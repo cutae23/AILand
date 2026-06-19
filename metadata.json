@@ -1,0 +1,6 @@
+{
+  "name": "토지 및 공동주택 개발 시뮬레이터",
+  "description": "토지이음 규제 검토, 용적률 완화 계산 및 공동주택 개발 시나리오 시뮬레이션을 원스톱으로 지원하는 전문가용 부동산 개발 검토 도구입니다.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
