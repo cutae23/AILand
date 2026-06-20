@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { SampleLand } from './types.js';
+import type { SampleLand } from './types';
 
 export const SAMPLE_LANDS: SampleLand[] = [
   {

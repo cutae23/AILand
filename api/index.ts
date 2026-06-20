@@ -1,8 +1,8 @@
 import express from 'express';
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
-import { SAMPLE_LANDS } from '../src/sampleLands.js';
-import { LandRegulatoryAnalysis } from '../src/types.js';
+import { SAMPLE_LANDS } from '../src/sampleLands';
+import type { LandRegulatoryAnalysis } from '../src/types';
 
 dotenv.config();
 
