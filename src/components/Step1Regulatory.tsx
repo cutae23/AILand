@@ -26,9 +26,37 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
-  // Method D: Expected land usage & development scale inputs
-  const [expectedUsage, setExpectedUsage] = useState<string>('공동주택 (다세대 / 아파트)');
-  const [expectedScale, setExpectedScale] = useState<string>('지상 5층, 연면적 약 1,500㎡ 규모');
+  // Method C: Expected land usage & development scale inputs (Multi-usage list)
+  interface UsageScaleItem {
+    id: string;
+    usage: string;
+    scale: string;
+  }
+
+  const [usageScaleList, setUsageScaleList] = useState<UsageScaleItem[]>([
+    { id: '1', usage: '공동주택 (다세대 / 아파트)', scale: '지상 5층, 연면적 약 1,500㎡ 규모' }
+  ]);
+
+  const handleAddUsageScale = () => {
+    setUsageScaleList([
+      ...usageScaleList,
+      {
+        id: Date.now().toString(),
+        usage: '상업용 근린생활시설 (종합상가)',
+        scale: '지상 1~2층, 연면적 약 500㎡ 규모'
+      }
+    ]);
+  };
+
+  const handleRemoveUsageScale = (id: string) => {
+    setUsageScaleList(usageScaleList.filter(item => item.id !== id));
+  };
+
+  const handleUpdateUsageScale = (id: string, field: 'usage' | "scale", value: string) => {
+    setUsageScaleList(
+      usageScaleList.map(item => (item.id === id ? { ...item, [field]: value } : item))
+    );
+  };
 
   // Interactive Law Q&A Chat State
   const [chatInput, setChatInput] = useState<string>('');
@@ -179,8 +207,8 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
 
   // Simulated timed steps for analysis to give expert-level feeling
   const runAnalysis = async () => {
-    if (!customerLink && !imagePreview) {
-      setError('리뷰를 시작하려면 토지이음 주소/링크를 쓰시거나 규제 도면 캡쳐를 등록해 주세요.');
+    if (usageScaleList.length === 0) {
+      setError('리뷰를 시작하려면 최소 하나 이상의 개발 예정 용도 및 규모를 방법 C에 등록해 주세요.');
       return;
     }
 
@@ -208,8 +236,7 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
           eumLink: customerLink,
           screenshot: imagePreview,
           sampleLandId: selectedSampleId || null,
-          expectedUsage: expectedUsage,
-          expectedScale: expectedScale
+          usageScaleList: usageScaleList
         })
       });
 
@@ -233,8 +260,9 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
     setSelectedSampleId('');
     setCustomerLink('');
     setImagePreview(null);
-    setExpectedUsage('공동주택 (다세대 / 아파트)');
-    setExpectedScale('지상 5층, 연면적 약 1,500㎡ 규모');
+    setUsageScaleList([
+      { id: '1', usage: '공동주택 (다세대 / 아파트)', scale: '지상 5층, 연면적 약 1,500㎡ 규모' }
+    ]);
     setError(null);
   };
 
@@ -255,14 +283,14 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
             <div className="lg:col-span-12 xl:col-span-7 space-y-5">
               
               {/* Method A: Custom Portal Link / Address */}
-              <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+              <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100/80">
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <Link2 className="w-3.5 h-3.5 text-indigo-600" />
-                  방법 A: 토지이음 주소 링크 또는 직접 번지수 입력 <span className="text-rose-500 text-[10px] font-normal font-semibold">(필수)</span>
+                  방법 A: 토지이음 주소 링크 또는 지번주소 <span className="text-gray-400 text-[10px] font-normal">(선택)</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="예: 서울특별시 영등포구 여의도동 1번지 또는 토지이음 규제대장 URL 링크"
+                  placeholder="예: 서울특별시 영등포구 여의도동 1번지 또는 토지이음 규제정보 대장 URL 주소"
                   value={customerLink}
                   onChange={(e) => {
                     setCustomerLink(e.target.value);
@@ -272,20 +300,20 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
               </div>
 
               {/* Method B: Drag and Drop Screenshot */}
-              <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+              <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100/80">
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
                     <Upload className="w-3.5 h-3.5 text-indigo-600" />
-                    방법 B: 토지이용규계획확인서 규제 도면 캡쳐 등록
+                    방법 B: 토지이용계획확인서 규제도면 캡쳐 <span className="text-gray-400 text-[10px] font-normal">(선택)</span>
                   </label>
-                  <span className="px-2 py-0.5 bg-amber-100 text-amber-805 text-[10px] font-bold rounded animate-pulse">
+                  <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded animate-pulse">
                     🚨 최대한 많이 캡쳐해 주세요!
                   </span>
                 </div>
 
                 {/* Important Tip Callout */}
                 <p className="text-[10px] text-amber-700 mb-3 leading-relaxed bg-amber-50 p-2.5 rounded-lg border border-amber-200/50">
-                  <strong>💡 [중요 안내]</strong> 토지이용계획확인서의 <strong>지적도면, 지역지구 행위제한, 관련 법령 정보</strong> 등이 최대한 고화질로 <strong>넓은 영역 및 최대한 많이 캡쳐</strong>되어 업로드될 수록, AI의 맞춤 법적 인허가 파싱 및 리스크 차단 정밀도가 극대화됩니다!
+                  <strong>💡 [추천 안내]</strong> 토지이용계획서의 지적도, 지역지구 지정현황 및 관련 고시 법령 영역를 <strong>최대한 넓고 선명하게 캡쳐</strong>하여 등록할 시, 용지 성격에 맞는 8대 규제 필터링의 신뢰도가 대폭 늘어납니다.
                 </p>
 
                 <div
@@ -295,10 +323,10 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
                   onClick={() => fileInputRef.current?.click()}
                   className={`border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition ${
                     isDragOver
-                      ? 'border-indigo-500 bg-indigo-50/20'
+                      ? 'border-indigo-500 bg-indigo-50/25'
                       : imagePreview
                       ? 'border-green-500/40 bg-zinc-50'
-                      : 'border-zinc-205 hover:border-gray-300 bg-white hover:bg-gray-50/30'
+                      : 'border-zinc-200 hover:border-gray-300 bg-white hover:bg-gray-50/30'
                   }`}
                 >
                   <input
@@ -315,7 +343,7 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
                         alt="Screen upload preview"
                         className="max-h-28 mx-auto rounded border shadow-xs"
                       />
-                      <p className="text-xs text-green-600 font-medium font-semibold">✨ 규제 캡쳐 도면이 성공적으로 분석 모델에 장착되었습니다.</p>
+                      <p className="text-xs text-green-600 font-medium">✨ 규제 캡쳐 도면이 성공적으로 모델 조서 대장에 반영되었습니다.</p>
                       <button
                         type="button"
                         onClick={(e) => {
@@ -331,96 +359,112 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
                     <div className="space-y-1.5 py-2">
                       <Upload className="w-8 h-8 text-indigo-400 mx-auto" />
                       <p className="text-xs text-gray-600">
-                        <span className="text-indigo-600 font-bold">클릭하여 캡쳐 파일 선택</span> 또는 드래그 앤 드롭
+                        <span className="text-indigo-600 font-bold">클릭하여 규제 도면 캡쳐 등록</span> 또는 Drag-and-drop
                       </p>
-                      <p className="text-[10px] text-gray-400">행위제한내용 및 도면이 잘 보이게 넓게 캡쳐한 이미지 파일</p>
+                      <p className="text-[10px] text-gray-400">지적 고시선, 행위제한내용이 담겨 있는 도면 파일 (*.jpg, *.png)</p>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Method C: Expected Building Usage & Scale (New dynamic context builder) */}
-              <div className="bg-indigo-50/20 p-4 rounded-xl border border-indigo-100/50 space-y-3">
-                <label className="block text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                  방법 C: 구상 중이신 예상 용도 및 개발 규모 (AI 상세 검토 핵심 엔진)
-                </label>
+              {/* Method C: Expected Building Usage & Scale (Dynamic multi-usage matching) */}
+              <div className="bg-indigo-50/20 p-4 rounded-xl border border-indigo-100/50 space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-650 animate-bounce" />
+                    방법 C: 개발 예정 용도 및 규모 기획 (복합 용도 추가 가능)
+                  </label>
+                  <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-850 rounded text-[9px] font-bold">
+                    기획 개수: {usageScaleList.length}개
+                  </span>
+                </div>
                 <p className="text-[10px] text-gray-500 leading-relaxed">
-                  선택 혹은 기술하신 예정 쓰임새에 맞게 주설비(부설주차장 수, 대지안의 공지)와 건축법 완화 요소를 매칭하여 검토 결과 조서를 작성하게 됩니다.
+                  개발하고자 하시는 <strong>용도를 각각 적고 용도별로 계획 규모(층수, 세대수, 연면적 등)</strong>를 자세히 지정해 주세요. 인허가 모델이 각 용도 간 주차장 대수 가중치와 조례 완화 혜택을 매칭합니다.
                 </p>
 
-                {/* 1. Usage Selector */}
-                <div className="space-y-2">
-                  <span className="text-[11px] font-semibold text-gray-600 block">1) 예상 건축물 주된 용도 선택:</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[
-                      '공동주택 (다세대 / 아파트)',
-                      '상업용 근린생활시설 (상가빌딩)',
-                      '오피스텔 / 도시형생활주택',
-                      '지식산업센터 / 벤처공장',
-                      '직접 기술 (아래 폼에 입력)'
-                    ].map((usage) => (
-                      <button
-                        key={usage}
-                        type="button"
-                        onClick={() => {
-                          if (usage !== '직접 기술 (아래 폼에 입력)') {
-                            setExpectedUsage(usage);
-                          } else {
-                            setExpectedUsage('');
-                          }
-                        }}
-                        className={`px-2.5 py-1.5 rounded-md text-[11px] font-medium transition ${
-                          expectedUsage === usage || (usage === '직접 기술 (아래 폼에 입력)' && !['공동주택 (다세대 / 아파트)','상업용 근린생활시설 (상가빌딩)','오피스텔 / 도시형생활주택','지식산업센터 / 벤처공장'].includes(expectedUsage))
-                            ? 'bg-indigo-600 text-white shadow-xs'
-                            : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-                        }`}
-                      >
-                        {usage}
-                      </button>
-                    ))}
-                  </div>
-                  
-                  <input
-                    type="text"
-                    value={expectedUsage}
-                    onChange={(e) => setExpectedUsage(e.target.value)}
-                    placeholder="직접 건축 용도를 구체적으로 입력하세요 (예: 노인복지시설, 세차장, 단독주택)"
-                    className="w-full text-xs px-3 py-2 rounded border border-gray-200 mt-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
+                {/* List of dynamic usage-scale pairs */}
+                <div className="space-y-2.5">
+                  {usageScaleList.map((item, index) => (
+                    <div key={item.id} className="p-3 bg-white border border-indigo-100/60 rounded-xl relative shadow-xs space-y-2.5">
+                      <div className="flex items-center justify-between border-b border-gray-50 pb-1.5">
+                        <span className="text-[11px] font-extrabold text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded">
+                          기획 #{index + 1}
+                        </span>
+                        {usageScaleList.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveUsageScale(item.id)}
+                            className="text-[10px] text-red-500 hover:text-red-700 hover:underline font-bold"
+                          >
+                            지우기
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                        <div className="md:col-span-5 space-y-1">
+                          <label className="block text-[10px] text-gray-400 font-bold uppercase">사용 방법 및 용도</label>
+                          <input
+                            type="text"
+                            value={item.usage}
+                            onChange={(e) => handleUpdateUsageScale(item.id, 'usage', e.target.value)}
+                            placeholder="예: 공동주택(다세대), 상가(근생), 오피스텔 등"
+                            className="w-full text-xs px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-gray-50/30 text-gray-800"
+                          />
+                        </div>
+                        <div className="md:col-span-7 space-y-1">
+                          <label className="block text-[10px] text-gray-400 font-bold uppercase">해당 용도 규모 (층수 및 연면적 등)</label>
+                          <input
+                            type="text"
+                            value={item.scale}
+                            onChange={(e) => handleUpdateUsageScale(item.id, 'scale', e.target.value)}
+                            placeholder="예: 지상 1~4층 12가구, 또는 지상 1층 연면적 300㎡ 상가"
+                            className="w-full text-xs px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-gray-50/30 text-gray-800"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
-                {/* 2. Scale Input */}
-                <div className="space-y-1.5">
-                  <span className="text-[11px] font-semibold text-gray-600 block">2) 개발 구상 규모 (층수 / 연면적 등):</span>
-                  <div className="flex flex-wrap gap-1.5 mb-1.5">
-                    {[
-                      '지상 5층, 연면적 약 1,500㎡ 규모',
-                      '지하 1층 ~ 지상 10층 중형 빌딩 개발',
-                      '지상 3층 규모의 꼬마빌딩 융합 기획',
-                      '초고층 복합복합체 개발 (용적률 완화 가용 최대화)'
-                    ].map((scale) => (
-                      <button
-                        key={scale}
-                        type="button"
-                        onClick={() => setExpectedScale(scale)}
-                        className={`px-2 py-1 rounded text-[10px] font-normal transition ${
-                          expectedScale === scale
-                            ? 'bg-indigo-100 text-indigo-900 font-bold border border-indigo-200'
-                            : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
-                        }`}
-                      >
-                        {scale}
-                      </button>
-                    ))}
+                {/* Interactive Row Controllers */}
+                <div className="flex flex-col sm:flex-row gap-2 pt-1 border-t border-indigo-100/40">
+                  <button
+                    type="button"
+                    onClick={handleAddUsageScale}
+                    className="flex-1 py-2 bg-white hover:bg-slate-50 border border-indigo-200 text-indigo-700 font-bold text-xs rounded-lg transition text-center shadow-xs flex items-center justify-center gap-1"
+                  >
+                    + 신규 용도 및 규모 기획 추가
+                  </button>
+                  
+                  {/* Preset Injectors */}
+                  <div className="flex items-center gap-1.5 self-center">
+                    <span className="text-[10px] text-gray-400 font-medium">인기 복합조합 추천:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUsageScaleList([
+                          { id: '1', usage: '지상 1~2층 근린생활시설 (리테일 상가)', scale: '총 2개층, 연면적 약 350㎡ 규모' },
+                          { id: '2', usage: '지상 3~7층 공동주택 (다세대 주택)', scale: '총 5개층, 연면적 1,000㎡ (총 15세대 계획)' }
+                        ]);
+                      }}
+                      className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100/50 text-indigo-750 font-semibold text-[9px] rounded border border-indigo-100 transition"
+                    >
+                      상가+다세대 주택
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUsageScaleList([
+                          { id: '1', usage: '상업용 근린생활시설', scale: '지상 1층 리테일 매장 150㎡' },
+                          { id: '2', usage: '업무시설 (오피스텔)', scale: '지상 2~8층, 전용면적 총 1,200㎡ 규모' }
+                        ]);
+                      }}
+                      className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100/50 text-indigo-750 font-semibold text-[9px] rounded border border-indigo-100 transition"
+                    >
+                      상가+오피스텔
+                    </button>
                   </div>
-                  <input
-                    type="text"
-                    value={expectedScale}
-                    onChange={(e) => setExpectedScale(e.target.value)}
-                    placeholder="예: 지상 7층, 세대당 약 18세대 주거 용도"
-                    className="w-full text-xs px-3 py-2 rounded border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-gray-800"
-                  />
                 </div>
               </div>
 
@@ -431,20 +475,21 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
                 </div>
               )}
 
+              {/* High-visibility colored Regulatory Review Trigger Button */}
               <button
                 type="button"
                 disabled={isLoading}
                 onClick={runAnalysis}
-                className="w-full py-3.5 bg-indigo-650 hover:bg-indigo-700 disabled:bg-gray-300 text-white font-semibold rounded-xl text-xs sm:text-sm transition duration-200 flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] disabled:bg-gray-300 text-white font-bold rounded-xl text-xs sm:text-sm transition duration-150 flex items-center justify-center gap-2 shadow-md hover:shadow-indigo-500/10 cursor-pointer text-center"
               >
                 {isLoading ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>{loadingStep}</span>
+                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                    <span className="font-semibold text-white">{loadingStep}</span>
                   </>
                 ) : (
                   <>
-                    <FileText className="w-4 h-4 animate-pulse" />
+                    <FileText className="w-4 h-4" />
                     <span>8대 관계법규 종합 필터링 및 조서 검토 실행</span>
                   </>
                 )}

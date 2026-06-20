@@ -41,14 +41,22 @@ function getGeminiClient(): GoogleGenAI | null {
 
 // 1. API Route: Legal / Regulatory Land Analysis (Step 1)
 app.post('/api/analyze', async (req, res) => {
-  const { eumLink, screenshot, sampleLandId, expectedUsage, expectedScale } = req.body;
+  const { eumLink, screenshot, sampleLandId, expectedUsage, expectedScale, usageScaleList } = req.body;
 
   let chosenSample = SAMPLE_LANDS.find(l => l.id === sampleLandId);
   const ai = getGeminiClient();
 
-  // Pick use and scale parameters
-  const targetUsage = expectedUsage || '공동주택 (다세대 / 아파트)';
-  const targetScale = expectedScale || '지상 5층, 연면적 약 1,500㎡ 규모';
+  // Handle single vs multiple usages dynamically
+  const list = Array.isArray(usageScaleList) && usageScaleList.length > 0 
+    ? usageScaleList 
+    : [{ usage: expectedUsage || '공동주택 (다세대 / 아파트)', scale: expectedScale || '지상 5층, 연면적 약 1,500㎡ 규모' }];
+
+  const targetUsage = list.map((item: any) => item.usage).join(', ');
+  const targetScale = list.map((item: any) => `[${item.usage}: ${item.scale}]`).join(' + ');
+
+  const scenarioDescription = list.map((item: any, idx: number) => 
+    `- 개발 계획 ${idx + 1}: 용도[${item.usage}] / 규모[${item.scale}]`
+  ).join('\n');
 
   // Baseline mock data in case AI is offline or key is missing
   let fallbackData: LandRegulatoryAnalysis = {
@@ -78,7 +86,7 @@ app.post('/api/analyze', async (req, res) => {
       {
         title: '주차장법 제19조 및 지자체 부설주차장 설치 조례',
         status: 'warning',
-        desc: `선택하신 용도("${targetUsage}")를 "${targetScale}"로 기획 시, 가구 수 혹은 연면적 면적비에 따라 대략 15~24대 이상의 법정 주차 면적 설치와 진출입 확보가 의무화될 것으로 예측됩니다. 이를 해결하기 위해 피로티 구조 설계나 기계식 주차 타워 병행 가능 여부에 대한 추가 조사가 상존합니다.`
+        desc: `선택하신 복합 용도("${targetUsage}")를 "${targetScale}"로 기획 시, 가구 수 혹은 연면적 면적비에 따라 대략 15~24대 이상의 법정 주차 면적 설치와 진출입 확보가 의무화될 것으로 예측됩니다. 이를 해결하기 위해 피로티 구조 설계나 기계식 주차 타워 병행 가능 여부에 대한 추가 조사가 상존합니다.`
       },
       {
         title: '주택건설기준 등에 관한 규정 제9조 (진입도로의 폭)',
@@ -103,7 +111,7 @@ app.post('/api/analyze', async (req, res) => {
     ],
     developmentPotential: chosenSample 
       ? chosenSample.description 
-      : `구상하시는 "${targetUsage}" 용도의 "${targetScale}" 개발안은 인근 역세권 지구단위계획 완화 비례와 주차 공간 구상에 따라 수지타산의 가름길이 결정됩니다. 일조권 후퇴에 적극 대응하는 사선 설계를 조합하여 용적률을 최대한 가동하면 대단히 유니크한 역세권 복합체 수익형 자산으로 승화할 수 있습니다.`,
+      : `구상하시는 "${targetUsage}" 용도의 복합 개발안은 인근 역세권 지구단위계획 완화 비례와 주차 공간 구상에 따라 수지타산의 가름길이 결정됩니다. 일조권 후퇴에 적극 대응하는 사선 설계를 조합하여 용적률을 최대한 가동하면 대단히 유니크한 역세권 복합체 수익형 자산으로 승화할 수 있습니다.`,
     recommendations: [
       '일조 제한선을 우회할 수 있는 스텝업 형태의 테라스하우스 및 옥상 정원 조경 연계 설계',
       '도로 확장 기부채납을 통한 용적률 한계치 최고가 산출 확보 공략',
@@ -129,28 +137,28 @@ app.post('/api/analyze', async (req, res) => {
 
       const promptString = `
 당신은 대한민국 건축법, 국토계획법, 주택법, 주차장법, 교육환경법, 서울특별시/해당지자체 도시계획 및 건축 조례, 그리고 지구단위계획 수립 가이드라인 등의 지자체 부동산 개발 인허가 검토 전문가입니다.
-사용자가 구상 중인 다음의 개발 시나리오 조건에 완벽하게 부용하는 8대 핵심 행위제한에 관한 종합 법규조서와 설계 완화 검정 성적서를 작성해 내십시오.
+사용자가 구상 중인 다음의 다중 복합 개발 시나리오 조건에 완벽하게 부응하는 8대 핵심 행위제한에 관한 종합 법규조서와 설계 완화 검정 성적서를 작성해 내십시오.
 
 [사용자 구상 개발 시나리오]
 - 대상 토지주소/토지이음 정보: ${eumLink || '미제공 (캡쳐도면에 의존)'}
-- 사용자가 구상 중인 건축물 예상 용도: ${targetUsage}
-- 사용자가 구상 중인 개발 예상 규모: ${targetScale}
+${scenarioDescription}
 
-[중요 요청 - 지구단위계획 및 용적률 완화 가이드 추가]
-1. 해당 토지가 지구단위계획구역 대상 조건일 경우를 가정하여, 일반 건축 조례보다 시행지침이 최우선하는 원칙과 허용 용도 지정(오피스텔/근린생활시설 개발 가능 한도 여부), 최대 용적률 완화(기부채납 가중치 산식) 예외 조서 규정을 regulations 배열에 다각도로 심층 기술하시기 바랍니다.
-2. 사용자가 기재한 예상 용도("${targetUsage}")와 규모("${targetScale}") 하에 직관적으로 영향도가 매우 큰 주차장법(세대당 또는 전용면적 총합 기준에 따른 예상 법정 필요 주차 공간) 및 접도 의무 기준(주거 등 성격에 따른 진입로 확폭 가중선)을 명확히 설명해 주세요.
+[중요 요청 - 복합 용도 매칭 고도 기획 및 완화 가이드]
+1. 제안된 복합용도 조합(${targetUsage})의 용도 상호 간 법적 충돌 및 완충 요건을 심도 있게 분석해 주십시오. (예: 주택과 상업시설의 소음 방화 구획, 주차장법상 서로 다른 기준 적용 등)
+2. 해당 토지가 지구단위계획구역 대상 조건일 경우를 가정하여, 일반 건축 조례보다 시행지침이 최우선하는 원칙과 허용 용도 지정(오피스텔/근린생활시설 개발 가능 한도 여부), 최대 용적률 완화(기부채납 가중치 산식) 예외 조서 규정을 regulations 배열에 다각도로 심층 기술하시기 바랍니다.
+3. 사용자가 기재한 예상 복합 용도와 각 규모들에 하에 직관적으로 영향도가 매우 큰 주차장법(각 세대 혹은 전용면적 총합 기준에 따르는 법정 예상 필요 주차 공간) 및 접도 의무 기준(주거/상업 등 성격에 따른 진입로 확폭 가중선)을 명확히 설명해 주세요.
 
 [반드시 검토에 포함하여 regulations 배열에 담아내야 할 8대 법적 항목]
 1. 국토의 계획 및 이용에 관한 법률 및 조례 (용도지역별 건폐율/용적률 상한 정격 및 지구단위계획 우선 원칙)
 2. 건축법 제61조 (정북방향 일조 등의 확보를 위한 높이제한 조치 및 사선 완출 기획)
 3. 건축법 제60조 (가로구역별 건축물의 평균 높이제한 가이드)
-4. 주차장법 제19조 및 지자체 부설주차장 설치 조례 (구입 예정 용도인 "${targetUsage}"에 따르는 세부 설치 대수 비율 산출법)
+4. 주차장법 제19조 및 지자체 부설주차장 설치 조례 (구입 예정 용도들에 요구되는 각 부설주차장 세부 설치 대수 비율 산출법)
 5. 주택건설기준 등에 관한 규정 제9조 및 건축법 접도 관계 (세대규모/용도에 따르는 의무 도로 폭 확보 여부)
 6. 교육환경 보호에 관한 법률 (절대/상대 정화구역 관련 학교 인접 이격 가이드)
 7. 소방시설법 및 피난방화구조기준 (비상 소방차 전용 통로 폭 6m 및 수평 회차 선로 요구 사항)
 8. 지자체 건축조례상 공지 확보(대지 경계 이격 준수의무) 및 대지 내 의무 조경 식재 비율 기준
 
-각 항목마다 실제 대한민국 건축 관련 법규 정식 조항 명칭과 해당 구상 용도/규모에 수반되는 구체적인 규제 세목을 자세히 기술하고, 그에 따른 경고 등급에 비례하여 status 필드를 'warning', 'safe', 'info' 기호에 매치하십시오.
+각 항목마다 실제 대한민국 건축 관련 법규 정식 조항 명칭과 해당 구상 용업/규모에 수반되는 구체적인 규제 세목을 자세히 기술하고, 그에 따른 경고 등급에 비례하여 status 필드를 'warning', 'safe', 'info' 기호에 매치하십시오.
 
 마지막으로 종합 의견인 developmentPotential 란에 한국어로 8개 법규를 융합한 핵심 개발 수지/기획 타당성 분석 의견을 대략 4~6문장의 긴 한국어 문단으로 전문성 가득 차게 서술하고, recommendations에 법적 한계 완화 동반 설계 기획 우회 대안 3개 이상을 제안해 주십시오.
 
