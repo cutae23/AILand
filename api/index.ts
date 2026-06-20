@@ -1,8 +1,8 @@
 import express from 'express';
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
-import { SAMPLE_LANDS } from '../src/sampleLands';
-import type { LandRegulatoryAnalysis } from '../src/types';
+import { SAMPLE_LANDS } from './sampleLands';
+import type { LandRegulatoryAnalysis } from './types';
 
 dotenv.config();
 
@@ -11,6 +11,23 @@ const app = express();
 // Enable large payloads for base64 image uploads
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+
+// Path normalization middleware for Vercel Serverless environment and local dev
+app.use((req, res, next) => {
+  const originalUrl = req.url;
+  const originalPath = req.path;
+  
+  // 1. If Vercel rewrites /api/* to /api/index.ts, req.url may be prefixed with /api/index
+  if (req.url.startsWith('/api/index')) {
+    req.url = req.url.replace('/api/index', '/api');
+  } else if (!req.url.startsWith('/api') && req.url !== '/' && !req.url.startsWith('/_')) {
+    // If it comes as /analyze or /ask-legal without api prefix, prepend /api for routing matching
+    req.url = '/api' + req.url;
+  }
+  
+  console.log(`[Express Router] Original path: ${originalPath} (${originalUrl}) -> Normalized to: ${req.url}`);
+  next();
+});
 
 // Lazy initializer for Gemini SDK as instructed
 function getGeminiClient(customKey?: string): GoogleGenAI | null {
