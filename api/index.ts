@@ -29,7 +29,7 @@ function getGeminiClient(customKey?: string): GoogleGenAI | null {
 }
 
 /// 1. API Route: Legal / Regulatory Land Analysis (Step 1)
-app.post('/api/analyze', async (req, res) => {
+app.post(['/api/analyze', '/analyze', '/api/index/analyze', '/index/analyze'], async (req, res) => {
   try {
     const { eumLink, screenshot, sampleLandId, expectedUsage, expectedScale, usageScaleList } = req.body;
 
@@ -241,7 +241,7 @@ ${scenarioDescription}
 });
 
 // 1.5. API Route: Legal AI Advisory Interactive Q&A
-app.post('/api/ask-legal', async (req, res) => {
+app.post(['/api/ask-legal', '/ask-legal', '/api/index/ask-legal', '/index/ask-legal'], async (req, res) => {
   const { question, landContext, history } = req.body;
   const customKey = req.headers['x-gemini-key'] as string | undefined;
   const ai = getGeminiClient(customKey);
