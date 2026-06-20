@@ -269,20 +269,27 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
         body: JSON.stringify({
           eumLink: customerLink,
           screenshot: imagePreview,
-          sampleLandId: null,
+          sampleLandId: selectedSampleId || null,
           usageScaleList: usageScaleList
         })
       });
 
       if (!response.ok) {
-        throw new Error('서버 분석 응답에 실패했습니다.');
+        let errMsg = '서버 분석 응답에 실패했습니다.';
+        try {
+          const errData = await response.json();
+          if (errData && errData.error) {
+            errMsg = errData.error;
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
       }
 
       const data: LandRegulatoryAnalysis = await response.json();
       setAnalysisResult(data);
       onAnalysisComplete(data);
     } catch (err: any) {
-      setError('규제 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해보세요.');
+      setError(err.message || '규제 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해보세요.');
       console.error(err);
     } finally {
       setIsLoading(false);

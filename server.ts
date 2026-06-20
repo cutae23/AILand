@@ -176,32 +176,32 @@ ${scenarioDescription}
           config: {
             responseMimeType: 'application/json',
             responseSchema: {
-              type: 'OBJECT',
+              type: Type.OBJECT,
               properties: {
-                address: { type: 'STRING', description: '대지 주소 및 지번 정보' },
-                zoning: { type: 'STRING', description: '용도지역/지구 명칭 (예: 제2종일반주거지역)' },
-                baselineFAR: { type: 'NUMBER', description: '기본 용적률 허용치 수치만 (예: 200)' },
-                baselineBCR: { type: 'NUMBER', description: '기본 건폐율 허용치 수치만 (예: 60)' },
-                heightLimit: { type: 'STRING', description: '높이 및 층수 규제 핵심 요약' },
-                areaSize: { type: 'NUMBER', description: '대지 면적 수치㎡ (예: 350)' },
+                address: { type: Type.STRING, description: '대지 주소 및 지번 정보' },
+                zoning: { type: Type.STRING, description: '용도지역/지구 명칭 (예: 제2종일반주거지역)' },
+                baselineFAR: { type: Type.NUMBER, description: '기본 용적률 허용치 수치만 (예: 200)' },
+                baselineBCR: { type: Type.NUMBER, description: '기본 건폐율 허용치 수치만 (예: 60)' },
+                heightLimit: { type: Type.STRING, description: '높이 및 층수 규제 핵심 요약' },
+                areaSize: { type: Type.NUMBER, description: '대지 면적 수치㎡ (예: 350)' },
                 regulations: {
-                  type: 'ARRAY',
+                  type: Type.ARRAY,
                   description: '주요 개별 법규 규제 요소들',
                   items: {
-                    type: 'OBJECT',
+                    type: Type.OBJECT,
                     properties: {
-                      title: { type: 'STRING', description: '규제 제목' },
-                      status: { type: 'STRING', description: '상태 속성 - warning, safe, info 중 하나만 사용' },
-                      desc: { type: 'STRING', description: '규제 영향 분석 및 상세 설명' }
+                      title: { type: Type.STRING, description: '규제 제목' },
+                      status: { type: Type.STRING, description: '상태 속성 - warning, safe, info 중 하나만 사용' },
+                      desc: { type: Type.STRING, description: '규제 영향 분석 및 상세 설명' }
                     },
                     required: ['title', 'status', 'desc']
                   }
                 },
-                developmentPotential: { type: 'STRING', description: '종합적인 개발 가치성 분석 의견 (한국어)' },
+                developmentPotential: { type: Type.STRING, description: '종합적인 개발 가치성 분석 의견 (한국어)' },
                 recommendations: {
-                  type: 'ARRAY',
+                  type: Type.ARRAY,
                   description: '전문가 자문 검토 제언 사항 리스트',
-                  items: { type: 'STRING' }
+                  items: { type: Type.STRING }
                 }
               },
               required: [
