@@ -21,22 +21,19 @@ app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
 // Lazy initializer for Gemini SDK as instructed
-let aiClient: GoogleGenAI | null = null;
-function getGeminiClient(): GoogleGenAI | null {
-  if (!aiClient) {
-    const key = process.env.GEMINI_API_KEY;
-    if (key && key !== 'MY_GEMINI_API_KEY') {
-      aiClient = new GoogleGenAI({
-        apiKey: key,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
-          }
+function getGeminiClient(customKey?: string): GoogleGenAI | null {
+  const key = (customKey && customKey.trim()) || process.env.GEMINI_API_KEY;
+  if (key && key !== 'MY_GEMINI_API_KEY' && key.trim() !== '') {
+    return new GoogleGenAI({
+      apiKey: key.trim(),
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
         }
-      });
-    }
+      }
+    });
   }
-  return aiClient;
+  return null;
 }
 
 // 1. API Route: Legal / Regulatory Land Analysis (Step 1)
@@ -44,7 +41,8 @@ app.post('/api/analyze', async (req, res) => {
   const { eumLink, screenshot, sampleLandId, expectedUsage, expectedScale, usageScaleList } = req.body;
 
   let chosenSample = SAMPLE_LANDS.find(l => l.id === sampleLandId);
-  const ai = getGeminiClient();
+  const customKey = req.headers['x-gemini-key'] as string | undefined;
+  const ai = getGeminiClient(customKey);
 
   // Handle single vs multiple usages dynamically
   const list = Array.isArray(usageScaleList) && usageScaleList.length > 0 
@@ -248,7 +246,8 @@ ${scenarioDescription}
 // 1.5. API Route: Legal AI Advisory Interactive Q&A
 app.post('/api/ask-legal', async (req, res) => {
   const { question, landContext, history } = req.body;
-  const ai = getGeminiClient();
+  const customKey = req.headers['x-gemini-key'] as string | undefined;
+  const ai = getGeminiClient(customKey);
 
   if (!question) {
     return res.status(400).json({ error: '질문 내용이 전송되지 않았습니다.' });

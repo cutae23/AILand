@@ -26,6 +26,32 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
+  // Custom Gemini API Key State & Storage
+  const [customApiKey, setCustomApiKey] = useState<string>(() => {
+    return localStorage.getItem('user_gemini_api_key') || '';
+  });
+  const [isApiKeySaved, setIsApiKeySaved] = useState<boolean>(() => {
+    return !!localStorage.getItem('user_gemini_api_key');
+  });
+  const [showKeyInstructions, setShowKeyInstructions] = useState<boolean>(false);
+
+  const handleSaveApiKey = (key: string) => {
+    const trimmed = key.trim();
+    if (trimmed) {
+      localStorage.setItem('user_gemini_api_key', trimmed);
+      setIsApiKeySaved(true);
+    } else {
+      localStorage.removeItem('user_gemini_api_key');
+      setIsApiKeySaved(false);
+    }
+  };
+
+  const handleClearApiKey = () => {
+    localStorage.removeItem('user_gemini_api_key');
+    setCustomApiKey('');
+    setIsApiKeySaved(false);
+  };
+
   // Method C: Expected land usage & development scale inputs (Multi-usage list)
   interface UsageScaleItem {
     id: string;
@@ -90,9 +116,13 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
     setChatError(null);
 
     try {
+      const savedApiKey = localStorage.getItem('user_gemini_api_key') || '';
       const response = await fetch('/api/ask-legal', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(savedApiKey ? { 'x-gemini-key': savedApiKey } : {})
+        },
         body: JSON.stringify({
           question: questionText,
           landContext: analysisResult,
@@ -229,13 +259,17 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
         await new Promise(resolve => setTimeout(resolve, i === 3 ? 1200 : 700));
       }
 
+      const savedApiKey = localStorage.getItem('user_gemini_api_key') || '';
       const response = await fetch('/api/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(savedApiKey ? { 'x-gemini-key': savedApiKey } : {})
+        },
         body: JSON.stringify({
           eumLink: customerLink,
           screenshot: imagePreview,
-          sampleLandId: selectedSampleId || null,
+          sampleLandId: null,
           usageScaleList: usageScaleList
         })
       });
@@ -282,6 +316,119 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
             {/* Left Input Fields */}
             <div className="lg:col-span-12 xl:col-span-7 space-y-5">
               
+              {/* Gemini API Key Registration & Settings block */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 shadow-xs">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                    실시간 AI 분석 소스: Gemini API 개인 키 등록 <span className="text-gray-400 text-[10px] font-normal">(선택)</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowKeyInstructions(!showKeyInstructions)}
+                    className="text-[10px] text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>{showKeyInstructions ? '가이드 닫기' : 'API 키 발급/설정법 안내'}</span>
+                    <Info className="w-3 h-3" />
+                  </button>
+                </div>
+
+                {/* Guide Container */}
+                <AnimatePresence>
+                  {showKeyInstructions && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden mb-3 text-xs text-gray-600 bg-indigo-50/50 p-3.5 rounded-lg border border-indigo-100/50 space-y-1.5 leading-relaxed font-sans"
+                    >
+                      <h4 className="font-bold text-gray-900 flex items-center gap-1 text-[11px]">
+                        🔑 Gemini API 키 발급 및 서비스 고정 설정법:
+                      </h4>
+                      <ol className="list-decimal list-inside space-y-1 text-[11px] text-gray-600">
+                        <li>
+                          <strong>무료 발급:</strong> 공식 사이트인{' '}
+                          <a
+                            href="https://aistudio.google.com/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-indigo-650 hover:underline inline-flex items-center gap-0.5 font-bold"
+                          >
+                            Google AI Studio (aistudio.google.com)
+                          </a>
+                          에 방문하여 Google 계정으로 로그인 후 [Get API key] 버튼을 눌러 즉시 키를 생성할 수 있습니다.
+                        </li>
+                        <li>
+                          <strong>개인키 직접 등록:</strong> 아래 입력란에 발급받은 키를 등록하여 브라우저에 저장하면, 서버의 공용 일일 트래픽 한계에 영향받지 않고 회원 고유의 속도로 무제한 분석이 실행됩니다. (브라우저 로컬 저장소에만 안전 보관됨)
+                        </li>
+                        <li>
+                          <strong>영구 고정 방법 (서버 기본값):</strong> 프로젝트 루트 디렉토리의{' '}
+                          <code className="bg-gray-100 px-1 py-0.5 rounded text-rose-600 font-mono text-[10px]">.env</code>{' '}
+                          또는{' '}
+                          <code className="bg-gray-100 px-1 py-0.5 rounded text-rose-600 font-mono text-[10px]">.env.example</code>{' '}
+                          파일 내에 <code className="bg-gray-100 px-1 py-0.5 rounded font-mono text-[10px]">GEMINI_API_KEY=내_발급_키</code> 형식으로 환경변수를 지정하면 수동 입력 없이 전 사용자에게도 항시 고성능 AI 모드가 가동됩니다.
+                        </li>
+                      </ol>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="password"
+                      placeholder={
+                        isApiKeySaved
+                          ? '••••••••••••••••••••••••••••••••••••'
+                          : 'Gemini API Key를 입력하세요 (AI_Studio에서 발급받은 AIzaSy...)'
+                      }
+                      value={customApiKey}
+                      onChange={(e) => {
+                        setCustomApiKey(e.target.value);
+                        if (isApiKeySaved) setIsApiKeySaved(false); // input touched, reset saved state until clicked save
+                      }}
+                      className="w-full text-xs sm:text-sm pl-8 pr-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 text-gray-800 bg-white font-mono"
+                    />
+                    <div className="absolute left-2.5 top-3.5 text-indigo-500">
+                      <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                    </div>
+                  </div>
+                  {isApiKeySaved ? (
+                    <button
+                      type="button"
+                      onClick={handleClearApiKey}
+                      className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold rounded-lg border border-rose-200 hover:border-rose-300 transition shrink-0 cursor-pointer"
+                    >
+                      지우기
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleSaveApiKey(customApiKey)}
+                      className="px-4 py-2 bg-indigo-650 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition shrink-0 shadow-xs cursor-pointer"
+                    >
+                      키 등록
+                    </button>
+                  )}
+                </div>
+
+                <div className="mt-2 flex items-center justify-between text-[10px]">
+                  <span className="text-gray-500 font-semibold flex items-center gap-1">
+                    상태:{' '}
+                    {isApiKeySaved ? (
+                      <span className="text-emerald-600 font-bold flex items-center gap-0.5">
+                        ● 개인 API 키 등록완료 (우선 적용)
+                      </span>
+                    ) : (
+                      <span className="text-indigo-600 font-bold flex items-center gap-0.5">
+                        ● 공용 서버 API 키 또는 에뮬레이터 가동 (기본값)
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-gray-400 font-normal">웹 브라우저 내부 보관됨</span>
+                </div>
+              </div>
+
               {/* Method A: Custom Portal Link / Address */}
               <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100/80">
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
@@ -524,15 +671,6 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
                   </div>
                 </div>
               </div>
-
-              {selectedSampleId && (
-                <div className="mt-6 p-3.5 bg-indigo-50/50 rounded-lg text-xs leading-relaxed text-indigo-900 border border-indigo-100">
-                  <span className="font-semibold text-indigo-700">선택된 대지 정보:</span>
-                  <p className="mt-1 text-gray-600 font-normal">
-                    {SAMPLE_LANDS.find(l => l.id === selectedSampleId)?.description}
-                  </p>
-                </div>
-              )}
             </div>
           </div>
         ) : (
@@ -551,14 +689,22 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
                   {analysisResult.address}
                 </h3>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAnalysisResult(null)}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-bold text-white transition flex items-center gap-1.5 shadow-sm"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  기획안 수정 및 재검토
+                </button>
                 <button
                   type="button"
                   onClick={handleReset}
-                  className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-semibold text-gray-300 hover:text-white transition flex items-center gap-1"
+                  className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-semibold text-gray-300 hover:text-white transition flex items-center gap-1 border border-gray-700"
                 >
                   <RefreshCw className="w-3 h-3" />
-                  다시 분석하기
+                  새 대지 (전체 초기화)
                 </button>
               </div>
             </div>
