@@ -95,8 +95,7 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
       const response = await fetch('/api/ask-legal', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          'X-Gemini-Key': localStorage.getItem('gemini_api_key') || ''
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           question: questionText,
@@ -224,8 +223,7 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'X-Gemini-Key': localStorage.getItem('gemini_api_key') || ''
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           eumLink: customerLink,
@@ -760,9 +758,8 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
                 <div className="mb-4 p-3.5 rounded-xl bg-amber-50/80 border border-amber-200/60 text-[11px] text-amber-800 leading-relaxed font-normal flex gap-2.5 items-start">
                   <span className="p-1 px-2.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold shrink-0">안내</span>
                   <div>
-                    <span className="font-bold text-amber-950 block mb-0.5">공용 인공지능 API 호출량 초과 (429) 감지</span>
-                    현재 공용 Gemini API 엔드포인트의 일시적 한계량(429)이 초과되어 내장형 전문가 자문 데이터베이스 기반 분석 결과로 제공되었습니다.
-                    <span className="text-amber-900 font-semibold block mt-1.5">💡 해결 방법: 왼쪽 사이드바 맨 하단 <strong className="font-bold underline text-amber-950">"개인 Gemini API 키 입력"</strong> 에 개인 API 키(AI Studio 무료 발급 키 등)를 입력 및 저장하시면 무제한 실시간 분석이 완벽 구동됩니다!</span>
+                    <span className="font-bold text-amber-950 block mb-0.5">인공지능 API 호출량 초과 (429) 감지</span>
+                    현재 사용 중인 API 한도(429)가 초과되어 내장형 전문가 자문 데이터베이스 기반 분석 결과로 자동 전환되었습니다. 잠시 후 재시도하시거나 Settings에서 프로젝트 환경 변수 설정을 점검하십시오.
                   </div>
                 </div>
               )}
@@ -843,7 +840,7 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
 
               {chatHistory.some(msg => msg.content?.includes('로컬 자문 DB')) && (
                 <div className="p-2.5 rounded bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-200 leading-relaxed font-normal">
-                  💡 <strong>실시간 한도(429) 우회 알림:</strong> 법률 상담 역시 안전 대비용 로컬 자문 DB 기반 자동 답변으로 전환 처리되었습니다. 왼쪽 사이드바 하단에 본인의 개인 Gemini API 키를 입력 및 저장해 보세요!
+                  💡 <strong>실시간 한도(429) 알림:</strong> 법률 상담 역시 안전 대비용 로컬 자문 DB 기반 자동 답변으로 제공되었습니다. 잠시 후 질문을 재전송 해 주십시오.
                 </div>
               )}
 

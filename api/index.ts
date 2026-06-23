@@ -94,8 +94,8 @@ app.use((req, res, next) => {
 });
 
 // Lazy initializer for Gemini SDK as instructed
-function getGeminiClient(customKey?: string): GoogleGenAI | null {
-  const key = (customKey && customKey.trim()) || process.env.GEMINI_API_KEY;
+function getGeminiClient(): GoogleGenAI | null {
+  const key = process.env.GEMINI_API_KEY;
   if (key && key !== 'MY_GEMINI_API_KEY' && key.trim() !== '') {
     return new GoogleGenAI({
       apiKey: key.trim(),
@@ -115,8 +115,7 @@ app.post(['/api/analyze', '/analyze', '/api/index/analyze', '/index/analyze'], a
     const { eumLink, screenshot, sampleLandId, expectedUsage, expectedScale, usageScaleList } = req.body;
 
     let chosenSample = SAMPLE_LANDS.find(l => l.id === sampleLandId);
-    const customKey = req.headers['x-gemini-key'] as string | undefined;
-    const ai = getGeminiClient(customKey);
+    const ai = getGeminiClient();
 
     // Handle single vs multiple usages dynamically
     const list = Array.isArray(usageScaleList) && usageScaleList.length > 0 
@@ -382,8 +381,7 @@ ${scenarioDescription}
 // 1.5. API Route: Legal AI Advisory Interactive Q&A
 app.post(['/api/ask-legal', '/ask-legal', '/api/index/ask-legal', '/index/ask-legal'], async (req, res) => {
   const { question, landContext, history } = req.body;
-  const customKey = req.headers['x-gemini-key'] as string | undefined;
-  const ai = getGeminiClient(customKey);
+  const ai = getGeminiClient();
 
   if (!question) {
     return res.status(400).json({ error: '질문 내용이 전송되지 않았습니다.' });
