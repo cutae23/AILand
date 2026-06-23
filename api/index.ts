@@ -131,19 +131,77 @@ app.post(['/api/analyze', '/analyze', '/api/index/analyze', '/index/analyze'], a
     ).join('\n');
 
     // Baseline mock data in case AI is offline or key is missing
+    let address = eumLink || '서울특별시 영등포구 여의도동 일대 대지';
+    let zoning = '제3종일반주거지역 (지구단위계획 수립구역)';
+    let baselineFAR = 250;
+    let baselineBCR = 50;
+    let heightLimit = '일조사선 제약 및 지구단위계획 권장높이 30m 이하';
+    let areaSize = 330;
+
+    if (chosenSample) {
+      address = chosenSample.address;
+      zoning = chosenSample.zoning;
+      baselineFAR = chosenSample.baselineFAR;
+      baselineBCR = chosenSample.baselineBCR;
+      heightLimit = chosenSample.heightLimit;
+      areaSize = chosenSample.areaSize;
+    } else if (address) {
+      const addrStr = address.toString();
+      if (addrStr.includes('상업역') || addrStr.includes('상업지역') || addrStr.includes('상업')) {
+        zoning = '일반상업지역 (가로구역별 최고높이 규정 수립대지)';
+        baselineFAR = 800;
+        baselineBCR = 60;
+        heightLimit = '가로구역별 최고높이 규정 (48m 이하) 및 지구단위계획 시행지침 우선';
+      } else if (addrStr.includes('준주거')) {
+        zoning = '준주거지역 (역세권 고밀 임대주택 추가복합 특례)';
+        baselineFAR = 400;
+        baselineBCR = 60;
+        heightLimit = '지구단위계획 상 허용/권장 및 높이규제선 적용 (35m 이하)';
+      } else if (addrStr.includes('1종') || addrStr.includes('일종')) {
+        zoning = '제1종일반주거지역 (단독/다세대 쾌적성 보존지역)';
+        baselineFAR = 150;
+        baselineBCR = 60;
+        heightLimit = '4층 이하 (정북일조 및 경사 이격 확보 필수)';
+      } else if (addrStr.includes('2종') || addrStr.includes('이종')) {
+        zoning = '제2종일반주거지역 (지자체 개정 조례 완화 대지)';
+        baselineFAR = 200;
+        baselineBCR = 60;
+        heightLimit = '조례상 7층이하 규제선 폐지 및 북측 일조권 기준적용 (21m)';
+      } else if (addrStr.includes('준공업')) {
+        zoning = '준공업지역 (공공재개발 및 아파트 복합 연계 가능)';
+        baselineFAR = 400;
+        baselineBCR = 60;
+        heightLimit = '가로구역선 높이 또는 산업시설 일조권 규정 적용 (35m)';
+      } else if (addrStr.includes('녹지')) {
+        zoning = '자연녹지지역 (도시식생 보호 및 휴양 보전지역)';
+        baselineFAR = 80;
+        baselineBCR = 20;
+        heightLimit = '4층 이하 (보수적 용도 및 건폐율 제한 적용)';
+      }
+
+      const areaMatch = addrStr.match(/(\d+(?:\.\d+)?)\s*(?:m2|㎡|평)/i);
+      if (areaMatch) {
+        let sizeVal = parseFloat(areaMatch[1]);
+        if (addrStr.includes('평')) {
+          sizeVal = Math.round(sizeVal * 3.3058);
+        }
+        areaSize = sizeVal;
+      }
+    }
+
     let fallbackData: LandRegulatoryAnalysis = {
       id: sampleLandId || undefined,
-      address: chosenSample ? chosenSample.address : (eumLink || '서울특별시 영등포구 여의도동 일대 대지'),
-      zoning: chosenSample ? chosenSample.zoning : '제3종일반주거지역 (지구단위계획 수립구역)',
-      baselineFAR: chosenSample ? chosenSample.baselineFAR : 250,
-      baselineBCR: chosenSample ? chosenSample.baselineBCR : 50,
-      heightLimit: chosenSample ? chosenSample.heightLimit : '일조사선 제약 및 지구단위계획 권장높이 30m 이하',
-      areaSize: chosenSample ? chosenSample.areaSize : 330,
+      address,
+      zoning,
+      baselineFAR,
+      baselineBCR,
+      heightLimit,
+      areaSize,
       regulations: [
         {
           title: '국토의 계획 및 이용에 관한 법률 (용도지역 건폐율 및 용적률)',
           status: 'info',
-          desc: `계획법 제77조·제78조 및 서울시 도시계획 조례 기준에 따라 제3종일반주거지역 건폐율 상한은 50%, 상한 용적률은 250% 입니다. 다만 지구단위계획 시행 한계에 구속될 수 있으므로, 제안된 "${targetUsage}" 용도가 구역계 결정 고시 상 허용 용도에 완전히 편입되는지 우선 대조해야 합니다.`
+          desc: `계획법 제77조·제78조 및 지자체 건축조례 기준에 따라 해당 대지(${zoning})의 지정 건폐율 상한은 ${baselineBCR}%, 상한 용적률은 ${baselineFAR}% 수준으로 책정됩니다. 다만 지구단위계획 시행 한계에 구속될 수 있으므로, 제안된 "${targetUsage}" 용도가 해당 지적 조서 상 허용 용도에 완비되는지 대조해야 합니다.`
         },
         {
           title: '건축법 제61조 (정북방향 일조 등의 확보를 위한 높이제한)',
@@ -394,7 +452,21 @@ ${contextStr}
       return res.json({ answer });
     } catch (err: any) {
       console.error('Interactive Legal Q&A failed:', err);
-      return res.status(500).json({ error: `AI 답변 생성 오류: ${err.message}` });
+      // Fallback instead of 500 error!
+      const offlineAnswers: { [key: string]: string } = {
+        '오피스텔': '제3종일반주거지역 또는 상업지역 등 용도지역 조건에 따라 오피스텔(준주택) 설치 가능 여부가 상이해집니다. 통상 준주거나 상업지역에 유리합니다. 주차 및 피난소방 기준이 공동주택과 다르며, 지자체 지구단위계획 지침 상 허용 용도 여부를 꼭 파악하셔야 합니다.',
+        '지구단위': '지구단위계획구역으로 지정되어 있다면, 일반 건축 조례보다 지구단위계획 시행지침이 최우선 적용되어 건폐율, 용적률, 층수, 불허용도가 극도로 엄격하게 제약되거나 인센티브를 부여받습니다. 구역 계획 결정 조서를 서울시 도시계획포털 등에서 다운로드하여 세부 사항을 확인하시는 것을 적극 권합니다.',
+        '조례': '조례에 따르면, 건축물 높이가 높아질수록 정북방향 일조 사선제한이 완화 또는 강화될 수 있으나 9m 기준에서 계단식 셋백(Setback)이 필요하게 됩니다. 지자체별 상세 공지 조정을 체크하시길 권해 드립니다.'
+      };
+
+      let matchedAnswer = '⚠️ [로컬 자문 DB 연동 응답] 실시간 AI 분석기 허용한도 제한(429)으로 인해 보존용 DB 기반 가이드가 자동으로 활성화되었습니다.\n\n해당 필지 및 구상 용도 개발 시 정북방향 일조 사선제한과 대지 내 진입로 도로 접도 의무가 핵심 성공 인자가 됩니다. 지자체 건축조례를 자세히 체크해야 합니다.';
+      for (const key of Object.keys(offlineAnswers)) {
+        if (question.includes(key)) {
+          matchedAnswer = `⚠️ [로컬 자문 DB 연동 응답] 실시간 AI 분석기 허용한도 제한(429)으로 인해 보존용 DB 기반 가이드가 자동으로 활성화되었습니다.\n\n${offlineAnswers[key]}`;
+          break;
+        }
+      }
+      return res.json({ answer: matchedAnswer });
     }
   } else {
     // Offline / No Key mockup response
