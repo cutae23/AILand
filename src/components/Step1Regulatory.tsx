@@ -26,31 +26,7 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
-  // Custom Gemini API Key State & Storage
-  const [customApiKey, setCustomApiKey] = useState<string>(() => {
-    return localStorage.getItem('user_gemini_api_key') || '';
-  });
-  const [isApiKeySaved, setIsApiKeySaved] = useState<boolean>(() => {
-    return !!localStorage.getItem('user_gemini_api_key');
-  });
-  const [showKeyInstructions, setShowKeyInstructions] = useState<boolean>(false);
 
-  const handleSaveApiKey = (key: string) => {
-    const trimmed = key.trim();
-    if (trimmed) {
-      localStorage.setItem('user_gemini_api_key', trimmed);
-      setIsApiKeySaved(true);
-    } else {
-      localStorage.removeItem('user_gemini_api_key');
-      setIsApiKeySaved(false);
-    }
-  };
-
-  const handleClearApiKey = () => {
-    localStorage.removeItem('user_gemini_api_key');
-    setCustomApiKey('');
-    setIsApiKeySaved(false);
-  };
 
   // Method C: Expected land usage & development scale inputs (Multi-usage list)
   interface UsageScaleItem {
@@ -116,12 +92,10 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
     setChatError(null);
 
     try {
-      const savedApiKey = localStorage.getItem('user_gemini_api_key') || '';
       const response = await fetch('/api/ask-legal', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          ...(savedApiKey ? { 'x-gemini-key': savedApiKey } : {})
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           question: questionText,
@@ -131,7 +105,7 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
       });
 
       if (!response.ok) {
-        throw new Error('법률 자문 서비스 응답에 실패했습니다. API 키 정보 또는 네트워크 통신을 확인하십시오.');
+        throw new Error('법률 자문 서비스 응답에 실패했습니다. 네트워크 통신 또는 서버 환경 설정을 확인하십시오.');
       }
 
       const data = await response.json();
@@ -245,26 +219,11 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
     setIsLoading(true);
     setError(null);
 
-    const steps = [
-      '토지이음 대장 공공 연계 확인 중...',
-      '용도지역 및 도시계획 조례 법정 기준 파싱 중...',
-      '일조 제한, 건축선 보호 한계선 3차원 시뮬레이션 중...',
-      'Gemini AI 기반 지능형 건축 규제 성적서 작성 중...'
-    ];
-
     try {
-      // Step feedback animation
-      for (let i = 0; i < steps.length; i++) {
-        setLoadingStep(steps[i]);
-        await new Promise(resolve => setTimeout(resolve, i === 3 ? 1200 : 700));
-      }
-
-      const savedApiKey = localStorage.getItem('user_gemini_api_key') || '';
       const response = await fetch('/api/analyze', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(savedApiKey ? { 'x-gemini-key': savedApiKey } : {})
+        headers: {
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           eumLink: customerLink,
@@ -275,166 +234,46 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
       });
 
       if (!response.ok) {
-        let errMsg = '서버 분석 응답에 실패했습니다.';
-        try {
-          const errData = await response.json();
-          if (errData && errData.error) {
-            errMsg = errData.error;
-          }
-        } catch (_) {}
-        throw new Error(errMsg);
+        throw new Error('규제 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
       }
 
       const data: LandRegulatoryAnalysis = await response.json();
       setAnalysisResult(data);
       onAnalysisComplete(data);
     } catch (err: any) {
-      setError(err.message || '규제 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해보세요.');
-      console.error(err);
+      setError(err.message || '규제 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleReset = () => {
-    setAnalysisResult(null);
-    setSelectedSampleId('');
     setCustomerLink('');
     setImagePreview(null);
+    setSelectedSampleId('');
+    setAnalysisResult(null);
     setUsageScaleList([
       { id: '1', usage: '공동주택 (다세대 / 아파트)', scale: '지상 5층, 연면적 약 1,500㎡ 규모' }
     ]);
-    setError(null);
   };
 
   return (
-    <div className="space-y-6" id="step1-container">
-      <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
-          <Landmark className="w-5 h-5 text-indigo-600" />
-          Step 1: 토지이음 규제 및 용도별 법규 조서 검토
-        </h2>
-        <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-          토지이음 주소/링크와 규제 도면 캡쳐, 그리고 구상 중이신 <strong>개발 예정 용도 및 규모</strong>를 함께 입력하여 건축법, 주차장법, 소방방재, 조례 등을 아우르는 8대 핵심 행위제한 성적서를 종합적으로 정성 검토합니다.
-        </p>
+    <div className="space-y-6">
+      {!analysisResult ? (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* Left Inputs Form Card */}
+          <div className="lg:col-span-7 bg-white p-5 rounded-xl border border-gray-100 shadow-sm space-y-5">
+            <div>
+              <h2 className="text-sm font-extrabold text-gray-900 tracking-tight flex items-center gap-1.5 uppercase">
+                <MapPin className="w-4 h-4 text-indigo-600 animate-pulse" />
+                기초 필지 규제 분석 기획서 작성
+              </h2>
+              <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
+                법규 데이터를 수집하기 위해 토지이음 링크, 캡쳐 도면 또는 기획하려는 예상 건축 규모정보를 기입하십시오.
+              </p>
+            </div>
 
-        {!analysisResult ? (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left Input Fields */}
-            <div className="lg:col-span-12 xl:col-span-7 space-y-5">
-              
-              {/* Gemini API Key Registration & Settings block */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 shadow-xs">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                    실시간 AI 분석 소스: Gemini API 개인 키 등록 <span className="text-gray-400 text-[10px] font-normal">(선택)</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowKeyInstructions(!showKeyInstructions)}
-                    className="text-[10px] text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>{showKeyInstructions ? '가이드 닫기' : 'API 키 발급/설정법 안내'}</span>
-                    <Info className="w-3 h-3" />
-                  </button>
-                </div>
-
-                {/* Guide Container */}
-                <AnimatePresence>
-                  {showKeyInstructions && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden mb-3 text-xs text-gray-600 bg-indigo-50/50 p-3.5 rounded-lg border border-indigo-100/50 space-y-1.5 leading-relaxed font-sans"
-                    >
-                      <h4 className="font-bold text-gray-900 flex items-center gap-1 text-[11px]">
-                        🔑 Gemini API 키 발급 및 서비스 고정 설정법:
-                      </h4>
-                      <ol className="list-decimal list-inside space-y-1 text-[11px] text-gray-600">
-                        <li>
-                          <strong>무료 발급:</strong> 공식 사이트인{' '}
-                          <a
-                            href="https://aistudio.google.com/"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-indigo-650 hover:underline inline-flex items-center gap-0.5 font-bold"
-                          >
-                            Google AI Studio (aistudio.google.com)
-                          </a>
-                          에 방문하여 Google 계정으로 로그인 후 [Get API key] 버튼을 눌러 즉시 키를 생성할 수 있습니다.
-                        </li>
-                        <li>
-                          <strong>개인키 직접 등록:</strong> 아래 입력란에 발급받은 키를 등록하여 브라우저에 저장하면, 서버의 공용 일일 트래픽 한계에 영향받지 않고 회원 고유의 속도로 무제한 분석이 실행됩니다. (브라우저 로컬 저장소에만 안전 보관됨)
-                        </li>
-                        <li>
-                          <strong>영구 고정 방법 (서버 기본값):</strong> 프로젝트 루트 디렉토리의{' '}
-                          <code className="bg-gray-100 px-1 py-0.5 rounded text-rose-600 font-mono text-[10px]">.env</code>{' '}
-                          또는{' '}
-                          <code className="bg-gray-100 px-1 py-0.5 rounded text-rose-600 font-mono text-[10px]">.env.example</code>{' '}
-                          파일 내에 <code className="bg-gray-100 px-1 py-0.5 rounded font-mono text-[10px]">GEMINI_API_KEY=내_발급_키</code> 형식으로 환경변수를 지정하면 수동 입력 없이 전 사용자에게도 항시 고성능 AI 모드가 가동됩니다.
-                        </li>
-                      </ol>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type="password"
-                      placeholder={
-                        isApiKeySaved
-                          ? '••••••••••••••••••••••••••••••••••••'
-                          : 'Gemini API Key를 입력하세요 (AI_Studio에서 발급받은 AIzaSy...)'
-                      }
-                      value={customApiKey}
-                      onChange={(e) => {
-                        setCustomApiKey(e.target.value);
-                        if (isApiKeySaved) setIsApiKeySaved(false); // input touched, reset saved state until clicked save
-                      }}
-                      className="w-full text-xs sm:text-sm pl-8 pr-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 text-gray-800 bg-white font-mono"
-                    />
-                    <div className="absolute left-2.5 top-3.5 text-indigo-500">
-                      <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-                    </div>
-                  </div>
-                  {isApiKeySaved ? (
-                    <button
-                      type="button"
-                      onClick={handleClearApiKey}
-                      className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold rounded-lg border border-rose-200 hover:border-rose-300 transition shrink-0 cursor-pointer"
-                    >
-                      지우기
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleSaveApiKey(customApiKey)}
-                      className="px-4 py-2 bg-indigo-650 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition shrink-0 shadow-xs cursor-pointer"
-                    >
-                      키 등록
-                    </button>
-                  )}
-                </div>
-
-                <div className="mt-2 flex items-center justify-between text-[10px]">
-                  <span className="text-gray-500 font-semibold flex items-center gap-1">
-                    상태:{' '}
-                    {isApiKeySaved ? (
-                      <span className="text-emerald-600 font-bold flex items-center gap-0.5">
-                        ● 개인 API 키 등록완료 (우선 적용)
-                      </span>
-                    ) : (
-                      <span className="text-indigo-600 font-bold flex items-center gap-0.5">
-                        ● 공용 서버 API 키 또는 에뮬레이터 가동 (기본값)
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-gray-400 font-normal">웹 브라우저 내부 보관됨</span>
-                </div>
-              </div>
+            <div className="space-y-4">
 
               {/* Method A: Custom Portal Link / Address */}
               <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100/80">
@@ -621,8 +460,9 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
                   </div>
                 </div>
               </div>
+            </div>
 
-              {error && (
+            {error && (
                 <div className="p-3 bg-red-50 rounded-lg border border-red-100 flex items-start gap-2.5 text-xs text-red-700">
                   <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
                   <p>{error}</p>
@@ -1042,6 +882,5 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
           </motion.div>
         )}
       </div>
-    </div>
   );
 }
