@@ -753,16 +753,6 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
             {/* AI Summary and Recommendations */}
             <div className="bg-slate-55 p-4 rounded-xl border border-slate-100 bg-gradient-to-tr from-indigo-50/10 via-white to-slate-50">
               <div className="text-xs font-bold text-indigo-600 mb-2">지능형 입지 가치 분석</div>
-              
-              {analysisResult.developmentPotential?.includes('로컬 규제') && (
-                <div className="mb-4 p-3.5 rounded-xl bg-amber-50/80 border border-amber-200/60 text-[11px] text-amber-800 leading-relaxed font-normal flex gap-2.5 items-start">
-                  <span className="p-1 px-2.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold shrink-0">안내</span>
-                  <div>
-                    <span className="font-bold text-amber-950 block mb-0.5">인공지능 API 호출량 초과 (429) 감지</span>
-                    현재 사용 중인 API 한도(429)가 초과되어 내장형 전문가 자문 데이터베이스 기반 분석 결과로 자동 전환되었습니다. 잠시 후 재시도하시거나 Settings에서 프로젝트 환경 변수 설정을 점검하십시오.
-                  </div>
-                </div>
-              )}
 
               <p className="text-xs leading-relaxed text-gray-700 whitespace-pre-wrap font-normal">
                 {analysisResult.developmentPotential}
@@ -837,12 +827,6 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
                   </div>
                 )}
               </div>
-
-              {chatHistory.some(msg => msg.content?.includes('로컬 자문 DB')) && (
-                <div className="p-2.5 rounded bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-200 leading-relaxed font-normal">
-                  💡 <strong>실시간 한도(429) 알림:</strong> 법률 상담 역시 안전 대비용 로컬 자문 DB 기반 자동 답변으로 제공되었습니다. 잠시 후 질문을 재전송 해 주십시오.
-                </div>
-              )}
 
               {/* Suggestions Chips */}
               <div className="space-y-1.5">
