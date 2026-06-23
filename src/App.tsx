@@ -8,7 +8,7 @@ import Step1Regulatory from './components/Step1Regulatory.js';
 import Step2Relaxation from './components/Step2Relaxation.js';
 import Step3Scenario from './components/Step3Scenario.js';
 import { LandRegulatoryAnalysis, FARRelaxationResult } from './types.js';
-import { MapPin, Building2, HelpCircle, CheckCircle, Sliders, FileText, ChevronRight, Calculator, User, Compass, ServerCrash } from 'lucide-react';
+import { MapPin, Building2, HelpCircle, CheckCircle, Sliders, FileText, ChevronRight, Calculator, User, Compass, ServerCrash, Key } from 'lucide-react';
 
 export default function App() {
   const [activeStep, setActiveStep] = useState<1 | 2 | 3>(1);
@@ -16,6 +16,29 @@ export default function App() {
   // App-wide state sharing logic between the steps
   const [regulatoryAnalysis, setRegulatoryAnalysis] = useState<LandRegulatoryAnalysis | null>(null);
   const [relaxationResult, setRelaxationResult] = useState<FARRelaxationResult | null>(null);
+
+  const [customApiKey, setCustomApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
+  const [savedKeyExists, setSavedKeyExists] = useState(!!localStorage.getItem('gemini_api_key'));
+
+  const handleSaveKey = () => {
+    if (customApiKey.trim()) {
+      localStorage.setItem('gemini_api_key', customApiKey.trim());
+      setSavedKeyExists(true);
+      alert('API 키가 브라우저에 안전하게 저장되었습니다! 이제 실시간 AI 요약/인적 자문 시 본인의 Quota가 위임되어 429 한도로부터 우회됩니다.');
+      // Refresh step1 if current active step is 1 to utilize new key
+      window.location.reload();
+    } else {
+      alert('API 키를 정확히 입력해 주십시오.');
+    }
+  };
+
+  const handleClearKey = () => {
+    localStorage.removeItem('gemini_api_key');
+    setCustomApiKey('');
+    setSavedKeyExists(false);
+    alert('저장된 API 키가 정상적으로 제거되었습니다. 공용 공유 Quota로 재설정됩니다.');
+    window.location.reload();
+  };
 
   const handleAnalysisComplete = (analysis: LandRegulatoryAnalysis) => {
     setRegulatoryAnalysis(analysis);
@@ -124,6 +147,48 @@ export default function App() {
               </div>
             </button>
           </nav>
+        </div>
+
+        {/* Gemini API Key Custom Setup Card */}
+        <div className="mx-6 my-4 p-4 rounded-xl bg-amber-50/70 border border-amber-200/60 text-xs">
+          <div className="flex items-center gap-1.5 text-amber-900 font-semibold mb-1.5">
+            <Key className="w-3.5 h-3.5 text-amber-700" />
+            <span>개인 Gemini API 키 입력</span>
+          </div>
+          <p className="text-[10px] text-amber-800 leading-relaxed mb-2.5">
+            공용 한도 초과(429) 시, 개인 API 키를 입력하여 우회 분석할 수 있습니다 (로컬 브라우저에만 저장됨).
+          </p>
+          <div className="space-y-1.5">
+            <input
+              type="password"
+              placeholder="AI Studio API 키 입력"
+              value={customApiKey}
+              onChange={(e) => setCustomApiKey(e.target.value)}
+              className="w-full px-2.5 py-1.5 bg-white border border-[#D1CEC8] rounded-lg text-[11px] focus:outline-none focus:border-[#5F7161]"
+            />
+            <div className="flex gap-1.5">
+              <button
+                onClick={handleSaveKey}
+                className="flex-1 px-2.5 py-1.5 bg-[#5F7161] hover:bg-[#4E5E50] text-white font-medium rounded-lg text-[10px] transition"
+              >
+                저장 및 적용
+              </button>
+              {savedKeyExists && (
+                <button
+                  onClick={handleClearKey}
+                  className="px-2 py-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 font-medium rounded-lg text-[10px] transition border border-rose-200"
+                >
+                  제거
+                </button>
+              )}
+            </div>
+          </div>
+          {savedKeyExists && (
+            <div className="mt-2 text-[9px] text-[#5F7161] flex items-center gap-1 font-semibold">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block animate-pulse"></span>
+              <span>개인 API Key 가동 중 (429 한도 우회)</span>
+            </div>
+          )}
         </div>
 
         {/* Dynamic Project Quick Status Footer inside Sidebar */}
