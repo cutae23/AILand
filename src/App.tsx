@@ -4,10 +4,10 @@
  */
 
 import React, { useState } from 'react';
-import Step1Regulatory from './components/Step1Regulatory.js';
-import Step2Relaxation from './components/Step2Relaxation.js';
-import Step3Scenario from './components/Step3Scenario.js';
-import { LandRegulatoryAnalysis, FARRelaxationResult } from './types.js';
+import Step1Regulatory from './components/Step1Regulatory';
+import Step2Relaxation from './components/Step2Relaxation';
+import Step3Scenario from './components/Step3Scenario';
+import { LandRegulatoryAnalysis, FARRelaxationResult } from './types';
 import { MapPin, Building2, HelpCircle, CheckCircle, Sliders, FileText, ChevronRight, Calculator, User, Compass, ServerCrash } from 'lucide-react';
 
 export default function App() {

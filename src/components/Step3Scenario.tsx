@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { LandRegulatoryAnalysis, FARRelaxationResult, ScenarioInput, ScenarioResult, UnitConfig, AllocatedUnitResult } from '../types.js';
+import { LandRegulatoryAnalysis, FARRelaxationResult, ScenarioInput, ScenarioResult, UnitConfig, AllocatedUnitResult } from '../types';
 import { CircleDollarSign, Coins, TrendingUp, Building2, Layers, Compass, HelpCircle, ArrowRight, Table } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 

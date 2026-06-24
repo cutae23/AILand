@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { FARRelaxationInput, FARRelaxationResult, LandRegulatoryAnalysis } from '../types.js';
+import { FARRelaxationInput, FARRelaxationResult, LandRegulatoryAnalysis } from '../types';
 import { ArrowRight, HelpCircle, ShieldCheck, Award, Home, Trees, Coins, Sliders } from 'lucide-react';
 import { motion } from 'motion/react';
 
