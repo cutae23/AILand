@@ -116,12 +116,18 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
     setChatError(null);
 
     try {
-      const savedApiKey = localStorage.getItem('user_gemini_api_key') || '';
+      // Auto-save and register api key if typed but not explicitly registered
+      let finalApiKey = localStorage.getItem('user_gemini_api_key') || '';
+      if (customApiKey.trim() && customApiKey.trim() !== finalApiKey) {
+        handleSaveApiKey(customApiKey);
+        finalApiKey = customApiKey.trim();
+      }
+
       const response = await fetch('/api/ask-legal', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          ...(savedApiKey ? { 'x-gemini-key': savedApiKey } : {})
+          ...(finalApiKey ? { 'x-gemini-key': finalApiKey } : {})
         },
         body: JSON.stringify({
           question: questionText,
@@ -186,7 +192,7 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
     };
   };
 
-  // Read file as base64 helper
+  // Read file as base64 with client-side downscaling/compression helper to prevent huge payload fetch failures
   const handleFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
       setError('이미지 파일(*.png, *.jpg, *.jpeg)만 업로드할 수 있습니다.');
@@ -196,7 +202,49 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
     const reader = new FileReader();
     reader.onload = (e) => {
       if (e.target?.result) {
-        setImagePreview(e.target.result as string);
+        const rawDataUrl = e.target.result as string;
+        
+        // Optimize image size (downscale if larger than 1400px and compress as JPEG)
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1400; // Optimal max dimension for clear OCR and extremely light size
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            // Draw white background to handle transparent PNGs correctly in JPEG format
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Convert to JPEG with 80% quality for optimal balance of sharp text and tiny payload size
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            setImagePreview(compressedDataUrl);
+          } else {
+            setImagePreview(rawDataUrl); // Fallback to raw if canvas context is unavailable
+          }
+        };
+        img.onerror = () => {
+          setImagePreview(rawDataUrl); // Fallback to raw if image fails to load
+        };
+        img.src = rawDataUrl;
+        
+        setSelectedSampleId(''); // Clear selected sample ID when custom image is uploaded
+        setCustomerLink(''); // Clear previous sample link so AI analyzes only custom uploaded image
       }
     };
     reader.readAsDataURL(file);
@@ -238,7 +286,7 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
   // Simulated timed steps for analysis to give expert-level feeling
   const runAnalysis = async () => {
     if (usageScaleList.length === 0) {
-      setError('리뷰를 시작하려면 최소 하나 이상의 개발 예정 용도 및 규모를 방법 C에 등록해 주세요.');
+      setError('리뷰를 시작하려면 최소 하나 이상의 개발 예정 용도 및 규모를 방법 B에 등록해 주세요.');
       return;
     }
 
@@ -259,12 +307,18 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
         await new Promise(resolve => setTimeout(resolve, i === 3 ? 1200 : 700));
       }
 
-      const savedApiKey = localStorage.getItem('user_gemini_api_key') || '';
+      // Auto-save and register api key if typed but not explicitly registered
+      let finalApiKey = localStorage.getItem('user_gemini_api_key') || '';
+      if (customApiKey.trim() && customApiKey.trim() !== finalApiKey) {
+        handleSaveApiKey(customApiKey);
+        finalApiKey = customApiKey.trim();
+      }
+
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          ...(savedApiKey ? { 'x-gemini-key': savedApiKey } : {})
+          ...(finalApiKey ? { 'x-gemini-key': finalApiKey } : {})
         },
         body: JSON.stringify({
           eumLink: customerLink,
@@ -436,29 +490,12 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
                 </div>
               </div>
 
-              {/* Method A: Custom Portal Link / Address */}
-              <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100/80">
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Link2 className="w-3.5 h-3.5 text-indigo-600" />
-                  방법 A: 토지이음 주소 링크 또는 지번주소 <span className="text-gray-400 text-[10px] font-normal">(선택)</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="예: 서울특별시 영등포구 여의도동 1번지 또는 토지이음 규제정보 대장 URL 주소"
-                  value={customerLink}
-                  onChange={(e) => {
-                    setCustomerLink(e.target.value);
-                  }}
-                  className="w-full text-xs sm:text-sm px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 text-gray-800 bg-white"
-                />
-              </div>
-
-              {/* Method B: Drag and Drop Screenshot */}
+              {/* Method A: Drag and Drop Screenshot */}
               <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100/80">
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
                     <Upload className="w-3.5 h-3.5 text-indigo-600" />
-                    방법 B: 토지이용계획확인서 규제도면 캡쳐 <span className="text-gray-400 text-[10px] font-normal">(선택)</span>
+                    방법 A: 토지이용계획확인서 규제도면 캡쳐 <span className="text-gray-400 text-[10px] font-normal">(선택)</span>
                   </label>
                   <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded animate-pulse">
                     🚨 최대한 많이 캡쳐해 주세요!
@@ -521,12 +558,12 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
                 </div>
               </div>
 
-              {/* Method C: Expected Building Usage & Scale (Dynamic multi-usage matching) */}
+              {/* Method B: Expected Building Usage & Scale (Dynamic multi-usage matching) */}
               <div className="bg-indigo-50/20 p-4 rounded-xl border border-indigo-100/50 space-y-4">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-indigo-650 animate-bounce" />
-                    방법 C: 개발 예정 용도 및 규모 기획 (복합 용도 추가 가능)
+                    방법 B: 개발 예정 용도 및 규모 기획 (복합 용도 추가 가능)
                   </label>
                   <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-850 rounded text-[9px] font-bold">
                     기획 개수: {usageScaleList.length}개
@@ -625,7 +662,7 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
               {error && (
                 <div className="p-3 bg-red-50 rounded-lg border border-red-100 flex items-start gap-2.5 text-xs text-red-700">
                   <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-                  <p>{error}</p>
+                  <p className="whitespace-pre-wrap leading-relaxed">{error}</p>
                 </div>
               )}
 

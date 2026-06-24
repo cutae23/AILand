@@ -84,7 +84,7 @@ app.use((req, res, next) => {
   // 1. If Vercel rewrites /api/* to /api/index.ts, req.url may be prefixed with /api/index
   if (req.url.startsWith('/api/index')) {
     req.url = req.url.replace('/api/index', '/api');
-  } else if (originalPath === '/analyze' || originalPath === '/ask-legal') {
+  } else if (req.url === '/analyze' || req.url === '/ask-legal' || req.url.startsWith('/analyze?') || req.url.startsWith('/ask-legal?')) {
     // If it comes as /analyze or /ask-legal without api prefix, prepend /api for routing matching
     req.url = '/api' + req.url;
   }
@@ -93,31 +93,92 @@ app.use((req, res, next) => {
   next();
 });
 
+// Robust content generation helper with automatic fallback to multiple models and automatic exponential backoff retries for transient errors (e.g. 503 High Demand, 429 Rate Limit)
+async function generateContentWithFallback(ai: GoogleGenAI, params: any) {
+  // Try stable models in priority sequence: gemini-3.5-flash -> gemini-3.1-flash-lite -> gemini-2.5-flash -> gemini-flash-latest
+  const rawModels = [
+    params.model,
+    'gemini-3.5-flash',
+    'gemini-3.1-flash-lite',
+    'gemini-2.5-flash',
+    'gemini-flash-latest'
+  ];
+  // Deduplicate and filter out empty model names
+  const modelsToTry = rawModels.filter((m, i, arr) => m && arr.indexOf(m) === i);
+
+  let lastError: any = null;
+
+  for (const modelName of modelsToTry) {
+    let retries = 3;
+    let waitTime = 1000; // Start with 1 second delay
+
+    while (retries > 0) {
+      try {
+        console.log(`[Gemini API] Requesting model: ${modelName} (Retries remaining: ${retries - 1})`);
+        return await ai.models.generateContent({
+          ...params,
+          model: modelName
+        });
+      } catch (err: any) {
+        lastError = err;
+        const errStr = (err.message || '') + ' ' + (JSON.stringify(err) || '');
+        
+        // Distinguish between transient errors (503, UNAVAILABLE) and quota limit (429, RESOURCE_EXHAUSTED)
+        const isTransient = errStr.includes('503') || 
+                            errStr.includes('demand') || 
+                            errStr.includes('temporary') || 
+                            errStr.includes('UNAVAILABLE');
+                            
+        const isQuotaExceeded = errStr.includes('429') || 
+                                errStr.includes('RESOURCE_EXHAUSTED') || 
+                                errStr.includes('quota') || 
+                                errStr.includes('limit');
+
+        if (isTransient && retries > 1) {
+          console.warn(`[Gemini API] Model ${modelName} returned transient error. Retrying in ${waitTime}ms...`, err.message || err);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          waitTime *= 2; // Exponential backoff
+          retries--;
+        } else if (isQuotaExceeded) {
+          console.warn(`[Gemini API] Model ${modelName} returned Quota Exceeded (429/RESOURCE_EXHAUSTED). Skipping to next model immediately to avoid unnecessary retry delays...`);
+          break; // Exit the retry loop for this model, and proceed to the next model in modelsToTry
+        } else {
+          console.warn(`[Gemini API] Model ${modelName} failed or not retryable. Moving to next model option.`, err.message || err);
+          break; // Stop retrying this specific model, move to next model in modelsToTry
+        }
+      }
+    }
+  }
+
+  throw lastError || new Error('전체 Gemini 인공지능 모델 호출이 실패했습니다.');
+}
+
 // Lazy initializer for Gemini SDK as instructed
 function getGeminiClient(customKey?: string): GoogleGenAI | null {
-  let key = (customKey && customKey.trim()) || process.env.GEMINI_API_KEY || '';
-  
-  // Clean the key (remove quotes and extra whitespace)
-  key = key.trim().replace(/^["']|["']$/g, '').trim();
-  
-  console.log(`[Gemini SDK Config] Custom key present: ${!!customKey}, Env key present: ${!!process.env.GEMINI_API_KEY}, Cleaned key prefix: ${key ? key.substring(0, 7) + '...' : 'none'}, Placeholder value: ${key === 'MY_GEMINI_API_KEY'}`);
-
-  if (key && key !== 'MY_GEMINI_API_KEY' && key !== '') {
-    try {
-      return new GoogleGenAI({
-        apiKey: key,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
-          }
+  const key = (customKey && customKey.trim()) || process.env.GEMINI_API_KEY;
+  if (key && key !== 'MY_GEMINI_API_KEY' && key.trim() !== '') {
+    return new GoogleGenAI({
+      apiKey: key.trim(),
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
         }
-      });
-    } catch (initErr) {
-      console.error('[Gemini SDK Config] Initialization error:', initErr);
-    }
+      }
+    });
   }
   return null;
 }
+
+// Debug endpoint to safely inspect GEMINI_API_KEY status
+app.get('/api/debug-key', (req, res) => {
+  const key = process.env.GEMINI_API_KEY;
+  return res.json({
+    exists: !!key,
+    length: key ? key.length : 0,
+    prefix: key ? key.substring(0, 6) : 'none',
+    nodeEnv: process.env.NODE_ENV || 'none'
+  });
+});
 
 /// 1. API Route: Legal / Regulatory Land Analysis (Step 1)
 app.post(['/api/analyze', '/analyze', '/api/index/analyze', '/index/analyze'], async (req, res) => {
@@ -125,7 +186,7 @@ app.post(['/api/analyze', '/analyze', '/api/index/analyze', '/index/analyze'], a
     const { eumLink, screenshot, sampleLandId, expectedUsage, expectedScale, usageScaleList } = req.body;
 
     let chosenSample = SAMPLE_LANDS.find(l => l.id === sampleLandId);
-    const customKey = req.headers['x-gemini-key'] as string | undefined;
+    const customKey = (req.headers['x-gemini-key'] || req.headers['x-gemini-api-key'] || req.headers['X-Gemini-Key'] || req.headers['X-Gemini-API-Key']) as string | undefined;
     const ai = getGeminiClient(customKey);
 
     // Handle single vs multiple usages dynamically
@@ -217,6 +278,18 @@ app.post(['/api/analyze', '/analyze', '/api/index/analyze', '/index/analyze'], a
           };
         }
 
+        let imagePromptAddition = '';
+        if (imagePart) {
+          imagePromptAddition = `
+[🚨🚨🚨 중요 시각 판독 지침 (필독) 🚨🚨🚨]
+사용자가 '토지이용계획확인서', '규제도면', 또는 실제 지번이 표기된 지도 화면의 캡쳐 이미지를 업로드하였습니다.
+1. 이미지 내에 기재되어 있는 실제 대지 주소, 용도지역/지구 구역(예: 제3종일반주거지역, 준주거지역, 준공업지역, 일반상업지역 등), 지번, 대지면적(㎡), 인접 도로 너비와 접도 조건 등의 텍스트 및 기호를 시각적으로 고도로 정밀 판독해 주십시오.
+2. 판독된 정보는 분석 결과 JSON의 "address"(실제 판독된 지번 및 도로명 주소), "zoning"(실제 판독된 용도지역/지구 명칭), "baselineFAR"(실제 용도지역에 맞는 기본 용적률 상한), "baselineBCR"(실제 용도지역에 맞는 기본 건폐율 상한), "areaSize"(실제 대지 면적) 필드에 실시간 반영해 주십시오. (기존 템플릿의 가상 서울 여의도 주소나 용도지역 수치 등으로 뭉뚱그려 대체하지 마십시오.)
+3. 규제 도면의 필지 형태(세장형, 가로형 등), 접해 있는 도면상 도로 배치, 인접 필지와의 관계를 바탕으로 건축법상 일조 사선 제한 후퇴 한계나 건축선 후퇴 조건을 실제 도면을 기준으로 검출하여 regulations 배열에 기입하십시오.
+4. 만약 해상도가 낮거나 한글 텍스트 판독이 불분명할 경우에도, 도면의 구조나 흐릿한 글자로부터 용도지역 단어(예: "주거", "상업", "녹지")를 최대한 유추하여 실제 땅의 사실관계에 부합하도록 분석 결과를 가동해 주십시오.
+`;
+        }
+
         const promptString = `
 당신은 대한민국 건축법, 국토계획법, 주택법, 주차장법, 교육환경법, 서울특별시/해당지자체 도시계획 및 건축 조례, 그리고 지구단위계획 수립 가이드라인 등의 지자체 부동산 개발 인허가 검토 전문가입니다.
 사용자가 구상 중인 다음의 다중 복합 개발 시나리오 조건에 완벽하게 부응하는 8대 핵심 행위제한에 관한 종합 법규조서와 설계 완화 검정 성적서를 작성해 내십시오.
@@ -224,6 +297,8 @@ app.post(['/api/analyze', '/analyze', '/api/index/analyze', '/index/analyze'], a
 [사용자 구상 개발 시나리오]
 - 대상 토지주소/토지이음 정보: ${eumLink || '미제공 (캡쳐도면에 의존)'}
 ${scenarioDescription}
+
+${imagePromptAddition}
 
 [중요 요청 - 복합 용도 매칭 고도 기획 및 완화 가이드]
 1. 제안된 복합용도 조합(${targetUsage})의 용도 상호 간 법적 충돌 및 완충 요건을 심도 있게 분석해 주십시오. (예: 주택과 상업시설의 소음 방화 구획, 주차장법상 서로 다른 기준 적용 등)
@@ -253,7 +328,7 @@ ${scenarioDescription}
         }
         contentsParts.push({ text: promptString });
 
-        const response = await ai.models.generateContent({
+        const response = await generateContentWithFallback(ai, {
           model: 'gemini-3.5-flash',
           contents: { parts: contentsParts },
           config: {
@@ -316,13 +391,39 @@ ${scenarioDescription}
 
         return res.json(mergedResult);
       } catch (err: any) {
-        console.error('Gemini processing failed, falling back to local database:', err);
-        fallbackData.developmentPotential = `⚠️ [Gemini AI 처리 실패 - 로컬 규제 DB 가동] AI 분석 도중 오류가 발생했습니다. (오류내용: ${err.message || err})\n\n` + fallbackData.developmentPotential;
+        console.error('Gemini processing failed:', err);
+        if (screenshot) {
+          const errStr = (err.message || '') + ' ' + (JSON.stringify(err) || '');
+          const isQuota = errStr.includes('429') || 
+                          errStr.includes('RESOURCE_EXHAUSTED') || 
+                          errStr.includes('quota') || 
+                          errStr.includes('limit');
+          
+          if (isQuota) {
+            return res.status(500).json({
+              error: `⚠️ [Google AI Studio 무료 호출 제한 발생]
+공용 API 키의 호출 속도 제한(Rate Limit) 또는 무료 할당량이 모두 소진되었습니다.
+
+💡 즉시 해결하는 방법:
+1. 약 1~2분 뒤 다시 호출하시면 한도가 해제되어 즉시 정상 작동할 수 있습니다.
+2. 우측 상단의 'API 키 발급/설정법 안내' 가이드를 통해 회원님의 개인 API 키(무료)를 발급받아 입력 및 등록(키 등록 버튼 클릭)하시면 대기 없이 100% 무제한으로 모든 기능을 실시간 이용할 수 있습니다.`
+            });
+          }
+          return res.status(500).json({
+            error: `업로드하신 이미지 분석 중 AI 호출 오류가 발생했습니다: ${err.message || err}. 설정에서 API 키가 올바른지 확인하거나 잠시 후 다시 시도해 주세요.`
+          });
+        }
+        fallbackData.developmentPotential = "⚠️ [로컬 규제 DB 기반 엔진 작동] AI 분석 중 일시적인 지연이 발생하여 내장된 기본 가이드라인으로 검토되었습니다.\n\n" + fallbackData.developmentPotential;
         return res.json(fallbackData);
       }
     } else {
+      if (screenshot) {
+        return res.status(400).json({
+          error: '업로드하신 캡쳐 도면을 인공지능(AI)으로 분석하려면 우측 상단의 API 키를 등록하거나 환경 변수(GEMINI_API_KEY) 설정이 필요합니다.'
+        });
+      }
       // No API key provided, work fully in offline mode
-      fallbackData.developmentPotential = "ℹ️ [로컬 규제 DB 기반 엔진 작동] Settings > Secrets에서 GEMINI_API_KEY를 등록하거나 Step 1 상단의 '개인 API 키 등록' 기능을 이용하시면 실시간 최신 도시계획 조례 연동 AI 분석 조서가 가동됩니다.\n\n" + fallbackData.developmentPotential;
+      fallbackData.developmentPotential = "ℹ️ [로컬 규제 DB 기반 엔진 작동] Settings에서 GEMINI_API_KEY를 등록하면 보다 강력한 최신 프롬프트 기반의 도시계획 조례 연동 법규 검토가 제공됩니다.\n\n" + fallbackData.developmentPotential;
       return res.json(fallbackData);
     }
   } catch (globalErr: any) {
@@ -334,7 +435,7 @@ ${scenarioDescription}
 // 1.5. API Route: Legal AI Advisory Interactive Q&A
 app.post(['/api/ask-legal', '/ask-legal', '/api/index/ask-legal', '/index/ask-legal'], async (req, res) => {
   const { question, landContext, history } = req.body;
-  const customKey = req.headers['x-gemini-key'] as string | undefined;
+  const customKey = (req.headers['x-gemini-key'] || req.headers['x-gemini-api-key'] || req.headers['X-Gemini-Key'] || req.headers['X-Gemini-API-Key']) as string | undefined;
   const ai = getGeminiClient(customKey);
 
   if (!question) {
@@ -392,7 +493,7 @@ ${contextStr}
         parts: [{ text: defaultPrompt }]
       });
 
-      const response = await ai.models.generateContent({
+      const response = await generateContentWithFallback(ai, {
         model: 'gemini-3.5-flash',
         contents: contentsParts,
         config: {
@@ -404,7 +505,23 @@ ${contextStr}
       return res.json({ answer });
     } catch (err: any) {
       console.error('Interactive Legal Q&A failed:', err);
-      return res.status(500).json({ error: `AI 답변 생성 오류: ${err.message}` });
+      const errStr = (err.message || '') + ' ' + (JSON.stringify(err) || '');
+      const isQuota = errStr.includes('429') || 
+                      errStr.includes('RESOURCE_EXHAUSTED') || 
+                      errStr.includes('quota') || 
+                      errStr.includes('limit');
+      
+      if (isQuota) {
+        return res.status(500).json({
+          error: `⚠️ [Google AI Studio 무료 호출 제한 발생]
+공용 API 키의 호출 속도 제한(Rate Limit) 또는 무료 할당량이 모두 소진되었습니다.
+
+💡 즉시 해결하는 방법:
+1. 약 1~2분 뒤 다시 질문하시면 한도가 해제되어 즉시 정상적으로 답변을 받아보실 수 있습니다.
+2. 우측 상단의 'API 키 발급/설정법 안내' 가이드를 통해 회원님의 개인 API 키(무료)를 발급받아 입력 및 등록(키 등록 버튼 클릭)하시면 대기 없이 100% 무제한으로 모든 기능을 실시간 이용할 수 있습니다.`
+        });
+      }
+      return res.status(500).json({ error: `AI 답변 생성 오류: ${err.message || err}` });
     }
   } else {
     // Offline / No Key mockup response
