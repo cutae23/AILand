@@ -445,11 +445,55 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
     // G. Value Diagnosis Scoring and Radar Chart
     // Normalize axis values to 0-100 scales for Radar Chart presentation
-    const salesScore = Math.round(Math.min(100, Math.max(10, (totalSalesRevenue / (totalProjectCost * 0.5 + 1)) * 100)));
-    const leaseScore = Math.round(Math.min(100, Math.max(10, (((totalLeaseDeposits + totalAnnualRent * 10) / (totalProjectCost * 0.5 + 1)) * 100))));
+    const rawSalesScore = Math.round(Math.min(100, Math.max(10, (totalSalesRevenue / (totalProjectCost * 0.5 + 1)) * 100)));
+    const rawLeaseScore = Math.round(Math.min(100, Math.max(10, (((totalLeaseDeposits + totalAnnualRent * 10) / (totalProjectCost * 0.5 + 1)) * 100))));
     const expenditureScore = Math.round(Math.max(15, Math.min(100, 100 - (totalProjectCost / (totalRevenues + 1) * 80))));
-    const bepScore = Math.round(Math.max(10, 100 - breakEvenRatio));
+    
+    // Dynamic BEP Score Curve based on real-world development risk benchmarks
+    let bepScore = 50;
+    if (breakEvenRatio <= 30) {
+      bepScore = Math.round(100 - (breakEvenRatio / 30) * 5); // 95 to 100
+    } else if (breakEvenRatio <= 50) {
+      bepScore = Math.round(95 - ((breakEvenRatio - 30) / 20) * 10); // 85 to 95
+    } else if (breakEvenRatio <= 70) {
+      bepScore = Math.round(85 - ((breakEvenRatio - 50) / 20) * 15); // 70 to 85
+    } else if (breakEvenRatio <= 90) {
+      bepScore = Math.round(70 - ((breakEvenRatio - 70) / 20) * 30); // 40 to 70
+    } else {
+      bepScore = Math.round(Math.max(10, 40 - ((breakEvenRatio - 90) / 10) * 30)); // 10 to 40
+    }
+
     const irrScore = Math.round(Math.min(100, Math.max(10, (irr > 0 ? (irr / 25) * 100 : 10))));
+
+    // Adaptive Business Model Weighting (Pure Sales, Pure Lease, or Mixed-use)
+    const hasSales = totalSalesRevenue > 0;
+    const hasLease = (totalLeaseDeposits + totalAnnualRent) > 0;
+
+    let salesScore = rawSalesScore;
+    let leaseScore = rawLeaseScore;
+
+    if (hasSales && !hasLease) {
+      // 100% Sales Project: No lease facilities.
+      // Score lease axis as a measure of 'Capital Liquidity / Fast Upfront Recovery' instead of a flat 10 penalization.
+      leaseScore = Math.round(Math.min(100, Math.max(70, rawSalesScore * 0.95)));
+    } else if (!hasSales && hasLease) {
+      // 100% Lease Project: No sales facilities.
+      // Score sales axis as a measure of 'Asset Capitalization / Yield Strength' instead of a flat 10 penalization.
+      salesScore = Math.round(Math.min(100, Math.max(70, rawLeaseScore * 0.95)));
+    } else if (hasSales && hasLease) {
+      // Mixed Project: Ensure smaller components are rewarded as beneficial diversification, not penalized for small scale.
+      const totalMixRevenue = totalSalesRevenue + totalLeaseDeposits + totalAnnualRent * 10;
+      const salesRatio = totalSalesRevenue / (totalMixRevenue > 0 ? totalMixRevenue : 1);
+      const leaseRatio = 1 - salesRatio;
+
+      if (salesRatio > 0.75) {
+        // Sales-dominant: Lease acts as high-quality supplemental cash flow
+        leaseScore = Math.round(Math.min(100, rawLeaseScore + (rawSalesScore - rawLeaseScore) * salesRatio * 0.85));
+      } else if (leaseRatio > 0.75) {
+        // Lease-dominant: Sales act as high-quality upfront debt reduction
+        salesScore = Math.round(Math.min(100, rawSalesScore + (rawLeaseScore - rawSalesScore) * leaseRatio * 0.85));
+      }
+    }
 
     const radarData = [
       { subject: '분양수입', score: salesScore },
