@@ -104,33 +104,82 @@ export default function Step4Report({
         {/* REPORT CSS STYLES FOR PERFECT PRINT FORMATTING */}
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
-            body {
+            @page {
+              size: A4 portrait;
+              margin: 15mm 12mm 15mm 12mm !important;
+            }
+            html, body {
               background-color: white !important;
               color: #1a1a1a !important;
               font-family: 'Inter', sans-serif !important;
+              width: 100% !important;
+              height: auto !important;
+              min-height: 0 !important;
+              overflow: visible !important;
+              margin: 0 !important;
+              padding: 0 !important;
             }
             #app-root {
+              display: block !important;
               background-color: white !important;
               padding: 0 !important;
               margin: 0 !important;
+              width: 100% !important;
+              height: auto !important;
+              min-height: 0 !important;
+              overflow: visible !important;
             }
             aside, header, footer, .print\\:hidden {
               display: none !important;
             }
             main {
+              display: block !important;
               padding: 0 !important;
               margin: 0 !important;
               max-width: 100% !important;
               width: 100% !important;
+              height: auto !important;
+              min-height: 0 !important;
+              overflow: visible !important;
             }
             #pdf-print-area {
+              display: block !important;
               border: none !important;
               padding: 0 !important;
               margin: 0 !important;
               background: transparent !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              height: auto !important;
+              overflow: visible !important;
             }
             .page-break {
               page-break-before: always !important;
+              break-inside: avoid !important;
+            }
+            /* Eliminate all scrollbars and force full visibility */
+            .overflow-x-auto, .overflow-auto, [class*="overflow-"] {
+              overflow: visible !important;
+              overflow-x: visible !important;
+              overflow-y: visible !important;
+            }
+            /* Table wrap adjustments */
+            table {
+              width: 100% !important;
+              table-layout: auto !important;
+              border-collapse: collapse !important;
+            }
+            th, td {
+              word-break: keep-all !important;
+              overflow-wrap: break-word !important;
+              white-space: normal !important;
+              font-size: 10px !important;
+              padding: 4px 6px !important;
+            }
+            /* Specific text wraps */
+            .font-mono {
+              word-break: break-all !important;
+              white-space: normal !important;
             }
           }
         `}} />
