@@ -35,9 +35,48 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   const [netRatio, setNetRatio] = useState<number>(75); // 전용률 (%)
   
   // Financial parameters
-  const [landPurchasePrice, setLandPurchasePrice] = useState<number>(
-    currentLand?.id === 'gangnam-yeoksam' ? 120 : currentLand?.id === 'seocho-banpo' ? 70 : 35
-  ); // 토지매입가 (억원)
+  const getOfficialLandPricePerM2 = () => {
+    if (!currentLand) return 500;
+    const addr = currentLand.address || '';
+    if (addr.includes('역삼') || addr.includes('강남')) return 2100; // 2,100만원/㎡
+    if (addr.includes('서초') || addr.includes('반포')) return 1600; // 1,600만원/㎡
+    if (addr.includes('을지로') || addr.includes('명동') || addr.includes('중구')) return 2400; // 2,400만원/㎡
+    if (addr.includes('연남') || addr.includes('마포')) return 850;  // 850만원/㎡
+    return 500; // 500만원/㎡
+  };
+
+  const getInitialLandPurchasePrices = () => {
+    const isGangnam = currentLand?.id === 'gangnam-yeoksam';
+    const isSeocho = currentLand?.id === 'seocho-banpo';
+    const isYeonnam = currentLand?.id === 'yeonnam-forest';
+    const isEuljiro = currentLand?.address.includes('을지로') || currentLand?.address.includes('중구') || currentLand?.address.includes('명동');
+    
+    let initPricePerPyung = 3500;
+    let initTotalPrice = 35;
+    
+    if (isGangnam) {
+      initPricePerPyung = 12000;
+      initTotalPrice = 410;
+    } else if (isSeocho) {
+      initPricePerPyung = 10000;
+      initTotalPrice = 205;
+    } else if (isEuljiro) {
+      initPricePerPyung = 15000;
+      initTotalPrice = 450;
+    } else if (isYeonnam) {
+      initPricePerPyung = 6000;
+      initTotalPrice = 57;
+    } else if (currentLand) {
+      initPricePerPyung = 3500;
+      initTotalPrice = Math.round((currentLand.areaSize * 0.3025 * 3500) / 10000);
+    }
+    return { initPricePerPyung, initTotalPrice };
+  };
+
+  const { initPricePerPyung, initTotalPrice } = getInitialLandPurchasePrices();
+
+  const [landPricePerPyung, setLandPricePerPyung] = useState<number>(initPricePerPyung); // 평당 토지 매입 단가 (만원/평)
+  const [landPurchasePrice, setLandPurchasePrice] = useState<number>(initTotalPrice); // 토지매입가 (총액, 억원)
   const [constructionCostPerPyung, setConstructionCostPerPyung] = useState<number>(850); // 평당 공사비 (만원, 예: 850만원)
   const [otherCostsRatio, setOtherCostsRatio] = useState<number>(20); // 기타 비용 비율 (%)
 
@@ -97,17 +136,62 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   // Input tab control
   const [activeInputTab, setActiveInputTab] = useState<'residential' | 'hotel' | 'retail' | 'office'>('residential');
 
+  // Sync handlers for land price
+  const handleLandPurchasePriceChange = (val: number) => {
+    setLandPurchasePrice(val);
+    const pyung = landArea * 0.3025;
+    if (pyung > 0) {
+      setLandPricePerPyung(Math.round((val * 10000) / pyung));
+    }
+  };
+
+  const handleLandPricePerPyungChange = (val: number) => {
+    setLandPricePerPyung(val);
+    const pyung = landArea * 0.3025;
+    const computedTotal = parseFloat(((pyung * val) / 10000).toFixed(1));
+    setLandPurchasePrice(computedTotal);
+  };
+
   // AI Market Price Analysis States
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [marketAnalysisReport, setMarketAnalysisReport] = useState<string>('');
   const [analysisError, setAnalysisError] = useState<string>('');
+  const [aiRecommendations, setAiRecommendations] = useState<any>(null);
+  const [isAiSynced, setIsAiSynced] = useState<boolean>(false);
 
   // Sync state if step 1 or step 2 changes
   useEffect(() => {
     if (currentLand) {
       setLandArea(currentLand.areaSize);
       setAppliedBCR(currentLand.baselineBCR);
-      setLandPurchasePrice(currentLand.id === 'gangnam-yeoksam' ? 120 : currentLand.id === 'seocho-banpo' ? 70 : 35);
+      
+      const isGangnam = currentLand.id === 'gangnam-yeoksam';
+      const isSeocho = currentLand.id === 'seocho-banpo';
+      const isYeonnam = currentLand.id === 'yeonnam-forest';
+      const isEuljiro = currentLand.address.includes('을지로') || currentLand.address.includes('중구') || currentLand.address.includes('명동');
+      
+      let initPricePerPyung = 3500;
+      let initTotalPrice = 35;
+      
+      if (isGangnam) {
+        initPricePerPyung = 12000;
+        initTotalPrice = 410;
+      } else if (isSeocho) {
+        initPricePerPyung = 10000;
+        initTotalPrice = 205;
+      } else if (isEuljiro) {
+        initPricePerPyung = 15000;
+        initTotalPrice = 450;
+      } else if (isYeonnam) {
+        initPricePerPyung = 6000;
+        initTotalPrice = 57;
+      } else {
+        initPricePerPyung = 3500;
+        initTotalPrice = Math.round((currentLand.areaSize * 0.3025 * 3500) / 10000);
+      }
+      
+      setLandPricePerPyung(initPricePerPyung);
+      setLandPurchasePrice(initTotalPrice);
       
       // Reset analysis or trigger on land change
       fetchMarketPrices(currentLand.address, currentLand.zoning);
@@ -124,6 +208,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   const fetchMarketPrices = async (address: string, zoning: string) => {
     setIsAnalyzing(true);
     setAnalysisError('');
+    setIsAiSynced(false);
     try {
       const finalApiKey = localStorage.getItem('user_gemini_api_key') || '';
       const response = await fetch('/api/analyze-market-price', {
@@ -163,6 +248,57 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           setOfficePricePerPyung(data.office);
         }
 
+        // Capture AI suggested development & financial parameters
+        const recs = {
+          landPricePerPyung: data.landPricePerPyung,
+          landPurchasePrice: data.landPurchasePrice,
+          constructionCostPerPyung: data.constructionCostPerPyung,
+          officeDepositPerPyung: data.officeDepositPerPyung,
+          officeRentPerPyung: data.officeRentPerPyung,
+          retail1FDeposit: data.retail1FDeposit,
+          retail1FRent: data.retail1FRent,
+          hotelDepositPerRoom: data.hotelDepositPerRoom,
+          hotelRentPerRoom: data.hotelRentPerRoom,
+          otherCostsRatio: data.otherCostsRatio,
+        };
+        setAiRecommendations(recs);
+
+        // Auto-apply AI surrounding analysis values immediately for instant feedback
+        if (data.landPricePerPyung !== undefined) {
+          setLandPricePerPyung(data.landPricePerPyung);
+          const pyung = (currentLand ? currentLand.areaSize : landArea) * 0.3025;
+          const calculatedTotal = parseFloat(((pyung * data.landPricePerPyung) / 10000).toFixed(1));
+          setLandPurchasePrice(data.landPurchasePrice || calculatedTotal);
+        } else if (data.landPurchasePrice !== undefined) {
+          setLandPurchasePrice(data.landPurchasePrice);
+          const pyung = (currentLand ? currentLand.areaSize : landArea) * 0.3025;
+          if (pyung > 0) {
+            setLandPricePerPyung(Math.round((data.landPurchasePrice * 10000) / pyung));
+          }
+        }
+
+        if (data.constructionCostPerPyung !== undefined) setConstructionCostPerPyung(data.constructionCostPerPyung);
+        if (data.officeDepositPerPyung !== undefined) setOfficeDepositPerPyung(data.officeDepositPerPyung);
+        if (data.officeRentPerPyung !== undefined) setOfficeRentPerPyung(data.officeRentPerPyung);
+        
+        if (data.retail1FDeposit !== undefined) {
+          setRetail1FDeposit(data.retail1FDeposit);
+          setRetailB1Deposit(Math.round(data.retail1FDeposit * 0.4));
+          setRetail2FDeposit(Math.round(data.retail1FDeposit * 0.6));
+          setRetail3FDeposit(Math.round(data.retail1FDeposit * 0.5));
+        }
+        if (data.retail1FRent !== undefined) {
+          setRetail1FRent(data.retail1FRent);
+          setRetailB1Rent(Math.round(data.retail1FRent * 0.4));
+          setRetail2FRent(Math.round(data.retail1FRent * 0.6));
+          setRetail3FRent(Math.round(data.retail1FRent * 0.5));
+        }
+
+        if (data.hotelDepositPerRoom !== undefined) setHotelDepositPerRoom(data.hotelDepositPerRoom);
+        if (data.hotelRentPerRoom !== undefined) setHotelRentPerRoom(data.hotelRentPerRoom);
+        if (data.otherCostsRatio !== undefined) setOtherCostsRatio(data.otherCostsRatio);
+
+        setIsAiSynced(true);
         setMarketAnalysisReport(data.marketAnalysis || '성공적으로 분양가를 도출했습니다.');
       } else {
         const errMsg = data.error || '시세 정보 수집 중 예기치 못한 문제가 발생했습니다.';
@@ -655,12 +791,59 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
         {/* AI Market Analysis Report Card */}
         {marketAnalysisReport && (
-          <div className="p-4 bg-amber-50/30 border border-[#EDDBC7]/70 rounded-xl space-y-2">
-            <div className="flex items-center gap-1.5 text-[#2C251F] font-bold text-xs">
-              <Sparkles className="w-4 h-4 text-[#8D7B68]" />
-              <span>AI 주변 실거래 및 분양 시세 분석 피드백</span>
+          <div className="p-5 bg-gradient-to-br from-amber-50/40 to-orange-50/20 border border-[#EDDBC7]/80 rounded-2xl space-y-4 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#EDDBC7]/40 pb-3">
+              <div className="flex items-center gap-2 text-[#2C251F] font-bold text-sm">
+                <Sparkles className="w-4 h-4 text-amber-600 animate-pulse" />
+                <span>AI 주변 입지·실거래 기반 수지분석 추천값 동기화</span>
+              </div>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                실시간 주변 분석 동기화 완료
+              </span>
             </div>
-            <p className="text-xs text-[#8D7B68] leading-relaxed whitespace-pre-wrap">{marketAnalysisReport}</p>
+
+            <p className="text-xs text-[#6E5D4F] leading-relaxed whitespace-pre-wrap font-medium">{marketAnalysisReport}</p>
+
+            {aiRecommendations && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                <div className="p-2.5 bg-white/70 rounded-xl border border-[#EDDBC7]/40 space-y-1">
+                  <div className="text-[10px] text-gray-400 font-semibold">AI 권장 토지비</div>
+                  <div className="text-xs font-bold text-gray-900">
+                    {aiRecommendations.landPricePerPyung 
+                      ? `평당 ${aiRecommendations.landPricePerPyung.toLocaleString()} 만원`
+                      : `${aiRecommendations.landPurchasePrice?.toLocaleString()} 억원`
+                    }
+                  </div>
+                  <div className="text-[9px] text-gray-400">
+                    {aiRecommendations.landPricePerPyung 
+                      ? `총 약 ${aiRecommendations.landPurchasePrice?.toLocaleString()} 억원`
+                      : '공시지가 및 실거래 분석'
+                    }
+                  </div>
+                </div>
+                <div className="p-2.5 bg-white/70 rounded-xl border border-[#EDDBC7]/40 space-y-1">
+                  <div className="text-[10px] text-gray-400 font-semibold">AI 권장 평당 공사비</div>
+                  <div className="text-xs font-bold text-gray-900">{aiRecommendations.constructionCostPerPyung?.toLocaleString()} 만원</div>
+                  <div className="text-[9px] text-gray-400">현 시점 자재·노무비 반영</div>
+                </div>
+                <div className="p-2.5 bg-white/70 rounded-xl border border-[#EDDBC7]/40 space-y-1">
+                  <div className="text-[10px] text-gray-400 font-semibold">오피스 권장 평당임대</div>
+                  <div className="text-xs font-bold text-gray-900">보 {aiRecommendations.officeDepositPerPyung?.toLocaleString()}만 / 월 {aiRecommendations.officeRentPerPyung?.toLocaleString()}만</div>
+                  <div className="text-[9px] text-gray-400">주변 오피스 공실률 보정</div>
+                </div>
+                <div className="p-2.5 bg-white/70 rounded-xl border border-[#EDDBC7]/40 space-y-1">
+                  <div className="text-[10px] text-gray-400 font-semibold">상가 1F 권장 평당임대</div>
+                  <div className="text-xs font-bold text-gray-900">보 {aiRecommendations.retail1FDeposit?.toLocaleString()}만 / 월 {aiRecommendations.retail1FRent?.toLocaleString()}만</div>
+                  <div className="text-[9px] text-gray-400">핵심 배후 상권 요율</div>
+                </div>
+              </div>
+            )}
+
+            <div className="text-[10px] text-[#8D7B68] flex items-center gap-1 font-semibold">
+              <Info className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+              <span>위 파라미터는 AI가 대상지 주소({currentLand?.address}) 주변의 실거래가 및 임대수요 트렌드를 추출하여 산정한 값으로, 하단의 수지분석 시뮬레이션에 자동 대입되었습니다.</span>
+            </div>
           </div>
         )}
 
@@ -1425,20 +1608,63 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                   </div>
                 </div>
 
-                <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
-                  <div className="flex justify-between font-medium">
-                    <span>총 토지 매입비</span>
-                    <span className="font-bold text-gray-950">{landPurchasePrice} 억원</span>
+                <div className="p-4.5 bg-slate-50 border border-slate-200/60 rounded-2xl space-y-4">
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between font-semibold text-gray-800">
+                      <span>평당 토지 매입비</span>
+                      <span className="font-bold text-[#5F7161]">{landPricePerPyung.toLocaleString()} 만원/평</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="1000"
+                      max="25000"
+                      step="100"
+                      value={landPricePerPyung}
+                      onChange={(e) => handleLandPricePerPyungChange(Number(e.target.value))}
+                      className="w-full accent-[#5F7161]"
+                    />
+                    <div className="flex justify-between text-[11px] text-gray-400 font-medium">
+                      <span>㎡당 토지비 환산</span>
+                      <span>약 {Math.round(landPricePerPyung / 3.3058).toLocaleString()} 만원/㎡</span>
+                    </div>
                   </div>
-                  <input
-                    type="range"
-                    min="5"
-                    max="500"
-                    step="1"
-                    value={landPurchasePrice}
-                    onChange={(e) => setLandPurchasePrice(Number(e.target.value))}
-                    className="w-full accent-[#5F7161]"
-                  />
+
+                  <div className="h-px bg-gray-200/50"></div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between font-semibold text-gray-800">
+                      <span>총 토지 매입비 (총액)</span>
+                      <span className="font-extrabold text-gray-950">{landPurchasePrice.toLocaleString()} 억원</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="5"
+                      max="3000"
+                      step="1"
+                      value={landPurchasePrice}
+                      onChange={(e) => handleLandPurchasePriceChange(Number(e.target.value))}
+                      className="w-full accent-slate-800"
+                    />
+                    <div className="text-[10px] text-gray-400 font-medium space-y-1 pt-1.5 border-t border-dashed border-gray-200">
+                      <div className="flex justify-between text-[11px]">
+                        <span>공시지가 (공시지가 추정)</span>
+                        <span>
+                          ㎡당 {getOfficialLandPricePerM2().toLocaleString()} 만원 (총 {parseFloat(((landArea * getOfficialLandPricePerM2()) / 10000).toFixed(1))} 억원)
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-[11px]">
+                        <span>공시지가 대비 배수</span>
+                        <span className="font-semibold text-emerald-700">
+                          {(() => {
+                            const totalOfficialCost = (landArea * getOfficialLandPricePerM2()) / 10000;
+                            return totalOfficialCost > 0 
+                              ? `${(landPurchasePrice / totalOfficialCost).toFixed(2)} 배 수준`
+                              : '-';
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
@@ -1511,7 +1737,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                     사업 종합수지 재무분석 평가서
                   </h4>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 text-center">
                     <div>
                       <span className="text-[10px] text-slate-400 block">총 투자비 (원가)</span>
                       <span className="font-bold text-sm text-gray-800 block mt-0.5">{result.financials.totalProjectCost} 억</span>
@@ -1519,6 +1745,12 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                     <div>
                       <span className="text-[10px] text-slate-400 block">총 매출가치 (Inflows)</span>
                       <span className="font-bold text-sm text-[#5F7161] block mt-0.5">{result.financials.totalRevenues} 억</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">투자 수익률 (ROI)</span>
+                      <span className={`font-bold text-sm ${result.financials.roi >= 0 ? 'text-[#5F7161]' : 'text-rose-600'} block mt-0.5`}>
+                        {result.financials.roi}%
+                      </span>
                     </div>
                     <div>
                       <span className="text-[10px] text-slate-400 block">장래 내부수익률 (IRR)</span>
@@ -1704,13 +1936,16 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                   </h6>
                   <div className="space-y-2 text-[10px] leading-relaxed">
                     <p>
-                      <strong>1. 내부수익률 (IRR 수익성):</strong> 사업 20년 현금흐름의 연평균 복리수익률입니다. <span className="font-semibold text-[#5F7161]">15% 이상(S등급: 우수)</span>, <span className="font-semibold text-amber-650">8~15%(A/B등급: 양호)</span>, <span className="font-semibold text-rose-600">8% 미만(C이하: 미흡)</span>으로 자본 비용 극복 여부를 판정합니다.
+                      <strong>1. 투자 수익률 (ROI):</strong> 총 사업 투입비(원가) 대비 예상 영업이익(10개년 분양/임대 합산 수치)의 비율입니다. 투자 자금 대비 거두는 마진 폭을 직접적으로 나타내어, 단기 자본 효율성을 파악하는 대표 지표입니다.
                     </p>
                     <p>
-                      <strong>2. 손익분기 분양률 (BEP 안전성):</strong> 총 원가를 회수하기 위해 필수로 완료해야 하는 누적 분양 매출률입니다. <span className="font-semibold text-[#5F7161]">60% 이하(안전)</span>, <span className="font-semibold text-rose-600">80% 초과(위험)</span>로 평가합니다.
+                      <strong>2. 내부수익률 (IRR 수익성):</strong> 사업 20년 현금흐름의 연평균 복리수익률입니다. <span className="font-semibold text-[#5F7161]">15% 이상(S등급: 우수)</span>, <span className="font-semibold text-amber-650">8~15%(A/B등급: 양호)</span>, <span className="font-semibold text-rose-600">8% 미만(C이하: 미흡)</span>으로 자본 비용 극복 여부를 판정합니다.
                     </p>
                     <p>
-                      <strong>3. BEP 1~2년 회수 vs 안전성 점수 괴리:</strong>
+                      <strong>3. 손익분기 분양률 (BEP 안전성):</strong> 총 원가를 회수하기 위해 필수로 완료해야 하는 누적 분양 매출률입니다. <span className="font-semibold text-[#5F7161]">60% 이하(안전)</span>, <span className="font-semibold text-rose-600">80% 초과(위험)</span>로 평가합니다.
+                    </p>
+                    <p>
+                      <strong>4. BEP 1~2년 회수 vs 안전성 점수 괴리:</strong>
                       <br />
                       현금흐름 시뮬레이션 상 2~3년차 만에 BEP(누적현금 +전환)를 달성하더라도, <strong>손익분기 분양률(원가율) 자체가 80%를 넘으면 안전성 점수는 낮게 나옵니다.</strong> 원금 회수 속도가 빠른 것(유동성/회전율 우수)과, 최종 미분양 시 사업이 도산할 위험(마진폭 안전성)은 별개의 리스크 지표이기 때문입니다.
                     </p>

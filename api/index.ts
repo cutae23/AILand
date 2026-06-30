@@ -448,6 +448,18 @@ app.post(['/api/analyze-market-price', '/analyze-market-price', '/api/index/anal
     let defaultHotel = 2000;
     let defaultRetail = { b1: 1500, f1: 3500, f2: 2000, f3: 1500 };
     let defaultOffice = 1850;
+    
+    // Expanded local business variables
+    let defaultLandPricePerPyung = 3500; // 만원/평
+    let defaultLandPurchasePrice = 35; // 억원
+    let defaultConstructionCostPerPyung = 850; // 만원
+    let defaultOfficeDepositPerPyung = 150; // 만원
+    let defaultOfficeRentPerPyung = 8; // 만원
+    let defaultRetail1FDeposit = 500; // 만원
+    let defaultRetail1FRent = 25; // 만원
+    let defaultHotelDepositPerRoom = 3000; // 만원
+    let defaultHotelRentPerRoom = 150; // 만원
+    let defaultOtherCostsRatio = 20; // %
     let defaultMarketAnalysis = `[오프라인 분석 안내] 입력하신 대지 주소(${targetAddress}) 인근의 시세를 고려하여 산정된 시세입니다. AI API 키를 설정하면 실시간 실제 국토교통부 실거래 정보 및 주변 대단지 단가 동향을 분석한 고급 평당 분양가 리포트가 수립됩니다.`;
 
     if (targetAddress.includes('역삼') || targetAddress.includes('강남')) {
@@ -456,6 +468,16 @@ app.post(['/api/analyze-market-price', '/analyze-market-price', '/api/index/anal
       defaultHotel = 3200;
       defaultRetail = { b1: 2800, f1: 7500, f2: 4000, f3: 3200 };
       defaultOffice = 3500;
+      defaultLandPricePerPyung = 12000; // 1억 2천만원/평
+      defaultLandPurchasePrice = 410; // 341.22평 * 1.2억원 = 약 410억원
+      defaultConstructionCostPerPyung = 980;
+      defaultOfficeDepositPerPyung = 180;
+      defaultOfficeRentPerPyung = 11;
+      defaultRetail1FDeposit = 650;
+      defaultRetail1FRent = 35;
+      defaultHotelDepositPerRoom = 4000;
+      defaultHotelRentPerRoom = 220;
+      defaultOtherCostsRatio = 22;
       defaultMarketAnalysis = '역삼동 테헤란로 및 주요 배후 상권 입지로 고소득 직장인 수요가 탄탄한 지역입니다. 아파트 기준 평당 6,000만원 전후, 오피스텔 기준 3,500~4,000만원 선의 분양가가 우세하며, 오피스텔 투룸 이상은 쓰리룸 아파텔 상품으로 고밀 분양 시 완판 경쟁력이 우수합니다.';
     } else if (targetAddress.includes('반포') || targetAddress.includes('서초')) {
       defaultApartment = { small: 6800, medium: 7200, large: 7800 };
@@ -463,13 +485,50 @@ app.post(['/api/analyze-market-price', '/analyze-market-price', '/api/index/anal
       defaultHotel = 3500;
       defaultRetail = { b1: 3200, f1: 8500, f2: 4500, f3: 3800 };
       defaultOffice = 3800;
+      defaultLandPricePerPyung = 10000; // 1억원/평
+      defaultLandPurchasePrice = 205; // 205.7평 * 1억원 = 약 205억원
+      defaultConstructionCostPerPyung = 1050;
+      defaultOfficeDepositPerPyung = 200;
+      defaultOfficeRentPerPyung = 12;
+      defaultRetail1FDeposit = 700;
+      defaultRetail1FRent = 40;
+      defaultHotelDepositPerRoom = 4500;
+      defaultHotelRentPerRoom = 250;
+      defaultOtherCostsRatio = 25;
       defaultMarketAnalysis = '대한민국 최고가 시세를 형성 중인 반포 및 서초동 입지입니다. 아파트 평당 분양가는 7,000만원을 상회하며, 오피스텔도 고급 하이엔드 어메니티를 탑재할 경우 평당 4,000~4,600만원에 육박합니다. 고가 분양을 타겟팅한 고품격 설계 설계비중이 높게 요구됩니다.';
+    } else if (targetAddress.includes('을지로') || targetAddress.includes('중구') || targetAddress.includes('명동')) {
+      defaultApartment = { small: 5200, medium: 5600, large: 6000 };
+      defaultOfficetel = { studio: 3000, tworoom: 3300, threeroom: 3700 };
+      defaultHotel = 2800;
+      defaultRetail = { b1: 2400, f1: 6800, f2: 3600, f3: 2800 };
+      defaultOffice = 3200;
+      defaultLandPricePerPyung = 15000; // 1억 5천만원/평
+      defaultLandPurchasePrice = 450; // 을지로 중심상업지 대형 부지 기준 고가
+      defaultConstructionCostPerPyung = 1000;
+      defaultOfficeDepositPerPyung = 220;
+      defaultOfficeRentPerPyung = 13;
+      defaultRetail1FDeposit = 800;
+      defaultRetail1FRent = 45;
+      defaultHotelDepositPerRoom = 5000;
+      defaultHotelRentPerRoom = 260;
+      defaultOtherCostsRatio = 22;
+      defaultMarketAnalysis = '서울 도심부(CBD) 핵심 오피스 빌딩 및 명동/을지로 주요 상권이 관통하는 중심지입니다. 업무시설 임대 수요가 최고 수준으로 안정적이며 평당 오피스 분양가는 3,200만원 선, 1층 명품 상가 평당 분양가는 6,800만원을 상회합니다. 또한 대단지 주거 배후지가 희소하여 소형 주거시설 및 오피스텔 분양 시 고소득 직장인 수요 기반 완판 경쟁력이 탁월합니다.';
     } else if (targetAddress.includes('연남') || targetAddress.includes('마포')) {
       defaultApartment = { small: 4200, medium: 4500, large: 5000 };
       defaultOfficetel = { studio: 2600, tworoom: 2900, threeroom: 3200 };
       defaultHotel = 2600;
       defaultRetail = { b1: 1800, f1: 5200, f2: 3000, f3: 2200 };
       defaultOffice = 2600;
+      defaultLandPricePerPyung = 6000; // 6천만원/평
+      defaultLandPurchasePrice = 57; // 94.38평 * 6000만원 = 약 57억원
+      defaultConstructionCostPerPyung = 900;
+      defaultOfficeDepositPerPyung = 140;
+      defaultOfficeRentPerPyung = 7.5;
+      defaultRetail1FDeposit = 450;
+      defaultRetail1FRent = 22;
+      defaultHotelDepositPerRoom = 3500;
+      defaultHotelRentPerRoom = 180;
+      defaultOtherCostsRatio = 18;
       defaultMarketAnalysis = '연남동/마포권역은 젊은 세대의 트렌디 상권 및 역세권 소형 가구 수요가 집중되는 지역입니다. 대형 아파트 평당 5,000만원 안팎, 중소형은 4,200만원 선이며, 1인 가구 타겟형 오피스텔 원룸(평당 2,600만원 선) 및 주거형 2룸 오피스텔 수요가 지속 강세입니다.';
     }
 
@@ -477,7 +536,7 @@ app.post(['/api/analyze-market-price', '/analyze-market-price', '/api/index/anal
       try {
         const promptString = `
 당신은 대한민국 국토교통부 실거래 정보와 주변 아파트, 주상복합, 오피스텔, 호텔, 상업시설(상가), 오피스의 분양 및 임대 시세 빅데이터를 정밀히 꿰뚫고 있는 공인 부동산 시장 분석 전문가입니다.
-다음 대지 정보 및 용도지역을 기반으로, 분양 예정인 "공동주택", "오피스텔", "호텔(숙박시설)", "판매시설(B1, 1F, 2F, 3F 상가)", "업무시설(오피스)"의 주변 적정 분양 시세(평당 분양단가, 단위: 만원)와 시세 분석 요약 리포트를 작성해 주십시오.
+다음 대지 정보 및 용도지역을 기반으로, 분양 및 임대 예정인 "공동주택", "오피스텔", "호텔(숙박시설)", "판매시설(상가)", "업무시설(오피스)"의 주변 적정 분양 시세(평당 분양단가, 단위: 만원)와 시세 분석 요약 리포트, 그리고 사업성 수지 분석을 위한 기초 권장 제반 파라미터들을 도출해 주십시오.
 
 [검토 대지 정보]
 - 대지 주소 및 상세정보: ${targetAddress}
@@ -503,6 +562,16 @@ app.post(['/api/analyze-market-price', '/analyze-market-price', '/api/index/anal
     "f3": 2000       // 상업시설 지상 3층 평당가 (단위: 만원, 숫자만)
   },
   "office": 2200,    // 업무시설(오피스)의 적정 평균 평당 분양가 (단위: 만원, 숫자만)
+  "landPricePerPyung": 3500,        // 대지의 추천 평당 토지 매입 단가 (단위: 만원, 숫자만, 서울의 경우 용산/마포/강남/서초 요지는 평당 5,000만 ~ 1억 8,000만원 선의 실거래 시세를 형성합니다)
+  "landPurchasePrice": 120,         // 위 대지 면적 규모에 맞춘 추천 총 토지 매입비 규모 (단위: 억원, 숫자만. 예: 대지면적 평수 * 평당 토지매입가 를 계산하여 억원으로 산출)
+  "constructionCostPerPyung": 850,   // 본 입지 및 개발 규모에 적합한 추정 평당 건축 공사비 단가 (단위: 만원, 숫자만)
+  "officeDepositPerPyung": 150,      // 인근 오피스 임대 평당 추천 보증금 (단위: 만원, 숫자만)
+  "officeRentPerPyung": 8,           // 인근 오피스 임대 평당 추천 월세 (단위: 만원, 숫자만)
+  "retail1FDeposit": 500,            // 1층 상가 임대 평당 추천 보증금 (단위: 만원, 숫자만)
+  "retail1FRent": 25,                // 1층 상가 임대 평당 추천 월세 (단위: 만원, 숫자만)
+  "hotelDepositPerRoom": 3000,        // 호텔 임대/운영 시 객실당 추천 보증금 (단위: 만원, 숫자만)
+  "hotelRentPerRoom": 150,           // 호텔 임대/운영 시 객실당 추천 월세 (단위: 만원, 숫자만)
+  "otherCostsRatio": 20,             // 예비비, 부대용역비 등을 포함한 기타 비용 비율 (%)
   "marketAnalysis": "해당 구역의 최신 주변 단지 실제 거래 동향, 분양 경쟁률, 고소득 임대 배후수요의 밀집 정도를 고려하여 도출된 합리적인 분양가격 근거 및 시장 전망을 한국어로 3~4문장의 깔끔하고 신뢰감 높은 어조로 설명해 주세요."
 }
 `;
@@ -539,7 +608,35 @@ app.post(['/api/analyze-market-price', '/analyze-market-price', '/api/index/anal
         const office = Number(parsed?.office || defaultOffice);
         const marketAnalysis = parsed?.marketAnalysis || defaultMarketAnalysis;
 
-        return res.json({ apartment, officetel, hotel, retail, office, marketAnalysis });
+        const landPricePerPyung = Number(parsed?.landPricePerPyung || defaultLandPricePerPyung);
+        const landPurchasePrice = Number(parsed?.landPurchasePrice || defaultLandPurchasePrice);
+        const constructionCostPerPyung = Number(parsed?.constructionCostPerPyung || defaultConstructionCostPerPyung);
+        const officeDepositPerPyung = Number(parsed?.officeDepositPerPyung || defaultOfficeDepositPerPyung);
+        const officeRentPerPyung = Number(parsed?.officeRentPerPyung || defaultOfficeRentPerPyung);
+        const retail1FDeposit = Number(parsed?.retail1FDeposit || defaultRetail1FDeposit);
+        const retail1FRent = Number(parsed?.retail1FRent || defaultRetail1FRent);
+        const hotelDepositPerRoom = Number(parsed?.hotelDepositPerRoom || defaultHotelDepositPerRoom);
+        const hotelRentPerRoom = Number(parsed?.hotelRentPerRoom || defaultHotelRentPerRoom);
+        const otherCostsRatio = Number(parsed?.otherCostsRatio || defaultOtherCostsRatio);
+
+        return res.json({ 
+          apartment, 
+          officetel, 
+          hotel, 
+          retail, 
+          office, 
+          marketAnalysis,
+          landPricePerPyung,
+          landPurchasePrice,
+          constructionCostPerPyung,
+          officeDepositPerPyung,
+          officeRentPerPyung,
+          retail1FDeposit,
+          retail1FRent,
+          hotelDepositPerRoom,
+          hotelRentPerRoom,
+          otherCostsRatio
+        });
       } catch (geminiErr: any) {
         console.error('Gemini market analysis failed, using fallback:', geminiErr);
         return res.json({
@@ -548,6 +645,16 @@ app.post(['/api/analyze-market-price', '/analyze-market-price', '/api/index/anal
           hotel: defaultHotel,
           retail: defaultRetail,
           office: defaultOffice,
+          landPricePerPyung: defaultLandPricePerPyung,
+          landPurchasePrice: defaultLandPurchasePrice,
+          constructionCostPerPyung: defaultConstructionCostPerPyung,
+          officeDepositPerPyung: defaultOfficeDepositPerPyung,
+          officeRentPerPyung: defaultOfficeRentPerPyung,
+          retail1FDeposit: defaultRetail1FDeposit,
+          retail1FRent: defaultRetail1FRent,
+          hotelDepositPerRoom: defaultHotelDepositPerRoom,
+          hotelRentPerRoom: defaultHotelRentPerRoom,
+          otherCostsRatio: defaultOtherCostsRatio,
           marketAnalysis: defaultMarketAnalysis + `\n(⚠️ AI 엔진 분석 오류로 기본 로컬 시세가 우선 적용되었습니다: ${geminiErr.message || geminiErr})`
         });
       }
@@ -558,6 +665,16 @@ app.post(['/api/analyze-market-price', '/analyze-market-price', '/api/index/anal
         hotel: defaultHotel,
         retail: defaultRetail,
         office: defaultOffice,
+        landPricePerPyung: defaultLandPricePerPyung,
+        landPurchasePrice: defaultLandPurchasePrice,
+        constructionCostPerPyung: defaultConstructionCostPerPyung,
+        officeDepositPerPyung: defaultOfficeDepositPerPyung,
+        officeRentPerPyung: defaultOfficeRentPerPyung,
+        retail1FDeposit: defaultRetail1FDeposit,
+        retail1FRent: defaultRetail1FRent,
+        hotelDepositPerRoom: defaultHotelDepositPerRoom,
+        hotelRentPerRoom: defaultHotelRentPerRoom,
+        otherCostsRatio: defaultOtherCostsRatio,
         marketAnalysis: defaultMarketAnalysis
       });
     }
