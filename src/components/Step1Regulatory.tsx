@@ -12,9 +12,16 @@ import { motion, AnimatePresence } from 'motion/react';
 interface Step1RegulatoryProps {
   onAnalysisComplete: (analysis: LandRegulatoryAnalysis) => void;
   savedAnalysis: LandRegulatoryAnalysis | null;
+  chatHistory: Array<{ role: 'user' | 'assistant', content: string }>;
+  setChatHistory: React.Dispatch<React.SetStateAction<Array<{ role: 'user' | 'assistant', content: string }>>>;
 }
 
-export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: Step1RegulatoryProps) {
+export default function Step1Regulatory({ 
+  onAnalysisComplete, 
+  savedAnalysis,
+  chatHistory,
+  setChatHistory
+}: Step1RegulatoryProps) {
   const [selectedSampleId, setSelectedSampleId] = useState<string>('');
   const [customerLink, setCustomerLink] = useState<string>('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -86,12 +93,6 @@ export default function Step1Regulatory({ onAnalysisComplete, savedAnalysis }: S
 
   // Interactive Law Q&A Chat State
   const [chatInput, setChatInput] = useState<string>('');
-  const [chatHistory, setChatHistory] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([
-    {
-      role: 'assistant',
-      content: '반갑습니다! 이 부지의 8대 법정 규제 검토 조서 작성을 완료했습니다. 도시계획 조례, 지구단위계획 의무 준수 한계, 지상 용도별 가용 분석(근생활/오피스텔 등 복합개발성), 주차장 대수 산정 등 추가로 궁금하신 구체적인 법적 사항을 무엇이든 질문해 주세요!'
-    }
-  ]);
   const [isChatLoading, setIsChatLoading] = useState<boolean>(false);
   const [chatError, setChatError] = useState<string | null>(null);
 

@@ -7,15 +7,23 @@ import React, { useState } from 'react';
 import Step1Regulatory from './components/Step1Regulatory';
 import Step2Relaxation from './components/Step2Relaxation';
 import Step3Scenario from './components/Step3Scenario';
+import Step4Report from './components/Step4Report';
 import { LandRegulatoryAnalysis, FARRelaxationResult } from './types';
 import { MapPin, Building2, HelpCircle, CheckCircle, Sliders, FileText, ChevronRight, Calculator, User, Compass, ServerCrash } from 'lucide-react';
 
 export default function App() {
-  const [activeStep, setActiveStep] = useState<1 | 2 | 3>(1);
+  const [activeStep, setActiveStep] = useState<1 | 2 | 3 | 4>(1);
   
   // App-wide state sharing logic between the steps
   const [regulatoryAnalysis, setRegulatoryAnalysis] = useState<LandRegulatoryAnalysis | null>(null);
   const [relaxationResult, setRelaxationResult] = useState<FARRelaxationResult | null>(null);
+  const [scenarioResult, setScenarioResult] = useState<any | null>(null);
+  const [chatHistory, setChatHistory] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([
+    {
+      role: 'assistant',
+      content: '반갑습니다! 이 부지의 8대 법정 규제 검토 조서 작성을 완료했습니다. 도시계획 조례, 지구단위계획 의무 준수 한계, 지상 용도별 가용 분석(근생활/오피스텔 등 복합개발성), 주차장 대수 산정 등 추가로 궁금하신 구체적인 법적 사항을 무엇이든 질문해 주세요!'
+    }
+  ]);
 
   const handleAnalysisComplete = (analysis: LandRegulatoryAnalysis) => {
     setRegulatoryAnalysis(analysis);
@@ -42,7 +50,7 @@ export default function App() {
     <div className="flex min-h-screen bg-[#F7F5F2] text-[#3E362E] font-sans overflow-x-hidden" id="app-root">
       
       {/* LEFT SIDEBAR: Project Control & Step navigation */}
-      <aside className="w-80 bg-white border-r border-[#E5E2DD] hidden md:flex flex-col flex-shrink-0" id="sidebar">
+      <aside className="w-80 bg-white border-r border-[#E5E2DD] hidden md:flex flex-col flex-shrink-0 print:hidden" id="sidebar">
         <div className="p-8">
           <div className="flex items-center gap-2.5 mb-10">
             <div className="w-8 h-8 bg-[#5F7161] rounded-lg flex items-center justify-center text-white font-bold font-serif shadow-sm">
@@ -123,6 +131,29 @@ export default function App() {
                 </div>
               </div>
             </button>
+
+            {/* Step 4 button */}
+            <button
+              onClick={() => setActiveStep(4)}
+              className="w-full text-left focus:outline-none group"
+            >
+              <div className={`flex items-center gap-4 transition duration-200 ${
+                activeStep === 4 ? 'text-[#5F7161] font-semibold' : 'text-[#A89F94] hover:text-[#3E362E]'
+              }`}>
+                <span className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs transition font-serif ${
+                  activeStep === 4 ? 'border-[#5F7161] bg-[#5F7161]/5 font-bold' : 'border-[#D1CEC8]'
+                }`}>
+                  04
+                </span>
+                <div className="flex flex-col">
+                  <span className="text-xs tracking-wide">종합 분석 리포트</span>
+                  <span className="text-[10px] text-gray-400 font-normal">Step 4: PDF 발급 & 수지</span>
+                </div>
+                {scenarioResult && (
+                  <CheckCircle className="w-4 h-4 text-emerald-600 ml-auto" />
+                )}
+              </div>
+            </button>
           </nav>
         </div>
 
@@ -165,7 +196,7 @@ export default function App() {
       <main className="flex-1 flex flex-col p-4 sm:p-8 lg:p-10 max-w-7xl mx-auto w-full">
         
         {/* Header toolbar */}
-        <header className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4" id="header-toolbar">
+        <header className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4 print:hidden" id="header-toolbar">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs font-bold tracking-widest uppercase text-[#8D7B68]">
@@ -196,6 +227,13 @@ export default function App() {
                 <p className="text-sm text-[#8D7B68] mt-1">지정 비율에 맞춘 세대수 배분 산출 및 평당 분양가를 감안한 토지사업 영업이익을 파악합니다.</p>
               </>
             )}
+
+            {activeStep === 4 && (
+              <>
+                <h1 className="text-2xl sm:text-3xl font-serif text-[#2C251F] font-bold">종합 개발 사업 타당성 평가서</h1>
+                <p className="text-sm text-[#8D7B68] mt-1">대지 규제 및 완화 조례, 상품 구성과 20개년 현금 수지 시뮬레이션 결과를 합산한 최종 보고서입니다.</p>
+              </>
+            )}
           </div>
 
           {/* Quick-toggle mobile helper */}
@@ -224,6 +262,14 @@ export default function App() {
             >
               3. 개발시나리오
             </button>
+            <button
+              onClick={() => setActiveStep(4)}
+              className={`flex-1 sm:flex-initial text-xs px-3.5 py-2 rounded-lg font-medium transition ${
+                activeStep === 4 ? 'bg-[#5F7161] text-white' : 'text-[#8D7B68] hover:bg-gray-50'
+              }`}
+            >
+              4. 종합보고서
+            </button>
           </div>
         </header>
 
@@ -233,6 +279,8 @@ export default function App() {
             <Step1Regulatory
               onAnalysisComplete={handleAnalysisComplete}
               savedAnalysis={regulatoryAnalysis}
+              chatHistory={chatHistory}
+              setChatHistory={setChatHistory}
             />
           )}
 
@@ -248,12 +296,22 @@ export default function App() {
             <Step3Scenario
               currentLand={regulatoryAnalysis}
               currentRelaxation={relaxationResult}
+              onScenarioChange={setScenarioResult}
+            />
+          )}
+
+          {activeStep === 4 && (
+            <Step4Report
+              currentLand={regulatoryAnalysis}
+              currentRelaxation={relaxationResult}
+              currentScenario={scenarioResult}
+              chatHistory={chatHistory}
             />
           )}
         </div>
 
         {/* BOTTOM STEP CONTROLS BAR */}
-        <footer className="mt-8 pt-6 border-t border-[#E5E2DD] flex flex-col sm:flex-row justify-between items-center gap-4">
+        <footer className="mt-8 pt-6 border-t border-[#E5E2DD] flex flex-col sm:flex-row justify-between items-center gap-4 print:hidden">
           <div className="text-xs text-[#8D7B68] flex items-center gap-1.5">
             <Building2 className="w-4 h-4 text-[#5F7161]" />
             <span>건축법규 및 부동산 인허가 사전검토 엔진 v1.4</span>
@@ -270,11 +328,10 @@ export default function App() {
               </button>
             )}
 
-            {activeStep < 3 ? (
+            {activeStep < 4 ? (
               <button
                 type="button"
                 onClick={() => {
-                  // Direct transition to next tab
                   setActiveStep((prev) => (prev + 1) as any);
                 }}
                 className="px-6 py-2.5 bg-[#5F7161] hover:bg-[#4E5E50] text-white text-xs font-semibold rounded-xl tracking-wide transition flex items-center gap-1.5 shadow-sm"
@@ -290,6 +347,13 @@ export default function App() {
                   if (confirm('모든 입력치를 초기화하고 Step 1부터 다시 규제를 재검토하시겠습니까?')) {
                     setRegulatoryAnalysis(null);
                     setRelaxationResult(null);
+                    setScenarioResult(null);
+                    setChatHistory([
+                      {
+                        role: 'assistant',
+                        content: '반갑습니다! 이 부지의 8대 법정 규제 검토 조서 작성을 완료했습니다. 도시계획 조례, 지구단위계획 의무 준수 한계, 지상 용도별 가용 분석(근생활/오피스텔 등 복합개발성), 주차장 대수 산정 등 추가로 궁금하신 구체적인 법적 사항을 무엇이든 질문해 주세요!'
+                      }
+                    ]);
                     setActiveStep(1);
                   }
                 }}

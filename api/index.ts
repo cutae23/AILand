@@ -432,6 +432,141 @@ ${imagePromptAddition}
   }
 });
 
+// 1.3. API Route: AI Market Price Analysis for Step 3
+app.post(['/api/analyze-market-price', '/analyze-market-price', '/api/index/analyze-market-price', '/index/analyze-market-price'], async (req, res) => {
+  try {
+    const { address, zoning } = req.body;
+    const targetAddress = address || '서울특별시 서초구 서초동 법원사거리 인근 준주거대지';
+    const targetZoning = zoning || '준주거지역';
+
+    const customKey = (req.headers['x-gemini-key'] || req.headers['x-gemini-api-key'] || req.headers['X-Gemini-Key'] || req.headers['X-Gemini-API-Key']) as string | undefined;
+    const ai = getGeminiClient(customKey);
+
+    // Default fallbacks based on address
+    let defaultApartment = { small: 3500, medium: 3800, large: 4200 };
+    let defaultOfficetel = { studio: 2200, tworoom: 2500, threeroom: 2800 };
+    let defaultHotel = 2000;
+    let defaultRetail = { b1: 1500, f1: 3500, f2: 2000, f3: 1500 };
+    let defaultOffice = 1850;
+    let defaultMarketAnalysis = `[오프라인 분석 안내] 입력하신 대지 주소(${targetAddress}) 인근의 시세를 고려하여 산정된 시세입니다. AI API 키를 설정하면 실시간 실제 국토교통부 실거래 정보 및 주변 대단지 단가 동향을 분석한 고급 평당 분양가 리포트가 수립됩니다.`;
+
+    if (targetAddress.includes('역삼') || targetAddress.includes('강남')) {
+      defaultApartment = { small: 5800, medium: 6200, large: 6800 };
+      defaultOfficetel = { studio: 3300, tworoom: 3600, threeroom: 4000 };
+      defaultHotel = 3200;
+      defaultRetail = { b1: 2800, f1: 7500, f2: 4000, f3: 3200 };
+      defaultOffice = 3500;
+      defaultMarketAnalysis = '역삼동 테헤란로 및 주요 배후 상권 입지로 고소득 직장인 수요가 탄탄한 지역입니다. 아파트 기준 평당 6,000만원 전후, 오피스텔 기준 3,500~4,000만원 선의 분양가가 우세하며, 오피스텔 투룸 이상은 쓰리룸 아파텔 상품으로 고밀 분양 시 완판 경쟁력이 우수합니다.';
+    } else if (targetAddress.includes('반포') || targetAddress.includes('서초')) {
+      defaultApartment = { small: 6800, medium: 7200, large: 7800 };
+      defaultOfficetel = { studio: 3800, tworoom: 4200, threeroom: 4600 };
+      defaultHotel = 3500;
+      defaultRetail = { b1: 3200, f1: 8500, f2: 4500, f3: 3800 };
+      defaultOffice = 3800;
+      defaultMarketAnalysis = '대한민국 최고가 시세를 형성 중인 반포 및 서초동 입지입니다. 아파트 평당 분양가는 7,000만원을 상회하며, 오피스텔도 고급 하이엔드 어메니티를 탑재할 경우 평당 4,000~4,600만원에 육박합니다. 고가 분양을 타겟팅한 고품격 설계 설계비중이 높게 요구됩니다.';
+    } else if (targetAddress.includes('연남') || targetAddress.includes('마포')) {
+      defaultApartment = { small: 4200, medium: 4500, large: 5000 };
+      defaultOfficetel = { studio: 2600, tworoom: 2900, threeroom: 3200 };
+      defaultHotel = 2600;
+      defaultRetail = { b1: 1800, f1: 5200, f2: 3000, f3: 2200 };
+      defaultOffice = 2600;
+      defaultMarketAnalysis = '연남동/마포권역은 젊은 세대의 트렌디 상권 및 역세권 소형 가구 수요가 집중되는 지역입니다. 대형 아파트 평당 5,000만원 안팎, 중소형은 4,200만원 선이며, 1인 가구 타겟형 오피스텔 원룸(평당 2,600만원 선) 및 주거형 2룸 오피스텔 수요가 지속 강세입니다.';
+    }
+
+    if (ai) {
+      try {
+        const promptString = `
+당신은 대한민국 국토교통부 실거래 정보와 주변 아파트, 주상복합, 오피스텔, 호텔, 상업시설(상가), 오피스의 분양 및 임대 시세 빅데이터를 정밀히 꿰뚫고 있는 공인 부동산 시장 분석 전문가입니다.
+다음 대지 정보 및 용도지역을 기반으로, 분양 예정인 "공동주택", "오피스텔", "호텔(숙박시설)", "판매시설(B1, 1F, 2F, 3F 상가)", "업무시설(오피스)"의 주변 적정 분양 시세(평당 분양단가, 단위: 만원)와 시세 분석 요약 리포트를 작성해 주십시오.
+
+[검토 대지 정보]
+- 대지 주소 및 상세정보: ${targetAddress}
+- 용도지역 구역: ${targetZoning}
+
+반드시 다음 JSON 규격에 완전하게 부합하는 구조로만 결과를 도출해 주십시오. 마크다운 블록이나 주석 기호를 절대 붙이지 말고 순수 JSON 문자열만 출력해야 합니다:
+{
+  "apartment": {
+    "small": 4500,  // 소형 (59㎡ / 실 전용 18평)의 적정 평당 분양가 (단위: 만원, 숫자만)
+    "medium": 4800, // 중형 (84㎡ / 실 전용 25평)의 적정 평당 분양가 (단위: 만원, 숫자만)
+    "large": 5200   // 대형 (114㎡ / 실 전용 34평)의 적정 평당 분양가 (단위: 만원, 숫자만)
+  },
+  "officetel": {
+    "studio": 3000,   // 원룸/스튜디오 (30㎡ / 실 전용 9평)의 적정 평당 분양가 (단위: 만원, 숫자만)
+    "tworoom": 3400,  // 투룸/주거형 (59㎡ / 실 전용 18평)의 적정 평당 분양가 (단위: 만원, 숫자만)
+    "threeroom": 3800 // 쓰리룸/아파텔 (84㎡ / 실 전용 25평)의 적정 평당 분양가 (단위: 만원, 숫자만)
+  },
+  "hotel": 2500,     // 호텔/숙박시설의 적정 평균 평당 분양가 또는 자산가치 (단위: 만원, 숫자만)
+  "retail": {
+    "b1": 1500,      // 상업시설 지하 1층 평당가 (단위: 만원, 숫자만)
+    "f1": 4500,      // 상업시설 지상 1층 평당가 (단위: 만원, 숫자만)
+    "f2": 2500,      // 상업시설 지상 2층 평당가 (단위: 만원, 숫자만)
+    "f3": 2000       // 상업시설 지상 3층 평당가 (단위: 만원, 숫자만)
+  },
+  "office": 2200,    // 업무시설(오피스)의 적정 평균 평당 분양가 (단위: 만원, 숫자만)
+  "marketAnalysis": "해당 구역의 최신 주변 단지 실제 거래 동향, 분양 경쟁률, 고소득 임대 배후수요의 밀집 정도를 고려하여 도출된 합리적인 분양가격 근거 및 시장 전망을 한국어로 3~4문장의 깔끔하고 신뢰감 높은 어조로 설명해 주세요."
+}
+`;
+
+        const response = await generateContentWithFallback(ai, {
+          model: 'gemini-3.5-flash',
+          contents: [{ role: 'user', parts: [{ text: promptString }] }],
+          config: {
+            responseMimeType: 'application/json'
+          }
+        });
+
+        const textResponse = response.text || '';
+        const parsed = JSON.parse(textResponse);
+        
+        // Ensure properties exist and are numbers to prevent React client crashes
+        const apartment = {
+          small: Number(parsed?.apartment?.small || defaultApartment.small),
+          medium: Number(parsed?.apartment?.medium || defaultApartment.medium),
+          large: Number(parsed?.apartment?.large || defaultApartment.large)
+        };
+        const officetel = {
+          studio: Number(parsed?.officetel?.studio || defaultOfficetel.studio),
+          tworoom: Number(parsed?.officetel?.tworoom || defaultOfficetel.tworoom),
+          threeroom: Number(parsed?.officetel?.threeroom || defaultOfficetel.threeroom)
+        };
+        const hotel = Number(parsed?.hotel || defaultHotel);
+        const retail = {
+          b1: Number(parsed?.retail?.b1 || defaultRetail.b1),
+          f1: Number(parsed?.retail?.f1 || defaultRetail.f1),
+          f2: Number(parsed?.retail?.f2 || defaultRetail.f2),
+          f3: Number(parsed?.retail?.f3 || defaultRetail.f3)
+        };
+        const office = Number(parsed?.office || defaultOffice);
+        const marketAnalysis = parsed?.marketAnalysis || defaultMarketAnalysis;
+
+        return res.json({ apartment, officetel, hotel, retail, office, marketAnalysis });
+      } catch (geminiErr: any) {
+        console.error('Gemini market analysis failed, using fallback:', geminiErr);
+        return res.json({
+          apartment: defaultApartment,
+          officetel: defaultOfficetel,
+          hotel: defaultHotel,
+          retail: defaultRetail,
+          office: defaultOffice,
+          marketAnalysis: defaultMarketAnalysis + `\n(⚠️ AI 엔진 분석 오류로 기본 로컬 시세가 우선 적용되었습니다: ${geminiErr.message || geminiErr})`
+        });
+      }
+    } else {
+      return res.json({
+        apartment: defaultApartment,
+        officetel: defaultOfficetel,
+        hotel: defaultHotel,
+        retail: defaultRetail,
+        office: defaultOffice,
+        marketAnalysis: defaultMarketAnalysis
+      });
+    }
+  } catch (globalErr: any) {
+    console.error('Critical global error in /api/analyze-market-price:', globalErr);
+    return res.status(500).json({ error: globalErr.message || 'Market analysis handler crash' });
+  }
+});
+
 // 1.5. API Route: Legal AI Advisory Interactive Q&A
 app.post(['/api/ask-legal', '/ask-legal', '/api/index/ask-legal', '/index/ask-legal'], async (req, res) => {
   const { question, landContext, history } = req.body;
