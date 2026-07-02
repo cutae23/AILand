@@ -12,12 +12,63 @@ import { LandRegulatoryAnalysis, FARRelaxationResult } from './types';
 import { MapPin, Building2, HelpCircle, CheckCircle, Sliders, FileText, ChevronRight, Calculator, User, Compass, ServerCrash } from 'lucide-react';
 
 export default function App() {
-  const [activeStep, setActiveStep] = useState<1 | 2 | 3 | 4>(1);
+  const [activeStep, setActiveStep] = useState<1 | 2 | 3 | 4>(4);
   
-  // App-wide state sharing logic between the steps
-  const [regulatoryAnalysis, setRegulatoryAnalysis] = useState<LandRegulatoryAnalysis | null>(null);
-  const [relaxationResult, setRelaxationResult] = useState<FARRelaxationResult | null>(null);
-  const [scenarioResult, setScenarioResult] = useState<any | null>(null);
+  // App-wide state sharing logic between the steps - pre-populated for Baegot
+  const [regulatoryAnalysis, setRegulatoryAnalysis] = useState<LandRegulatoryAnalysis | null>({
+    id: 'siheung-baegot',
+    address: '경기도 시흥시 배곧동 주상복합 공동주택 신축 대지',
+    zoning: '일반상업지역, 지구단위계획구역, 고도제한지구',
+    areaSize: 15450,
+    baselineFAR: 400,
+    baselineBCR: 60,
+    heightLimit: '최고 49층 이하 (지구단위계획 기준)',
+    regulations: [
+      {
+        title: '용적률 및 건폐율 규제',
+        status: 'safe',
+        desc: '일반상업지역 기본 용적률 400% 적용, 지자체 인센티브 준수 시 최대 800%까지 완화 가능.'
+      },
+      {
+        title: '최고 높이 및 층수 규제',
+        status: 'warning',
+        desc: '지상 49층 이하 높이 제한 적용. 배곧 지구단위계획 지침 및 건축 조례 의무 준수 필요.'
+      }
+    ],
+    developmentPotential: '배곧 주상복합 대안1(6호조합, 1,764세대) 기준층 및 비주거 저층 상가/운동 복합시설 기획에 적합한 초고층 주상복합 부지입니다.',
+    recommendations: [
+      '지하 1층 주차 및 설비 구성 최적화',
+      '지상 1층 로비 및 근생/운동시설 복합 배치',
+      '지상 2~5층 운동시설(저층부 스포츠 센터) 기획',
+      '지상 6층 주민공동 커뮤니티 공간 및 지상 24층 설비 피난 안전구역 확보'
+    ]
+  });
+
+  const [relaxationResult, setRelaxationResult] = useState<FARRelaxationResult | null>({
+    finalFAR: 550,
+    breakdown: {
+      base: 400,
+      donation: 50,
+      openSpace: 30,
+      eco: 40,
+      rental: 30
+    },
+    explanation: '시흥 배곧 주상복합 6호조합 설계안을 지원하기 위한 기부채납 및 공개공지 정원 식재 확보, 친환경인증 가점이 반영된 용적률 완화 시나리오입니다.'
+  });
+
+  const [scenarioResult, setScenarioResult] = useState<any | null>({
+    inputs: {},
+    result: {
+      irr: 16.4,
+      bepYear: 3,
+      financials: {
+        breakEvenRatio: 62.5,
+        operatingProfit: 1450,
+        roi: 18.2
+      }
+    }
+  });
+
   const [chatHistory, setChatHistory] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([
     {
       role: 'assistant',

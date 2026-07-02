@@ -109,6 +109,15 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
       : 'standard'
   );
 
+  const [hasMixedUseIncentive, setHasMixedUseIncentive] = useState<boolean>(
+    savedResult && savedResult.breakdown.mixedUse && savedResult.breakdown.mixedUse > 0 ? true : false
+  );
+  const [nonResidentialRatio, setNonResidentialRatio] = useState<number>(
+    savedResult && savedResult.breakdown.nonResidentialRatio !== undefined
+      ? savedResult.breakdown.nonResidentialRatio
+      : 20
+  );
+
   // Unified calculations
   const buildingEquivalentArea = hasDonatedBuilding ? (donatedBuildingArea * 0.3) : 0;
   const cashEquivalentArea = hasDonatedCash ? (donatedCashAmount * 10000 / landAppraisalValue) : 0;
@@ -143,7 +152,9 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
     ? (creativeDesignLevel === 'standard' ? 20 : 40) 
     : 0;
 
-  const currentTotalFAR = parseFloat((baselineFAR + donationBonus + openSpaceBonus + ecoBonus + rentalBonus + hotelBonus + specialArchitecturalZoneBonus + openGreenSpaceBonus + creativeDesignBonus).toFixed(1));
+  const mixedUseBonus = hasMixedUseIncentive ? Math.min(40, nonResidentialRatio) : 0;
+
+  const currentTotalFAR = parseFloat((baselineFAR + donationBonus + openSpaceBonus + ecoBonus + rentalBonus + hotelBonus + specialArchitecturalZoneBonus + openGreenSpaceBonus + creativeDesignBonus + mixedUseBonus).toFixed(1));
 
   // Auto-run calculation whenever inputs change
   useEffect(() => {
@@ -188,6 +199,9 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
       const designLabel = creativeDesignLevel === 'excellence' ? '최우수 디자인 혁신' : '우수 디자인 혁신';
       explParts.push(`서울시/지자체 도시·건축 창의혁신 디자인 공모 및 심의 통과 [${designLabel}] 특례 조항에 따라 용적률 +${creativeDesignBonus}%p가 대폭 가산 완화되었습니다.`);
     }
+    if (mixedUseBonus > 0) {
+      explParts.push(`주거·비주거 복합용도 개발 유도에 따라 비주거 비율 ${nonResidentialRatio}%를 확보하여 상업·문화 기능 연계 인센티브 용적률 +${mixedUseBonus}%p가 가산되었습니다.`);
+    }
 
     const explanation = explParts.length > 0 
       ? explParts.join('\n\n')
@@ -205,6 +219,9 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
         specialArchitecturalZone: specialArchitecturalZoneBonus,
         openGreenSpace: openGreenSpaceBonus,
         creativeDesign: creativeDesignBonus,
+        mixedUse: mixedUseBonus,
+        hasMixedUseIncentive,
+        nonResidentialRatio,
         
         donationLand: donationLandBonus,
         donationBuilding: donationBuildingBonus,
@@ -242,6 +259,9 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
     openGreenSpaceRatio,
     hasCreativeDesign,
     creativeDesignLevel,
+    hasMixedUseIncentive,
+    nonResidentialRatio,
+    mixedUseBonus,
     currentTotalFAR
   ]);
 
@@ -251,7 +271,8 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
     (hasHotelIncentive ? 50 : 0) + 
     (hasSpecialArchitecturalZone ? 25 : 0) + 
     (hasOpenGreenSpace ? 60 : 0) + 
-    (hasCreativeDesign ? 40 : 0)
+    (hasCreativeDesign ? 40 : 0) +
+    (hasMixedUseIncentive ? 40 : 0)
   );
 
   // Percentage bar fill helper
@@ -794,6 +815,151 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
               )}
             </div>
 
+            {/* Input 9: Residential/Non-Residential Ratio (주거, 비주거 비율 및 복합 인센티브) */}
+            <div className="p-4 rounded-xl border border-gray-100 bg-[#FCFAF7] space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
+                  <Sliders className="w-4 h-4 text-[#5F7161]" />
+                  9. 주거·비주거 비율 및 복합용도 인센티브
+                </span>
+                <input
+                  type="checkbox"
+                  checked={hasMixedUseIncentive}
+                  onChange={(e) => setHasMixedUseIncentive(e.target.checked)}
+                  className="w-4 h-4 rounded text-[#5F7161] focus:ring-[#5F7161]"
+                />
+              </div>
+              <p className="text-[11px] text-[#8D7B68]">
+                상업·준주거지역 내 주거복합 건축물에서 상업·업무·문화 목적의 비주거 의무비율을 상향하여 복합 활성화에 기여할 시 주어지는 보너스 가산 혜택입니다.
+              </p>
+
+              {hasMixedUseIncentive && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="pt-2 pl-3 border-l-2 border-[#EDDBC7] space-y-2"
+                >
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-500">계획 비주거 비율 (연면적 대비):</span>
+                    <span className="font-semibold text-[#5F7161]">{nonResidentialRatio}% 확보</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="10"
+                    max="50"
+                    step="5"
+                    value={nonResidentialRatio}
+                    onChange={(e) => setNonResidentialRatio(Number(e.target.value))}
+                    className="w-full accent-[#5F7161]"
+                  />
+                  <div className="flex justify-between text-[10px] text-gray-400">
+                    <span>10% 이상 의무 (+10%p)</span>
+                    <span>50% 업무특화단지 (+40%p)</span>
+                  </div>
+                  <p className="text-[10px] text-emerald-600 font-medium pt-1">
+                    * 비주거 비율 확보를 통해 복합개발 유도 용적률 가점 +{mixedUseBonus}%p 가산 적용
+                  </p>
+                </motion.div>
+              )}
+            </div>
+
+            {/* NEW SECTION: Other Regulatory Relaxations Unlocked */}
+            <div className="p-4 rounded-xl border border-[#EDDBC7]/60 bg-[#FAF6F0] space-y-3">
+              <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-[#C19A6B]" />
+                용적률(FAR) 외 다른 규제 완화 검토 (높이·건폐율 등)
+              </span>
+              <p className="text-[11px] text-[#8D7B68] leading-relaxed">
+                인센티브는 용적률뿐만 아니라, 특정 설계 요소 도입 시 <strong>건폐율 완화, 높이 제한 해제, 사선제한 완화</strong>가 병행하여 입체적으로 적용됩니다.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1 text-[11px]">
+                {/* 1. 건폐율 완화 */}
+                <div className={`p-2.5 rounded-lg border flex flex-col justify-between transition ${
+                  hasCreativeDesign || hasOpenGreenSpace
+                    ? 'bg-emerald-50/40 border-emerald-100 text-[#3E362E]'
+                    : 'bg-gray-50 border-gray-100 text-gray-400'
+                }`}>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-semibold">① 건폐율 완화 (BCR Relaxation)</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                      hasCreativeDesign || hasOpenGreenSpace ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {hasCreativeDesign || hasOpenGreenSpace ? '활성화 (최대 1.2배)' : '일반 제한'}
+                    </span>
+                  </div>
+                  <span className="text-[10px] leading-normal text-gray-500">
+                    {hasCreativeDesign || hasOpenGreenSpace 
+                      ? '창의디자인/개방녹지 지정으로 지상부 공지 확보를 위해 법정 건폐율 기준이 유연화됩니다.' 
+                      : '창의디자인 또는 개방형 녹지를 활성화하면 건폐율 완화가 가동됩니다.'}
+                  </span>
+                </div>
+
+                {/* 2. 높이 제한 완화 */}
+                <div className={`p-2.5 rounded-lg border flex flex-col justify-between transition ${
+                  hasSpecialArchitecturalZone || hasCreativeDesign || hasOpenGreenSpace
+                    ? 'bg-emerald-50/40 border-emerald-100 text-[#3E362E]'
+                    : 'bg-gray-50 border-gray-100 text-gray-400'
+                }`}>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-semibold">② 높이 제한 완화 (Height Limit)</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                      hasSpecialArchitecturalZone || hasCreativeDesign || hasOpenGreenSpace ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {hasSpecialArchitecturalZone || hasCreativeDesign || hasOpenGreenSpace ? '활성화 (규제 배제)' : '일반 제한'}
+                    </span>
+                  </div>
+                  <span className="text-[10px] leading-normal text-gray-500">
+                    {hasSpecialArchitecturalZone || hasCreativeDesign || hasOpenGreenSpace
+                      ? '특별건축구역 지정 및 디자인 혁신 시, 서울시 가로구역별 최고높이가 심의를 통해 완화 또는 배제됩니다.'
+                      : '특별건축구역, 창의디자인, 개방형 녹지 적용 시 높이 해제가 연동됩니다.'}
+                  </span>
+                </div>
+
+                {/* 3. 일조사선 규제 완화 */}
+                <div className={`p-2.5 rounded-lg border flex flex-col justify-between transition ${
+                  hasSpecialArchitecturalZone || hasCreativeDesign
+                    ? 'bg-emerald-50/40 border-emerald-100 text-[#3E362E]'
+                    : 'bg-gray-50 border-gray-100 text-gray-400'
+                }`}>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-semibold">③ 일조권 사선제한 (Setbacks)</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                      hasSpecialArchitecturalZone || hasCreativeDesign ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {hasSpecialArchitecturalZone || hasCreativeDesign ? '활성화 (최대 120%)' : '일반 제한'}
+                    </span>
+                  </div>
+                  <span className="text-[10px] leading-normal text-gray-500">
+                    {hasSpecialArchitecturalZone || hasCreativeDesign
+                      ? '정북방향 일조 사선 완화 기준(법정 1.2배 또는 전면 배제)이 연계되어 독창적인 입체 매스 설계가 가능해집니다.'
+                      : '특별건축구역 및 혁신 디자인 시 일조권 사선제한이 완화됩니다.'}
+                  </span>
+                </div>
+
+                {/* 4. 부설주차장 설치 완화 */}
+                <div className={`p-2.5 rounded-lg border flex flex-col justify-between transition ${
+                  hasHotelIncentive || rentalHousingRatio > 0
+                    ? 'bg-emerald-50/40 border-emerald-100 text-[#3E362E]'
+                    : 'bg-gray-50 border-gray-100 text-gray-400'
+                }`}>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-semibold">④ 부설 주차장 완화 (Parking)</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                      hasHotelIncentive || rentalHousingRatio > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {hasHotelIncentive || rentalHousingRatio > 0 ? '활성화 (조례 완화)' : '일반 제한'}
+                    </span>
+                  </div>
+                  <span className="text-[10px] leading-normal text-gray-500">
+                    {hasHotelIncentive || rentalHousingRatio > 0
+                      ? '관광호텔 및 역세권 청년주택(공임상생형) 연계 시 세대당 주차대수 산정 기준이 대폭 유연해져 지하 파기 면적이 경감됩니다.'
+                      : '청년 임대주택이나 관광호텔 도입 시 주차장 완화 조항이 가동됩니다.'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           {/* Results Gauge - Right Side */}
@@ -838,9 +1004,9 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
                   <span className="font-semibold text-gray-800">{baselineFAR}%</span>
                 </div>
                 <div className="flex justify-between text-gray-600 pb-1.5 border-b border-[#E5E2DD]">
-                  <span>기부채납 공공 기여:</span>
-                  <span className={`font-semibold ${donatedArea > 0 ? 'text-[#5F7161]' : 'text-gray-400'}`}>
-                    +{(baselineFAR * 1.5 * (donatedArea / (landArea - donatedArea || 1))).toFixed(1)}%
+                  <span>기부채납 공공 기여 (종합):</span>
+                  <span className={`font-semibold ${donationBonus > 0 ? 'text-[#5F7161]' : 'text-gray-400'}`}>
+                    +{donationBonus.toFixed(1)}%
                   </span>
                 </div>
                 <div className="flex justify-between text-gray-600 pb-1.5 border-b border-[#E5E2DD]">
@@ -879,10 +1045,16 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
                     +{hasOpenGreenSpace ? (openGreenSpaceRatio * 1.2).toFixed(1) : 0}%
                   </span>
                 </div>
-                <div className="flex justify-between text-[#2C251F] font-bold pb-1">
+                <div className="flex justify-between text-gray-600 pb-1.5 border-b border-[#E5E2DD]">
                   <span>창의혁신 디자인 인센티브형:</span>
-                  <span className={`font-bold ${hasCreativeDesign ? 'text-indigo-600' : 'text-gray-400'}`}>
+                  <span className={`font-semibold ${hasCreativeDesign ? 'text-indigo-600' : 'text-gray-400'}`}>
                     +{hasCreativeDesign ? (creativeDesignLevel === 'standard' ? 20 : 40) : 0}%
+                  </span>
+                </div>
+                <div className="flex justify-between text-[#2C251F] font-bold pb-1">
+                  <span>주거복합 비주거 가점형:</span>
+                  <span className={`font-bold ${hasMixedUseIncentive ? 'text-indigo-600' : 'text-gray-400'}`}>
+                    +{mixedUseBonus}%
                   </span>
                 </div>
               </div>
@@ -895,7 +1067,7 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
                 지자체 도시계획심의 위원회 가이드라인
               </span>
               <p className="whitespace-pre-line text-slate-600 font-normal">
-                {donatedArea > 0 || hasPublicOpenSpace || ecoFriendlyCert !== 'none' || rentalHousingRatio > 0 || hasHotelIncentive || hasSpecialArchitecturalZone || hasOpenGreenSpace || hasCreativeDesign
+                {donatedArea > 0 || hasPublicOpenSpace || ecoFriendlyCert !== 'none' || rentalHousingRatio > 0 || hasHotelIncentive || hasSpecialArchitecturalZone || hasOpenGreenSpace || hasCreativeDesign || hasMixedUseIncentive
                   ? `본 완화 수지 시뮬레이션은 서울시 도시계획 특별 배분조례에 부합하도록 즉각 대응 반영되었습니다.\n\n` + 
                     `- ${donatedArea > 0 ? `도로·공공 시설용 토지 기부면적 ${donatedArea}㎡에 인센티브를 연산해 지자체 기여도가 매우 우수합니다.` : ''}\n` +
                     `- ${hasPublicOpenSpace ? `도심 쌈지 숲 테마의 공개공지는 도시 쾌적성을 극대화하여 인센티브 조건에 적극 소구합니다.` : ''}\n` +
@@ -903,7 +1075,8 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
                     `- ${hasHotelIncentive ? `관광숙박시설(특례등급 ${hotelIncentiveLevel === 'luxury' ? '특급' : hotelIncentiveLevel === 'premium' ? '우수 비즈니스' : '일반'}) 배정 설계를 통하여 특별조례 기준에 도합 가산점이 부여됩니다.` : ''}\n` +
                     `- ${hasSpecialArchitecturalZone ? `특별건축구역 지정을 통해 사선 제한 규제 등을 입체적으로 해소하며 우수한 도시 미관을 기획합니다.` : ''}\n` +
                     `- ${hasOpenGreenSpace ? `지상부의 풍부한 개방형 녹지공간(${openGreenSpaceRatio}%) 구성은 친자연주의 생태도심 기준에 부합하여 가점 수혜를 촉진합니다.` : ''}\n` +
-                    `- ${hasCreativeDesign ? `독창적인 랜드마크 창의혁신 디자인 설계가 반영되어 기획 완성도 수준이 매우 우수합니다.` : ''}`
+                    `- ${hasCreativeDesign ? `독창적인 랜드마크 창의혁신 디자인 설계가 반영되어 기획 완성도 수준이 매우 우수합니다.` : ''}\n` +
+                    `- ${hasMixedUseIncentive ? `연면적 ${nonResidentialRatio}%를 비주거용(업무, 상업, 문화)으로 배분 기획하여 복합도심 인센티브 조항에 따른 특례 수혜가 성사되었습니다.` : ''}`
                   : '기부채납 또는 공개공지 확보 등 상향 옵션을 좌측 슬라이더에서 조절해 보세요. 산정된 최종 용적률 수치가 즉시 Step 3 건축 설계 모델에 대입됩니다.'}
               </p>
             </div>

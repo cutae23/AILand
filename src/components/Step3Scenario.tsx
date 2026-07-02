@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { LandRegulatoryAnalysis, FARRelaxationResult, ScenarioResult, AllocatedUnitResult } from '../types';
-import { CircleDollarSign, Coins, TrendingUp, Building2, Layers, Compass, HelpCircle, ArrowRight, Table, Sparkles, Loader2, RefreshCw, AlertTriangle, Home, Briefcase, Info } from 'lucide-react';
+import { CircleDollarSign, Coins, TrendingUp, Building2, Layers, Compass, HelpCircle, ArrowRight, Table, Sparkles, Loader2, RefreshCw, AlertTriangle, Home, Briefcase, Info, Plus, Trash2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 
 interface Step3ScenarioProps {
@@ -312,12 +312,58 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
     }
   };
 
-  const handleUpdateAptCount = (id: string, count: number) => {
-    setAptConfigs(prev => prev.map(item => item.id === id ? { ...item, count: Math.max(0, count) } : item));
+  const handleUpdateAptField = (id: string, field: keyof HousingConfig, value: any) => {
+    setAptConfigs(prev => prev.map(item => {
+      if (item.id === id) {
+        const updated = { ...item, [field]: value };
+        if (field === 'sizeM2') {
+          updated.pyung = parseFloat((Number(value) * 0.3025).toFixed(1));
+        } else if (field === 'pyung') {
+          updated.sizeM2 = parseFloat((Number(value) / 0.3025).toFixed(1));
+        }
+        return updated;
+      }
+      return item;
+    }));
   };
 
-  const handleUpdateOfficetelCount = (id: string, count: number) => {
-    setOfficetelConfigs(prev => prev.map(item => item.id === id ? { ...item, count: Math.max(0, count) } : item));
+  const handleUpdateOfficetelField = (id: string, field: keyof HousingConfig, value: any) => {
+    setOfficetelConfigs(prev => prev.map(item => {
+      if (item.id === id) {
+        const updated = { ...item, [field]: value };
+        if (field === 'sizeM2') {
+          updated.pyung = parseFloat((Number(value) * 0.3025).toFixed(1));
+        } else if (field === 'pyung') {
+          updated.sizeM2 = parseFloat((Number(value) / 0.3025).toFixed(1));
+        }
+        return updated;
+      }
+      return item;
+    }));
+  };
+
+  const handleDeleteApt = (id: string) => {
+    setAptConfigs(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleDeleteOfficetel = (id: string) => {
+    setOfficetelConfigs(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleAddAptConfig = () => {
+    const newId = `apt_custom_${Date.now()}`;
+    setAptConfigs(prev => [
+      ...prev,
+      { id: newId, name: '새 공동주택 평형', sizeM2: 84, pyung: 25, salesPricePerPyung: 4500, count: 5 }
+    ]);
+  };
+
+  const handleAddOfficetelConfig = () => {
+    const newId = `officetel_custom_${Date.now()}`;
+    setOfficetelConfigs(prev => [
+      ...prev,
+      { id: newId, name: '새 오피스텔 타입', sizeM2: 59, pyung: 18, salesPricePerPyung: 3000, count: 5 }
+    ]);
   };
 
   // 3. Dynamic Calculation logic
@@ -780,9 +826,9 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
               <div className="flex justify-between items-center text-[10px] text-gray-500 pt-0.5">
                 <span>지상 연면적 요구량: {result.aboveGroundGFA.toLocaleString()} ㎡</span>
                 {result.isFarExceeded ? (
-                  <span className="font-bold text-red-650">⚠️ 허용 한도 대비 {(result.consumedFAR - appliedFAR).toFixed(2)}% 초과! 세대수를 줄이십시오.</span>
+                  <span className="font-bold text-red-650">⚠️ 허용 한도 대비 {((result?.consumedFAR ?? 0) - (appliedFAR ?? 0)).toFixed(2)}% 초과! 세대수를 줄이십시오.</span>
                 ) : (
-                  <span className="font-semibold text-emerald-700">✓ 한도 여유 수지: {(appliedFAR - result.consumedFAR).toFixed(2)}% 잔여</span>
+                  <span className="font-semibold text-emerald-700">✓ 한도 여유 수지: {((appliedFAR ?? 0) - (result?.consumedFAR ?? 0)).toFixed(2)}% 잔여</span>
                 )}
               </div>
             </div>
@@ -893,88 +939,232 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
             {activeInputTab === 'residential' && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-xs font-bold text-[#8D7B68] uppercase tracking-widest flex items-center gap-1.5 mb-3">
-                    <Home className="w-4 h-4 text-[#5F7161]" />
-                    공동주택(다세대/아파트) 세대수 기획
-                  </h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs font-bold text-[#2C251F] uppercase tracking-widest flex items-center gap-1.5">
+                      <Home className="w-4 h-4 text-[#5F7161]" />
+                      공동주택(다세대/아파트) 상세 구성 기획
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={handleAddAptConfig}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-white bg-[#5F7161] hover:bg-[#4d5c4f] rounded-lg shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                      평형 추가
+                    </button>
+                  </div>
+                  
                   <div className="space-y-3">
-                    {aptConfigs.map((cfg) => (
-                      <div key={cfg.id} className="p-3 border border-gray-100 rounded-xl bg-[#FCFAF7] flex justify-between items-center gap-3">
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs font-bold text-[#2C251F] block truncate">{cfg.name.split(' (')[0]}</span>
-                          <div className="flex items-center gap-2 text-[10px] text-gray-500 mt-1">
-                            <span>전용 {cfg.sizeM2}㎡ ({cfg.pyung}평형)</span>
-                            <span className="text-gray-300">|</span>
-                            <span className="font-bold text-[#5F7161]">평당 {cfg.salesPricePerPyung.toLocaleString()}만원</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => handleUpdateAptCount(cfg.id, cfg.count - 1)}
-                            className="w-7 h-7 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer"
-                          >
-                            -
-                          </button>
-                          <input
-                            type="number"
-                            value={cfg.count}
-                            onChange={(e) => handleUpdateAptCount(cfg.id, parseInt(e.target.value) || 0)}
-                            className="w-10 text-center text-xs font-bold bg-white border border-gray-200 py-1 rounded-lg focus:outline-none"
-                          />
-                          <button
-                            onClick={() => handleUpdateAptCount(cfg.id, cfg.count + 1)}
-                            className="w-7 h-7 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer"
-                          >
-                            +
-                          </button>
-                          <span className="text-xs font-medium text-gray-500 ml-1">세대</span>
-                        </div>
-                      </div>
-                    ))}
+                    <div className="overflow-x-auto border border-gray-150 rounded-2xl bg-white shadow-xs">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-gray-200 bg-slate-50/50 text-gray-500 font-bold">
+                            <th className="p-2.5 w-1/3">평형 타입명</th>
+                            <th className="p-2.5 w-[14%] text-right">전용(㎡)</th>
+                            <th className="p-2.5 w-[14%] text-right">실평수(평)</th>
+                            <th className="p-2.5 w-1/5 text-right">평당분양가(만)</th>
+                            <th className="p-2.5 w-1/5 text-right">세대수</th>
+                            <th className="p-2.5 w-[8%] text-center"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {aptConfigs.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="p-4 text-center text-gray-400 font-medium">
+                                등록된 평형이 없습니다. 상단의 '평형 추가' 버튼을 눌러주세요.
+                              </td>
+                            </tr>
+                          ) : (
+                            aptConfigs.map((cfg) => (
+                              <tr key={cfg.id} className="hover:bg-slate-50/30 transition-colors">
+                                <td className="p-2">
+                                  <input
+                                    type="text"
+                                    value={cfg.name}
+                                    onChange={(e) => handleUpdateAptField(cfg.id, 'name', e.target.value)}
+                                    placeholder="예: 공동주택 84A형"
+                                    className="w-full font-bold text-[#2C251F] bg-slate-50/20 hover:bg-slate-50 focus:bg-white border border-gray-200 focus:border-[#5F7161] rounded-lg px-2 py-1 focus:outline-none text-[11px]"
+                                  />
+                                </td>
+                                <td className="p-2 text-right">
+                                  <input
+                                    type="number"
+                                    value={cfg.sizeM2 || ''}
+                                    onChange={(e) => handleUpdateAptField(cfg.id, 'sizeM2', parseFloat(e.target.value) || 0)}
+                                    className="w-14 text-right font-semibold text-gray-700 bg-slate-50/20 hover:bg-slate-50 focus:bg-white border border-gray-200 focus:border-[#5F7161] rounded-lg px-1.5 py-1 focus:outline-none text-[11px]"
+                                  />
+                                </td>
+                                <td className="p-2 text-right">
+                                  <input
+                                    type="number"
+                                    value={cfg.pyung || ''}
+                                    onChange={(e) => handleUpdateAptField(cfg.id, 'pyung', parseFloat(e.target.value) || 0)}
+                                    className="w-12 text-right font-semibold text-gray-700 bg-slate-50/20 hover:bg-slate-50 focus:bg-white border border-gray-200 focus:border-[#5F7161] rounded-lg px-1.5 py-1 focus:outline-none text-[11px]"
+                                  />
+                                </td>
+                                <td className="p-2 text-right">
+                                  <input
+                                    type="number"
+                                    value={cfg.salesPricePerPyung || ''}
+                                    onChange={(e) => handleUpdateAptField(cfg.id, 'salesPricePerPyung', parseInt(e.target.value) || 0)}
+                                    className="w-16 text-right font-mono font-bold text-[#5F7161] bg-slate-50/20 hover:bg-slate-50 focus:bg-white border border-gray-200 focus:border-[#5F7161] rounded-lg px-1.5 py-1 focus:outline-none text-[11px]"
+                                  />
+                                </td>
+                                <td className="p-2 text-right">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateAptField(cfg.id, 'count', Math.max(0, cfg.count - 1))}
+                                      className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded-md hover:bg-gray-50 text-[10px] font-bold text-gray-600 cursor-pointer"
+                                    >
+                                      -
+                                    </button>
+                                    <input
+                                      type="number"
+                                      value={cfg.count}
+                                      onChange={(e) => handleUpdateAptField(cfg.id, 'count', Math.max(0, parseInt(e.target.value) || 0))}
+                                      className="w-9 text-center font-bold text-gray-900 bg-slate-50/20 hover:bg-slate-50 focus:bg-white border border-gray-200 focus:border-[#5F7161] rounded-lg py-1 focus:outline-none text-[11px]"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateAptField(cfg.id, 'count', cfg.count + 1)}
+                                      className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded-md hover:bg-gray-50 text-[10px] font-bold text-gray-600 cursor-pointer"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                </td>
+                                <td className="p-2 text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteApt(cfg.id)}
+                                    className="p-1 text-gray-400 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                                    title="삭제"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="text-xs font-bold text-[#8D7B68] uppercase tracking-widest flex items-center gap-1.5 mb-3">
-                    <Briefcase className="w-4 h-4 text-indigo-600" />
-                    오피스텔(O/T 주거형) 세대수 기획
-                  </h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs font-bold text-[#2C251F] uppercase tracking-widest flex items-center gap-1.5">
+                      <Briefcase className="w-4 h-4 text-indigo-600" />
+                      오피스텔(O/T 주거형) 상세 구성 기획
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={handleAddOfficetelConfig}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-white bg-indigo-600 hover:bg-indigo-750 rounded-lg shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                      타입 추가
+                    </button>
+                  </div>
+
                   <div className="space-y-3">
-                    {officetelConfigs.map((cfg) => (
-                      <div key={cfg.id} className="p-3 border border-gray-100 rounded-xl bg-[#FCFAF7] flex justify-between items-center gap-3">
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs font-bold text-[#2C251F] block truncate">{cfg.name.split(' (')[0]}</span>
-                          <div className="flex items-center gap-2 text-[10px] text-gray-500 mt-1">
-                            <span>전용 {cfg.sizeM2}㎡ ({cfg.pyung}평형)</span>
-                            <span className="text-gray-300">|</span>
-                            <span className="font-bold text-indigo-700">평당 {cfg.salesPricePerPyung.toLocaleString()}만원</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => handleUpdateOfficetelCount(cfg.id, cfg.count - 1)}
-                            className="w-7 h-7 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer"
-                          >
-                            -
-                          </button>
-                          <input
-                            type="number"
-                            value={cfg.count}
-                            onChange={(e) => handleUpdateOfficetelCount(cfg.id, parseInt(e.target.value) || 0)}
-                            className="w-10 text-center text-xs font-bold bg-white border border-gray-200 py-1 rounded-lg focus:outline-none"
-                          />
-                          <button
-                            onClick={() => handleUpdateOfficetelCount(cfg.id, cfg.count + 1)}
-                            className="w-7 h-7 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer"
-                          >
-                            +
-                          </button>
-                          <span className="text-xs font-medium text-gray-500 ml-1">세대</span>
-                        </div>
-                      </div>
-                    ))}
+                    <div className="overflow-x-auto border border-gray-150 rounded-2xl bg-white shadow-xs">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-gray-200 bg-slate-50/50 text-gray-500 font-bold">
+                            <th className="p-2.5 w-1/3">타입명</th>
+                            <th className="p-2.5 w-[14%] text-right">전용(㎡)</th>
+                            <th className="p-2.5 w-[14%] text-right">실평수(평)</th>
+                            <th className="p-2.5 w-1/5 text-right">평당분양가(만)</th>
+                            <th className="p-2.5 w-1/5 text-right">호실수</th>
+                            <th className="p-2.5 w-[8%] text-center"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {officetelConfigs.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="p-4 text-center text-gray-400 font-medium">
+                                등록된 오피스텔 타입이 없습니다. 상단의 '타입 추가' 버튼을 눌러주세요.
+                              </td>
+                            </tr>
+                          ) : (
+                            officetelConfigs.map((cfg) => (
+                              <tr key={cfg.id} className="hover:bg-slate-50/30 transition-colors">
+                                <td className="p-2">
+                                  <input
+                                    type="text"
+                                    value={cfg.name}
+                                    onChange={(e) => handleUpdateOfficetelField(cfg.id, 'name', e.target.value)}
+                                    placeholder="예: 오피스텔 30형 원룸"
+                                    className="w-full font-bold text-[#2C251F] bg-slate-50/20 hover:bg-slate-50 focus:bg-white border border-gray-200 focus:border-[#5F7161] rounded-lg px-2 py-1 focus:outline-none text-[11px]"
+                                  />
+                                </td>
+                                <td className="p-2 text-right">
+                                  <input
+                                    type="number"
+                                    value={cfg.sizeM2 || ''}
+                                    onChange={(e) => handleUpdateOfficetelField(cfg.id, 'sizeM2', parseFloat(e.target.value) || 0)}
+                                    className="w-14 text-right font-semibold text-gray-700 bg-slate-50/20 hover:bg-slate-50 focus:bg-white border border-gray-200 focus:border-[#5F7161] rounded-lg px-1.5 py-1 focus:outline-none text-[11px]"
+                                  />
+                                </td>
+                                <td className="p-2 text-right">
+                                  <input
+                                    type="number"
+                                    value={cfg.pyung || ''}
+                                    onChange={(e) => handleUpdateOfficetelField(cfg.id, 'pyung', parseFloat(e.target.value) || 0)}
+                                    className="w-12 text-right font-semibold text-gray-700 bg-slate-50/20 hover:bg-slate-50 focus:bg-white border border-gray-200 focus:border-[#5F7161] rounded-lg px-1.5 py-1 focus:outline-none text-[11px]"
+                                  />
+                                </td>
+                                <td className="p-2 text-right">
+                                  <input
+                                    type="number"
+                                    value={cfg.salesPricePerPyung || ''}
+                                    onChange={(e) => handleUpdateOfficetelField(cfg.id, 'salesPricePerPyung', parseInt(e.target.value) || 0)}
+                                    className="w-16 text-right font-mono font-bold text-indigo-700 bg-slate-50/20 hover:bg-slate-50 focus:bg-white border border-gray-200 focus:border-[#5F7161] rounded-lg px-1.5 py-1 focus:outline-none text-[11px]"
+                                  />
+                                </td>
+                                <td className="p-2 text-right">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateOfficetelField(cfg.id, 'count', Math.max(0, cfg.count - 1))}
+                                      className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded-md hover:bg-gray-50 text-[10px] font-bold text-gray-600 cursor-pointer"
+                                    >
+                                      -
+                                    </button>
+                                    <input
+                                      type="number"
+                                      value={cfg.count}
+                                      onChange={(e) => handleUpdateOfficetelField(cfg.id, 'count', Math.max(0, parseInt(e.target.value) || 0))}
+                                      className="w-9 text-center font-bold text-gray-900 bg-slate-50/20 hover:bg-slate-50 focus:bg-white border border-gray-200 focus:border-[#5F7161] rounded-lg py-1 focus:outline-none text-[11px]"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateOfficetelField(cfg.id, 'count', cfg.count + 1)}
+                                      className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded-md hover:bg-gray-50 text-[10px] font-bold text-gray-600 cursor-pointer"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                </td>
+                                <td className="p-2 text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteOfficetel(cfg.id)}
+                                    className="p-1 text-gray-400 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                                    title="삭제"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
 
@@ -1111,7 +1301,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                       <div className="text-[10px] text-gray-500 pt-1 flex justify-between">
                         <span>예상 호텔 분양매출:</span>
                         <strong className="text-amber-800">
-                          {((hotelRoomCount * hotelRoomSizePyung * hotelPricePerPyung) / 10000).toFixed(2)} 억원
+                          {(((hotelRoomCount ?? 0) * (hotelRoomSizePyung ?? 0) * (hotelPricePerPyung ?? 0)) / 10000).toFixed(2)} 억원
                         </strong>
                       </div>
                     </div>
@@ -1150,11 +1340,11 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                       <div className="text-[10px] text-gray-500 pt-1 border-t border-indigo-50 flex flex-col gap-1">
                         <div className="flex justify-between">
                           <span>보증금 입금액:</span>
-                          <strong className="text-indigo-800">{((hotelRoomCount * hotelDepositPerRoom) / 10000).toFixed(2)} 억원</strong>
+                          <strong className="text-indigo-800">{(((hotelRoomCount ?? 0) * (hotelDepositPerRoom ?? 0)) / 10000).toFixed(2)} 억원</strong>
                         </div>
                         <div className="flex justify-between">
                           <span>연간 호텔 운영임대료:</span>
-                          <strong className="text-emerald-700">{((hotelRoomCount * hotelRentPerRoom * 12) / 10000).toFixed(2)} 억원/년</strong>
+                          <strong className="text-emerald-700">{(((hotelRoomCount ?? 0) * (hotelRentPerRoom ?? 0) * 12) / 10000).toFixed(2)} 억원/년</strong>
                         </div>
                       </div>
                     </div>
@@ -1525,7 +1715,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                       <div className="text-[10px] text-gray-500 pt-1 flex justify-between">
                         <span>예상 오피스 분양매출:</span>
                         <strong className="text-amber-800">
-                          {((officeArea * officePricePerPyung) / 10000).toFixed(2)} 억원
+                          {(((officeArea ?? 0) * (officePricePerPyung ?? 0)) / 10000).toFixed(2)} 억원
                         </strong>
                       </div>
                     </div>
@@ -1564,11 +1754,11 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                       <div className="text-[10px] text-gray-500 pt-1 border-t border-indigo-50 flex flex-col gap-1">
                         <div className="flex justify-between">
                           <span>보증금 입금 총액:</span>
-                          <strong className="text-indigo-800">{((officeArea * officeDepositPerPyung) / 10000).toFixed(2)} 억원</strong>
+                          <strong className="text-indigo-800">{(((officeArea ?? 0) * (officeDepositPerPyung ?? 0)) / 10000).toFixed(2)} 억원</strong>
                         </div>
                         <div className="flex justify-between">
                           <span>연간 오피스 임대료:</span>
-                          <strong className="text-emerald-700">{((officeArea * officeRentPerPyung * 12) / 10000).toFixed(2)} 억원/년</strong>
+                          <strong className="text-emerald-700">{(((officeArea ?? 0) * (officeRentPerPyung ?? 0) * 12) / 10000).toFixed(2)} 억원/년</strong>
                         </div>
                       </div>
                     </div>
@@ -1649,16 +1839,16 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                       <div className="flex justify-between text-[11px]">
                         <span>공시지가 (공시지가 추정)</span>
                         <span>
-                          ㎡당 {getOfficialLandPricePerM2().toLocaleString()} 만원 (총 {parseFloat(((landArea * getOfficialLandPricePerM2()) / 10000).toFixed(1))} 억원)
+                          ㎡당 {(getOfficialLandPricePerM2() ?? 0).toLocaleString()} 만원 (총 {parseFloat((((landArea ?? 0) * (getOfficialLandPricePerM2() ?? 0)) / 10000).toFixed(1))} 억원)
                         </span>
                       </div>
                       <div className="flex justify-between text-[11px]">
                         <span>공시지가 대비 배수</span>
                         <span className="font-semibold text-emerald-700">
                           {(() => {
-                            const totalOfficialCost = (landArea * getOfficialLandPricePerM2()) / 10000;
+                            const totalOfficialCost = ((landArea ?? 0) * (getOfficialLandPricePerM2() ?? 0)) / 10000;
                             return totalOfficialCost > 0 
-                              ? `${(landPurchasePrice / totalOfficialCost).toFixed(2)} 배 수준`
+                              ? `${((landPurchasePrice ?? 0) / totalOfficialCost).toFixed(2)} 배 수준`
                               : '-';
                           })()}
                         </span>
@@ -1897,11 +2087,11 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                               </span>
                               <span className="font-bold text-gray-800 text-[11px]">{u.name.split(' (')[0]}</span>
                             </div>
-                            <p className="text-[10px] text-gray-400 mt-1">단위단가: {u.unitSalesPrice.toFixed(2)}억 / 규모: {u.pyung}평</p>
+                            <p className="text-[10px] text-gray-400 mt-1">단위단가: {(u.unitSalesPrice ?? 0).toFixed(2)}억 / 규모: {u.pyung}평</p>
                           </div>
                           <div className="text-right">
                             <span className="font-bold text-gray-900">{u.count}실/세대</span>
-                            <p className="text-[10px] text-[#5F7161] font-bold">총 {u.totalSalesPrice.toFixed(2)} 억</p>
+                            <p className="text-[10px] text-[#5F7161] font-bold">총 {(u.totalSalesPrice ?? 0).toFixed(2)} 억</p>
                           </div>
                         </div>
                       );

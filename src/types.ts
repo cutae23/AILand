@@ -42,6 +42,9 @@ export interface FARRelaxationResult {
     specialArchitecturalZone?: number;
     openGreenSpace?: number;
     creativeDesign?: number;
+    mixedUse?: number;
+    hasMixedUseIncentive?: boolean;
+    nonResidentialRatio?: number;
     donationLand?: number;
     donationBuilding?: number;
     donationCash?: number;

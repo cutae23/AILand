@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useRef } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import { LandRegulatoryAnalysis, FARRelaxationResult } from '../types';
-import { Printer, FileText, CheckCircle, AlertTriangle, Info, TrendingUp, Building2, MapPin, Layers, Table, Coins, CircleDollarSign, MessageSquare } from 'lucide-react';
+import { Printer, FileText, CheckCircle, AlertTriangle, Info, TrendingUp, Building2, MapPin, Layers, Table, Coins, CircleDollarSign, MessageSquare, Sliders, ShieldCheck } from 'lucide-react';
 
 interface Step4ReportProps {
   currentLand: LandRegulatoryAnalysis | null;
@@ -50,14 +50,249 @@ export default function Step4Report({
 
   // Scenario figures
   const hasScenario = !!currentScenario && !!currentScenario.result;
-  const sInputs = hasScenario ? currentScenario.inputs : null;
-  const sResult = hasScenario ? currentScenario.result : null;
+  
+  const rawInputs = hasScenario ? currentScenario.inputs : null;
+  const sInputs = useMemo(() => {
+    if (!rawInputs) return null;
+    return {
+      landArea: rawInputs.landArea ?? 0,
+      appliedFAR: rawInputs.appliedFAR ?? 0,
+      appliedBCR: rawInputs.appliedBCR ?? 0,
+      netRatio: rawInputs.netRatio ?? 0,
+      landPurchasePrice: rawInputs.landPurchasePrice ?? 0,
+      constructionCostPerPyung: rawInputs.constructionCostPerPyung ?? 0,
+      otherCostsRatio: rawInputs.otherCostsRatio ?? 0,
+      aptConfigs: rawInputs.aptConfigs ?? [],
+      officetelConfigs: rawInputs.officetelConfigs ?? [],
+      ...rawInputs
+    };
+  }, [rawInputs]);
+
+  const rawResult = hasScenario ? currentScenario.result : null;
+  const sResult = useMemo(() => {
+    if (!rawResult) return null;
+    return {
+      irr: rawResult.irr ?? 0,
+      bepYear: rawResult.bepYear ?? 0,
+      totalAllocatedUnits: rawResult.totalAllocatedUnits ?? 0,
+      allocatedUnits: rawResult.allocatedUnits ?? [],
+      cashFlows: rawResult.cashFlows ?? Array(21).fill(0),
+      cumulativeCashFlow: rawResult.cumulativeCashFlow ?? Array(21).fill(0),
+      financials: {
+        breakEvenRatio: rawResult.financials?.breakEvenRatio ?? 0,
+        operatingProfit: rawResult.financials?.operatingProfit ?? 0,
+        roi: rawResult.financials?.roi ?? 0,
+        landCost: rawResult.financials?.landCost ?? 0,
+        constructionCost: rawResult.financials?.constructionCost ?? 0,
+        otherCosts: rawResult.financials?.otherCosts ?? 0,
+        totalProjectCost: rawResult.financials?.totalProjectCost ?? 0,
+        totalSalesRevenue: rawResult.financials?.totalSalesRevenue ?? 0,
+        totalLeaseDeposits: rawResult.financials?.totalLeaseDeposits ?? 0,
+        totalAnnualRent: rawResult.financials?.totalAnnualRent ?? 0,
+        totalRevenues: rawResult.financials?.totalRevenues ?? 0,
+        ...rawResult.financials
+      },
+      ...rawResult
+    };
+  }, [rawResult]);
+
+  // --- BAEGOD COOPERATIVE MULTI-FAMILY HOUSING - DYNAMIC BUILDING OVERVIEW & FEASIBILITY STATES ---
+  const [groups, setGroups] = useState({
+    typical: { label: '기준층 (7~23,25~49)', excl: 3850, comm: 1694, etc: 0, h: 3.2, n84: 35, n130: 7 },
+    mech: { label: '설비층 (24층)', excl: 0, comm: 673.75, etc: 1043.2, h: 5, n84: 0, n130: 0 },
+    community: { label: '커뮤니티층 (6층)', excl: 0, comm: 15252.3, etc: 0, h: 6.4, n84: 0, n130: 0 },
+    podium: { label: '저층부 (2~5층)', excl: 0, comm: 673.75, etc: 5600, h: 3.5, n84: 0, n130: 0 },
+    ground: { label: '1층 (로비/근생/운동)', excl: 0, comm: 2647.7, etc: 7900, h: 5, n84: 0, n130: 0 },
+    basement: { label: '지하1층 (주차/설비)', excl: 0, comm: 1176.9, etc: 0, h: 6, n84: 0, n130: 0 }
+  });
+
+  const defaultGroupForFloor = (f: number) => {
+    if (f === -1) return 'basement';
+    if (f === 1) return 'ground';
+    if (f >= 2 && f <= 5) return 'podium';
+    if (f === 6) return 'community';
+    if (f === 24) return 'mech';
+    return 'typical';
+  };
+
+  const floorsList = useMemo(() => {
+    const list = [];
+    for (let f = 49; f >= 1; f--) {
+      list.push(f);
+    }
+    list.push(-1);
+    return list;
+  }, []);
+
+  const [floorState, setFloorState] = useState<Record<number, {
+    group: string;
+    excl: number;
+    comm: number;
+    etc: number;
+    h: number;
+    n84: number;
+    n130: number;
+  }>>(() => {
+    const initial: Record<number, any> = {};
+    const defaultGroups = {
+      typical: { excl: 3850, comm: 1694, etc: 0, h: 3.2, n84: 35, n130: 7 },
+      mech: { excl: 0, comm: 673.75, etc: 1043.2, h: 5, n84: 0, n130: 0 },
+      community: { excl: 0, comm: 15252.3, etc: 0, h: 6.4, n84: 0, n130: 0 },
+      podium: { excl: 0, comm: 673.75, etc: 5600, h: 3.5, n84: 0, n130: 0 },
+      ground: { excl: 0, comm: 2647.7, etc: 7900, h: 5, n84: 0, n130: 0 },
+      basement: { excl: 0, comm: 1176.9, etc: 0, h: 6, n84: 0, n130: 0 }
+    };
+    for (let f = 49; f >= 1; f--) {
+      const g = defaultGroupForFloor(f);
+      initial[f] = { group: g, ...defaultGroups[g] };
+    }
+    initial[-1] = { group: 'basement', ...defaultGroups['basement'] };
+    return initial;
+  });
+
+  const handleGroupTemplateChange = (g: string, field: string, val: number) => {
+    setGroups(prev => {
+      const updatedGroup = { ...prev[g as keyof typeof prev], [field]: val };
+      const updated = { ...prev, [g]: updatedGroup };
+      
+      setFloorState(fState => {
+        const nextState = { ...fState };
+        Object.keys(nextState).forEach(fKey => {
+          const f = Number(fKey);
+          if (nextState[f].group === g) {
+            nextState[f] = {
+              ...nextState[f],
+              [field]: val
+            };
+          }
+        });
+        return nextState;
+      });
+
+      return updated;
+    });
+  };
+
+  const handleFloorFieldChange = (f: number, field: string, val: number) => {
+    setFloorState(prev => {
+      const updatedFloor = { ...prev[f], [field]: val, group: 'custom' };
+      return { ...prev, [f]: updatedFloor };
+    });
+  };
+
+  const handleFloorGroupChange = (f: number, g: string) => {
+    setFloorState(prev => {
+      if (g === 'custom') {
+        return { ...prev, [f]: { ...prev[f], group: 'custom' } };
+      }
+      const groupData = groups[g as keyof typeof groups];
+      return {
+        ...prev,
+        [f]: {
+          group: g,
+          excl: groupData.excl,
+          comm: groupData.comm,
+          etc: groupData.etc,
+          h: groupData.h,
+          n84: groupData.n84,
+          n130: groupData.n130
+        }
+      };
+    });
+  };
+
+  const totals = useMemo(() => {
+    let totalArea = 0;
+    let aboveArea = 0;
+    let units84 = 0;
+    let units130 = 0;
+    let aboveHeight = 0;
+    
+    Object.keys(floorState).forEach(fKey => {
+      const f = Number(fKey);
+      const s = floorState[f];
+      const sum = s.excl + s.comm + s.etc;
+      totalArea += sum;
+      units84 += s.n84;
+      units130 += s.n130;
+      if (f > 0) {
+        aboveArea += sum;
+        aboveHeight += s.h;
+      }
+    });
+
+    return {
+      totalArea,
+      aboveArea,
+      totalUnits: units84 + units130,
+      units84,
+      units130,
+      aboveHeight
+    };
+  }, [floorState]);
+
+  const totalEtcArea = useMemo(() => {
+    let etcSum = 0;
+    Object.keys(floorState).forEach(fKey => {
+      const f = Number(fKey);
+      const s = floorState[f];
+      if (s) {
+        etcSum += s.etc;
+      }
+    });
+    return etcSum;
+  }, [floorState]);
+
+  // Feasibility Parameters (stateful sliders)
+  const [landCostInput, setLandCostInput] = useState(2500); // 억원
+  const [constCostPerPyungInput, setConstCostPerPyungInput] = useState(850); // 만원
+  const [price84PerPyung, setPrice84PerPyung] = useState(4500); // 만원
+  const [price130PerPyung, setPrice130PerPyung] = useState(5000); // 만원
+  const [retailPricePerPyung, setRetailPricePerPyung] = useState(2500); // 만원
+
+  const feasibility = useMemo(() => {
+    const sales84 = totals.units84 * 25 * (price84PerPyung / 10000);
+    const sales130 = totals.units130 * 39 * (price130PerPyung / 10000);
+    const salesRetail = (totalEtcArea * 0.3025) * (retailPricePerPyung / 10000);
+    
+    const totalRevenue = sales84 + sales130 + salesRetail;
+    
+    const landCost = landCostInput;
+    const constructionCost = (totals.totalArea * 0.3025) * (constCostPerPyungInput / 10000);
+    const otherCosts = constructionCost * 0.20; // 20% indirect
+    const totalCost = landCost + constructionCost + otherCosts;
+    
+    const profit = totalRevenue - totalCost;
+    const roi = totalCost > 0 ? (profit / totalCost) * 100 : 0;
+    const bepRatio = totalRevenue > 0 ? (totalCost / totalRevenue) * 100 : 0;
+
+    return {
+      sales84,
+      sales130,
+      salesRetail,
+      totalRevenue,
+      landCost,
+      constructionCost,
+      otherCosts,
+      totalCost,
+      profit,
+      roi,
+      bepRatio
+    };
+  }, [totals, totalEtcArea, landCostInput, constCostPerPyungInput, price84PerPyung, price130PerPyung, retailPricePerPyung]);
 
   const todayStr = new Date().toLocaleDateString('ko-KR', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
   });
+
+  const displayTotalUnits = (hasScenario && sResult && sResult.totalAllocatedUnits) ? sResult.totalAllocatedUnits : totals.totalUnits;
+  const scenarioUnitBreakdown = (hasScenario && sResult && sResult.allocatedUnits && sResult.allocatedUnits.length > 0)
+    ? sResult.allocatedUnits.map((u: any) => `${u.name ? u.name.split(' (')[0] : '타입'}: ${u.count}세대/실`).join(' / ')
+    : `84형: ${totals.units84}세대 / 130형: ${totals.units130}세대`;
+  const displayTotalArea = (hasScenario && sResult && sResult.totalGFA) ? sResult.totalGFA : totals.totalArea;
+  const displayAboveArea = (hasScenario && sResult && sResult.aboveGroundGFA) ? sResult.aboveGroundGFA : totals.aboveArea;
 
   return (
     <div className="space-y-6">
@@ -216,9 +451,73 @@ export default function Step4Report({
             <div>
               <span className="text-[10px] text-gray-450 uppercase tracking-widest font-bold block">대지 실평수 / 면적</span>
               <span className="font-bold text-sm text-[#2C251F] block mt-1">
-                {(areaSize * 0.3025).toFixed(1)}평 / {areaSize.toLocaleString()} ㎡
+                {((areaSize ?? 0) * 0.3025).toFixed(1)}평 / {(areaSize ?? 0).toLocaleString()} ㎡
               </span>
             </div>
+          </div>
+        </div>
+
+        {/* COMPREHENSIVE BUILDING OVERVIEW TABLE (종합 건축 및 사업개요표) */}
+        <div className="space-y-4 pt-4" id="comprehensive-building-overview">
+          <h3 className="text-xs font-bold text-[#2C251F] tracking-widest uppercase flex items-center gap-1.5">
+            <Layers className="w-4 h-4 text-[#5F7161]" />
+            종합 건축 및 사업개요표 (Project & Building Specifications)
+          </h3>
+          <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-xs">
+            <table className="w-full text-left border-collapse text-xs">
+              <tbody>
+                <tr className="border-b border-gray-100">
+                  <td className="p-3 bg-slate-50/50 font-bold text-gray-700 w-1/4">사업명</td>
+                  <td className="p-3 text-gray-800 font-medium" colSpan={3}>배곧 주상복합 공동주택 및 복합시설 신축사업</td>
+                </tr>
+                <tr className="border-b border-gray-100">
+                  <td className="p-3 bg-slate-50/50 font-bold text-gray-700 w-1/4">대지위치</td>
+                  <td className="p-3 text-gray-800 font-medium" colSpan={3}>{address}</td>
+                </tr>
+                <tr className="border-b border-gray-100">
+                  <td className="p-3 bg-slate-50/50 font-bold text-gray-700 w-1/4">용도지역 / 지구</td>
+                  <td className="p-3 text-gray-800 font-medium">{zoning}</td>
+                  <td className="p-3 bg-slate-50/50 font-bold text-gray-700 w-1/4">대지면적</td>
+                  <td className="p-3 text-gray-800 font-mono font-bold">
+                    {areaSize.toLocaleString()} ㎡ ({((areaSize ?? 0) * 0.3025).toFixed(1)} 평)
+                  </td>
+                </tr>
+                <tr className="border-b border-gray-100">
+                  <td className="p-3 bg-slate-50/50 font-bold text-gray-700">주요 용도</td>
+                  <td className="p-3 text-gray-800" colSpan={3}>공동주택(주상복합), 오피스텔, 근린생활시설(상가), 운동시설, 주민공동시설</td>
+                </tr>
+                <tr className="border-b border-gray-100">
+                  <td className="p-3 bg-slate-50/50 font-bold text-gray-700">계획 건폐율</td>
+                  <td className="p-3 text-gray-800 font-mono font-semibold">{baselineBCR}% (법정한도: {baselineBCR}%)</td>
+                  <td className="p-3 bg-slate-50/50 font-bold text-gray-700">계획 용적률</td>
+                  <td className="p-3 text-indigo-700 font-mono font-bold">
+                    {finalFAR}% (기본: {baselineFAR}% / 완화: +{(finalFAR - baselineFAR)}%p)
+                  </td>
+                </tr>
+                <tr className="border-b border-gray-100">
+                  <td className="p-3 bg-slate-50/50 font-bold text-gray-700">총 연면적</td>
+                  <td className="p-3 text-gray-800 font-mono font-bold">
+                    {displayTotalArea.toLocaleString('ko-KR', { maximumFractionDigits: 1 })} ㎡ ({(displayTotalArea * 0.3025).toLocaleString('ko-KR', { maximumFractionDigits: 1 })} 평)
+                  </td>
+                  <td className="p-3 bg-slate-50/50 font-bold text-gray-700">지상층 연면적</td>
+                  <td className="p-3 text-gray-800 font-mono font-bold">
+                    {displayAboveArea.toLocaleString('ko-KR', { maximumFractionDigits: 1 })} ㎡ ({(displayAboveArea * 0.3025).toLocaleString('ko-KR', { maximumFractionDigits: 1 })} 평)
+                  </td>
+                </tr>
+                <tr className="border-b border-gray-100">
+                  <td className="p-3 bg-slate-50/50 font-bold text-gray-700">건축 규모</td>
+                  <td className="p-3 text-gray-800 font-medium">지상 49층, 지하 1층</td>
+                  <td className="p-3 bg-slate-50/50 font-bold text-gray-700">최고 높이</td>
+                  <td className="p-3 text-gray-800 font-mono font-bold">{(totals.aboveHeight ?? 0).toFixed(1)} m (설계기준)</td>
+                </tr>
+                <tr>
+                  <td className="p-3 bg-slate-50/50 font-bold text-gray-700">기획 세대수</td>
+                  <td className="p-3 text-indigo-900 font-bold" colSpan={3}>
+                    총 {displayTotalUnits.toLocaleString('ko-KR')} 세대/실 ({scenarioUnitBreakdown})
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -409,6 +708,12 @@ export default function Step4Report({
                         <td className="py-2.5 text-right font-semibold text-emerald-650">+{breakdown.creativeDesign}%</td>
                       </tr>
                     )}
+                    {breakdown.mixedUse !== undefined && breakdown.mixedUse > 0 && (
+                      <tr className="border-b border-gray-100">
+                        <td className="py-2.5 text-gray-600">주거복합 비주거 비율 특례 가점 (+{breakdown.nonResidentialRatio}%)</td>
+                        <td className="py-2.5 text-right font-semibold text-emerald-650">+{breakdown.mixedUse}%</td>
+                      </tr>
+                    )}
                     <tr className="font-bold border-t border-gray-200 text-sm">
                       <td className="py-3 text-gray-900">최종 인허가 완화 용적률 (FAR)</td>
                       <td className="py-3 text-right text-indigo-600">{finalFAR}%</td>
@@ -424,7 +729,7 @@ export default function Step4Report({
                 <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 mt-2 text-[10px]">
                   <span className="text-gray-450 font-medium">추가 확보 연면적 가치:</span>
                   <span className="font-bold text-[#5F7161]">
-                    +{((areaSize * (finalFAR - baselineFAR) / 100) * 0.3025).toFixed(1)} 평
+                    +{(((areaSize ?? 0) * ((finalFAR ?? 0) - (baselineFAR ?? 0)) / 100) * 0.3025).toFixed(1)} 평
                   </span>
                 </div>
               </div>
@@ -432,6 +737,453 @@ export default function Step4Report({
           ) : (
             <p className="text-xs italic text-gray-400">Step 2 인센티브 조건이 적용되지 않았습니다. 기본 용적률 {baselineFAR}%가 적용됩니다.</p>
           )}
+        </div>
+
+        {/* INTERACTIVE BUILDING FLOOR AREA OVERVIEW & FEASIBILITY ANALYSIS (수지분석) */}
+        <div className="page-break space-y-8 pt-6 border-t border-[#E5E2DD]">
+          <div className="border-b border-[#E5E2DD] pb-3">
+            <h2 className="text-lg font-serif font-bold text-[#2C251F] flex items-center gap-2">
+              <span className="text-xs bg-[#5F7161] text-white px-2 py-0.5 rounded-full font-mono">DETAIL</span>
+              배곧 주상복합 층별 면적 산정 및 실시간 수지 분석기
+            </h2>
+            <p className="text-xs text-[#8D7B68] mt-1 leading-relaxed">
+              지상 49층 및 지하 1층 배곧 주상복합 설계 원리에 기반한 실시간 계산기입니다. 특정 층의 용도 그룹을 수정하거나, 세부 그룹 템플릿 면적/층고/세대 구성을 고치면 전체 연면적과 프로젝트 수지 분석(매출, 원가, 이익, BEP) 결과가 동적으로 재정산됩니다.
+            </p>
+          </div>
+
+          {/* SUMMARY CARDS */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-[#FAF9F5] border border-[#EDDBC7]/60 rounded-2xl p-4 text-center">
+              <span className="text-[10px] text-gray-400 block font-bold tracking-wider uppercase mb-1">총 연면적 (Gross Area)</span>
+              <span className="text-lg font-extrabold text-gray-900 block font-mono">
+                {totals.totalArea.toLocaleString('ko-KR', { maximumFractionDigits: 1 })} ㎡
+              </span>
+              <span className="text-[9px] text-[#8D7B68] block mt-0.5">
+                {(totals.totalArea * 0.3025).toLocaleString('ko-KR', { maximumFractionDigits: 1 })} 평
+              </span>
+            </div>
+            <div className="bg-[#FAF9F5] border border-[#EDDBC7]/60 rounded-2xl p-4 text-center">
+              <span className="text-[10px] text-gray-400 block font-bold tracking-wider uppercase mb-1">지상 연면적 (Above Area)</span>
+              <span className="text-lg font-extrabold text-gray-900 block font-mono">
+                {totals.aboveArea.toLocaleString('ko-KR', { maximumFractionDigits: 1 })} ㎡
+              </span>
+              <span className="text-[9px] text-[#8D7B68] block mt-0.5">
+                {(totals.aboveArea * 0.3025).toLocaleString('ko-KR', { maximumFractionDigits: 1 })} 평
+              </span>
+            </div>
+            <div className="bg-[#FAF9F5] border border-[#EDDBC7]/60 rounded-2xl p-4 text-center">
+              <span className="text-[10px] text-gray-400 block font-bold tracking-wider uppercase mb-1">총 기획 세대수</span>
+              <span className="text-lg font-extrabold text-indigo-650 block font-mono">
+                {totals.totalUnits.toLocaleString('ko-KR')} 세대
+              </span>
+              <span className="text-[9px] text-[#8D7B68] block mt-0.5">
+                84형 {totals.units84}대 / 130형 {totals.units130}대
+              </span>
+            </div>
+            <div className="bg-[#FAF9F5] border border-[#EDDBC7]/60 rounded-2xl p-4 text-center">
+              <span className="text-[10px] text-gray-400 block font-bold tracking-wider uppercase mb-1">건물 최고 높이</span>
+              <span className="text-lg font-extrabold text-[#5F7161] block font-mono">
+                {(totals.aboveHeight ?? 0).toFixed(1)} m
+              </span>
+              <span className="text-[9px] text-[#8D7B68] block mt-0.5">
+                지상 49층 및 B1층 설계 기준
+              </span>
+            </div>
+          </div>
+
+          {/* TEMPLATES CONTROLLER */}
+          <div className="bg-[#FCFAF7] p-5 rounded-2xl border border-[#EDDBC7]/60 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#EDDBC7]/40 pb-2">
+              <h3 className="text-xs font-bold text-[#2C251F] uppercase tracking-wider flex items-center gap-1.5">
+                <Sliders className="w-4 h-4 text-[#5F7161]" />
+                층 그룹 템플릿 일괄 제어판
+              </h3>
+              <span className="text-[10px] text-[#8D7B68] leading-normal">
+                * 전용·공용·기타 면적(㎡), 층고(m), 공급 세대수를 조절하면 해당 템플릿의 모든 층에 적용됩니다.
+              </span>
+            </div>
+
+            <div className="space-y-3 divide-y divide-gray-150/50 max-h-72 overflow-y-auto pr-1">
+              {Object.keys(groups).map((gKey) => {
+                const g = gKey as keyof typeof groups;
+                const t = groups[g];
+                return (
+                  <div key={gKey} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-7 gap-3 items-center pt-3 first:pt-0 pb-1 text-xs">
+                    <div className="font-bold text-gray-800 md:col-span-1">{t.label}</div>
+                    <div>
+                      <label className="text-[9px] text-gray-400 block mb-0.5 uppercase">전용(㎡)</label>
+                      <input
+                        type="number"
+                        value={t.excl}
+                        onChange={(e) => handleGroupTemplateChange(gKey, 'excl', Number(e.target.value) || 0)}
+                        className="w-full text-xs p-1.5 border border-gray-200 rounded bg-white text-gray-800 font-mono text-right"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] text-gray-400 block mb-0.5 uppercase">공용(㎡)</label>
+                      <input
+                        type="number"
+                        value={t.comm}
+                        onChange={(e) => handleGroupTemplateChange(gKey, 'comm', Number(e.target.value) || 0)}
+                        className="w-full text-xs p-1.5 border border-gray-200 rounded bg-white text-gray-800 font-mono text-right"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] text-gray-400 block mb-0.5 uppercase">기타(㎡)</label>
+                      <input
+                        type="number"
+                        value={t.etc}
+                        onChange={(e) => handleGroupTemplateChange(gKey, 'etc', Number(e.target.value) || 0)}
+                        className="w-full text-xs p-1.5 border border-gray-200 rounded bg-white text-gray-800 font-mono text-right"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] text-gray-400 block mb-0.5 uppercase">층고(m)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={t.h}
+                        onChange={(e) => handleGroupTemplateChange(gKey, 'h', Number(e.target.value) || 0)}
+                        className="w-full text-xs p-1.5 border border-gray-200 rounded bg-white text-gray-800 font-mono text-right"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] text-gray-400 block mb-0.5">84형 세대수</label>
+                      <input
+                        type="number"
+                        value={t.n84}
+                        onChange={(e) => handleGroupTemplateChange(gKey, 'n84', Number(e.target.value) || 0)}
+                        className="w-full text-xs p-1.5 border border-gray-200 rounded bg-white text-gray-800 font-mono text-right"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] text-gray-400 block mb-0.5">130형 세대수</label>
+                      <input
+                        type="number"
+                        value={t.n130}
+                        onChange={(e) => handleGroupTemplateChange(gKey, 'n130', Number(e.target.value) || 0)}
+                        className="w-full text-xs p-1.5 border border-gray-200 rounded bg-white text-gray-800 font-mono text-right"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* DETAILED FLOOR SCROLLABLE TABLE */}
+          <div className="border border-gray-250 rounded-2xl overflow-hidden bg-white">
+            <div className="bg-slate-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+              <span className="font-bold text-gray-800 text-xs flex items-center gap-1.5">
+                <Table className="w-4 h-4 text-[#5F7161]" />
+                층별 면적표 및 유형배정 산정서
+              </span>
+              <span className="text-[10px] text-gray-400 font-mono">
+                총 {floorsList.length}개 층 분석
+              </span>
+            </div>
+            <div className="overflow-x-auto max-h-96 overflow-y-auto">
+              <table className="w-full text-left border-collapse text-[11px] leading-normal font-mono">
+                <thead className="sticky top-0 bg-slate-100 shadow-sm z-10 text-gray-500 font-semibold text-[10px]">
+                  <tr className="border-b border-gray-200">
+                    <th className="p-2.5 text-center w-14">층구분</th>
+                    <th className="p-2.5 w-44">지정 그룹</th>
+                    <th className="p-2.5 text-right w-20">전용(㎡)</th>
+                    <th className="p-2.5 text-right w-20">공용(㎡)</th>
+                    <th className="p-2.5 text-right w-20">기타/상가(㎡)</th>
+                    <th className="p-2.5 text-right w-20 font-bold">계(㎡)</th>
+                    <th className="p-2.5 text-right w-16">층고(m)</th>
+                    <th className="p-2.5 text-center w-16">84세대</th>
+                    <th className="p-2.5 text-center w-16">130세대</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {floorsList.map((f) => {
+                    const s = floorState[f];
+                    if (!s) return null;
+                    return (
+                      <tr key={f} className="border-b border-gray-100 hover:bg-slate-50/50">
+                        <td className="p-2 text-center font-bold text-gray-900 bg-slate-50/30">
+                          {f === -1 ? '지하1층' : `${f}층`}
+                        </td>
+                        <td className="p-2">
+                          <select
+                            value={s.group}
+                            onChange={(e) => handleFloorGroupChange(f, e.target.value)}
+                            className="w-full text-[10px] p-1 border border-gray-200 rounded bg-white text-gray-800"
+                          >
+                            <option value="typical">기준층 (7~49층)</option>
+                            <option value="mech">설비층 (24층)</option>
+                            <option value="community">커뮤니티층 (6층)</option>
+                            <option value="podium">저층부 (2~5층)</option>
+                            <option value="ground">1층 로비/근생</option>
+                            <option value="basement">지하1층 주차</option>
+                            <option value="custom">개별입력 (Custom)</option>
+                          </select>
+                        </td>
+                        <td className="p-2 text-right">
+                          <input
+                            type="number"
+                            value={s.excl}
+                            onChange={(e) => handleFloorFieldChange(f, 'excl', Number(e.target.value) || 0)}
+                            className="w-full text-[10px] p-1 border border-transparent hover:border-gray-200 text-right font-mono text-gray-800"
+                          />
+                        </td>
+                        <td className="p-2 text-right">
+                          <input
+                            type="number"
+                            value={s.comm}
+                            onChange={(e) => handleFloorFieldChange(f, 'comm', Number(e.target.value) || 0)}
+                            className="w-full text-[10px] p-1 border border-transparent hover:border-gray-200 text-right font-mono text-gray-800"
+                          />
+                        </td>
+                        <td className="p-2 text-right">
+                          <input
+                            type="number"
+                            value={s.etc}
+                            onChange={(e) => handleFloorFieldChange(f, 'etc', Number(e.target.value) || 0)}
+                            className="w-full text-[10px] p-1 border border-transparent hover:border-gray-200 text-right font-mono text-gray-800"
+                          />
+                        </td>
+                        <td className="p-2 text-right font-bold text-gray-900 bg-slate-50/20">
+                          {(s.excl + s.comm + s.etc).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}
+                        </td>
+                        <td className="p-2 text-right">
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={s.h}
+                            onChange={(e) => handleFloorFieldChange(f, 'h', Number(e.target.value) || 0)}
+                            className="w-full text-[10px] p-1 border border-transparent hover:border-gray-200 text-right font-mono text-gray-800"
+                          />
+                        </td>
+                        <td className="p-2 text-center">
+                          <input
+                            type="number"
+                            value={s.n84}
+                            onChange={(e) => handleFloorFieldChange(f, 'n84', Number(e.target.value) || 0)}
+                            className="w-full text-[10px] p-1 border border-transparent hover:border-gray-200 text-center font-mono text-gray-800"
+                          />
+                        </td>
+                        <td className="p-2 text-center">
+                          <input
+                            type="number"
+                            value={s.n130}
+                            onChange={(e) => handleFloorFieldChange(f, 'n130', Number(e.target.value) || 0)}
+                            className="w-full text-[10px] p-1 border border-transparent hover:border-gray-200 text-center font-mono text-gray-800"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* DYNAMIC FEASIBILITY ANALYSIS (수지분석) */}
+          <div className="bg-[#FAF9F5] p-6 rounded-2xl border border-[#EDDBC7] space-y-6">
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
+                <CircleDollarSign className="w-5 h-5 text-[#2C251F]" />
+                실시간 건축 수지 분석 (Business Feasibility Report)
+              </h3>
+              <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
+                위 층별 개요표 상의 전용·공용·기타 면적과 세대 구성에 근거한 동적 사업성 분석 시뮬레이터입니다. 슬라이더를 조작하여 실시간 수익 마진 변화를 모니터링 하십시오.
+              </p>
+            </div>
+
+            {/* CONTROL PANEL SLIDERS */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 bg-white p-4 rounded-xl border border-[#EDDBC7]/60">
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-gray-500 block">토지 실매입비 (총액)</span>
+                <div className="flex items-center justify-between gap-1">
+                  <input
+                    type="range"
+                    min="1000"
+                    max="4500"
+                    step="50"
+                    value={landCostInput}
+                    onChange={(e) => setLandCostInput(Number(e.target.value))}
+                    className="w-full accent-emerald-750"
+                  />
+                  <span className="text-[11px] font-mono font-bold text-slate-800 shrink-0 w-14 text-right">{landCostInput}억</span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-gray-500 block">평당 공사비 (만원/평)</span>
+                <div className="flex items-center justify-between gap-1">
+                  <input
+                    type="range"
+                    min="600"
+                    max="1300"
+                    step="20"
+                    value={constCostPerPyungInput}
+                    onChange={(e) => setConstCostPerPyungInput(Number(e.target.value))}
+                    className="w-full accent-emerald-750"
+                  />
+                  <span className="text-[11px] font-mono font-bold text-slate-800 shrink-0 w-14 text-right">{constCostPerPyungInput}만</span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-gray-500 block">84타입 평당 분양가</span>
+                <div className="flex items-center justify-between gap-1">
+                  <input
+                    type="range"
+                    min="2500"
+                    max="6500"
+                    step="50"
+                    value={price84PerPyung}
+                    onChange={(e) => setPrice84PerPyung(Number(e.target.value))}
+                    className="w-full accent-emerald-750"
+                  />
+                  <span className="text-[11px] font-mono font-bold text-slate-800 shrink-0 w-14 text-right">{price84PerPyung}만</span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-gray-500 block">130타입 평당 분양가</span>
+                <div className="flex items-center justify-between gap-1">
+                  <input
+                    type="range"
+                    min="3000"
+                    max="8500"
+                    step="100"
+                    value={price130PerPyung}
+                    onChange={(e) => setPrice130PerPyung(Number(e.target.value))}
+                    className="w-full accent-emerald-750"
+                  />
+                  <span className="text-[11px] font-mono font-bold text-slate-800 shrink-0 w-14 text-right">{price130PerPyung}만</span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-gray-500 block">기타상업 평당 분양가</span>
+                <div className="flex items-center justify-between gap-1">
+                  <input
+                    type="range"
+                    min="1000"
+                    max="5000"
+                    step="50"
+                    value={retailPricePerPyung}
+                    onChange={(e) => setRetailPricePerPyung(Number(e.target.value))}
+                    className="w-full accent-emerald-750"
+                  />
+                  <span className="text-[11px] font-mono font-bold text-slate-800 shrink-0 w-14 text-right">{retailPricePerPyung}만</span>
+                </div>
+              </div>
+            </div>
+
+            {/* DUAL SPREADSHEETS */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Income */}
+              <div className="border border-gray-200 rounded-xl bg-white overflow-hidden shadow-sm">
+                <div className="bg-slate-50 px-3 py-2 border-b border-gray-150 font-bold text-gray-800 text-[11px] flex justify-between">
+                  <span>① 수입 자금 유입 명세 (Project Cash Inflows)</span>
+                  <span className="text-emerald-750 font-semibold font-mono">총 분양매출</span>
+                </div>
+                <table className="w-full text-xs">
+                  <tbody>
+                    <tr className="border-b border-gray-100">
+                      <td className="p-3 text-gray-500">84타입 공동주택 ({totals.units84}세대 * 호당 25평)</td>
+                      <td className="p-3 text-right font-mono font-bold text-gray-800">
+                        {feasibility.sales84.toLocaleString('ko-KR', { maximumFractionDigits: 1 })} 억원
+                      </td>
+                    </tr>
+                    <tr className="border-b border-gray-100">
+                      <td className="p-3 text-gray-500">130타입 공동주택 ({totals.units130}세대 * 호당 39평)</td>
+                      <td className="p-3 text-right font-mono font-bold text-gray-800">
+                        {feasibility.sales130.toLocaleString('ko-KR', { maximumFractionDigits: 1 })} 억원
+                      </td>
+                    </tr>
+                    <tr className="border-b border-gray-100">
+                      <td className="p-3 text-gray-500">저층 상업/운동/기타시설 ({((totalEtcArea ?? 0) * 0.3025).toFixed(1)}평)</td>
+                      <td className="p-3 text-right font-mono font-bold text-gray-800">
+                        {feasibility.salesRetail.toLocaleString('ko-KR', { maximumFractionDigits: 1 })} 억원
+                      </td>
+                    </tr>
+                    <tr className="bg-[#FAF9F5] font-extrabold text-[#2C251F] text-[12px]">
+                      <td className="p-3">총 예상 유입 매출액 (Inflows)</td>
+                      <td className="p-3 text-right font-mono text-[#5F7161]">
+                        {feasibility.totalRevenue.toLocaleString('ko-KR', { maximumFractionDigits: 1 })} 억원
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Cost */}
+              <div className="border border-gray-200 rounded-xl bg-white overflow-hidden shadow-sm">
+                <div className="bg-slate-50 px-3 py-2 border-b border-gray-150 font-bold text-gray-800 text-[11px] flex justify-between">
+                  <span>② 예산 자금 지출 명세 (Project Cost Outflows)</span>
+                  <span className="text-rose-600 font-semibold font-mono">총 사업비</span>
+                </div>
+                <table className="w-full text-xs">
+                  <tbody>
+                    <tr className="border-b border-gray-100">
+                      <td className="p-3 text-gray-500">토지 매입 실비 산출 (Land Purchase Cost)</td>
+                      <td className="p-3 text-right font-mono font-bold text-gray-800">
+                        {feasibility.landCost.toLocaleString('ko-KR')} 억원
+                      </td>
+                    </tr>
+                    <tr className="border-b border-gray-100">
+                      <td className="p-3 text-gray-500">설계 및 주동 종합 공사비 ({((totals.totalArea ?? 0) * 0.3025).toFixed(1)}평)</td>
+                      <td className="p-3 text-right font-mono font-bold text-gray-800">
+                        {feasibility.constructionCost.toLocaleString('ko-KR', { maximumFractionDigits: 1 })} 억원
+                      </td>
+                    </tr>
+                    <tr className="border-b border-gray-100">
+                      <td className="p-3 text-gray-500">간접부대비, 세금 및 기타 금융비용 (공사비의 20% 적용)</td>
+                      <td className="p-3 text-right font-mono font-bold text-gray-800">
+                        {feasibility.otherCosts.toLocaleString('ko-KR', { maximumFractionDigits: 1 })} 억원
+                      </td>
+                    </tr>
+                    <tr className="bg-rose-50/30 font-extrabold text-[#2C251F] text-[12px]">
+                      <td className="p-3">총 소요 원가 예산 합계 (Outflows)</td>
+                      <td className="p-3 text-right font-mono text-rose-600">
+                        {feasibility.totalCost.toLocaleString('ko-KR', { maximumFractionDigits: 1 })} 억원
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* OUTCOME SUMMARY METRICS */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white p-4 rounded-xl border border-[#EDDBC7]/65 flex flex-col justify-between items-center text-center shadow-sm">
+                <span className="text-[10px] text-gray-400 font-bold block mb-1">예상 개발 이익 (Operating Profit)</span>
+                <span className={`text-xl font-black font-mono ${feasibility.profit >= 0 ? 'text-[#5F7161]' : 'text-rose-600'}`}>
+                  {feasibility.profit >= 0 ? '+' : ''}{feasibility.profit.toLocaleString('ko-KR', { maximumFractionDigits: 1 })} 억원
+                </span>
+                <span className="text-[9px] text-gray-400 mt-1">
+                  {feasibility.profit >= 0 ? '수지 흑자 구조' : '원가 초과 적자 위험'}
+                </span>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl border border-[#EDDBC7]/65 flex flex-col justify-between items-center text-center shadow-sm">
+                <span className="text-[10px] text-gray-400 font-bold block mb-1">사업 수익률 (ROI)</span>
+                <span className={`text-xl font-black font-mono ${feasibility.roi >= 15 ? 'text-[#5F7161]' : feasibility.roi >= 5 ? 'text-amber-600' : 'text-rose-600'}`}>
+                  {(feasibility.roi ?? 0).toFixed(1)} %
+                </span>
+                <span className="text-[9px] text-gray-400 mt-1">
+                  투자 소요액 대비 영업 마진율
+                </span>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl border border-[#EDDBC7]/65 flex flex-col justify-between items-center text-center shadow-sm">
+                <span className="text-[10px] text-gray-400 font-bold block mb-1">손익분기 분양률 (BEP Ratio)</span>
+                <span className="text-xl font-black font-mono text-indigo-650">
+                  {(feasibility.bepRatio ?? 0).toFixed(1)} %
+                </span>
+                <span className="text-[9px] text-gray-400 mt-1">
+                  {feasibility.bepRatio <= 65 ? '최우수 (낮은 분양 부담)' : feasibility.bepRatio <= 80 ? '안정권' : '위험군 (고분양 필수)'}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* PAGE 3: HOUSING PRODUCT LAYOUT & FINANCIAL FEASIBILITY */}
@@ -464,17 +1216,17 @@ export default function Step4Report({
                       {sResult.allocatedUnits.map((u: any) => (
                         <tr key={u.id} className="border-b border-gray-100 text-gray-700">
                           <td className="py-2.5 font-semibold text-gray-900">{u.name}</td>
-                          <td className="py-2.5">{u.pyung}평 ({(u.sizeM2).toFixed(1)}㎡)</td>
+                          <td className="py-2.5">{u.pyung}평 ({((u.sizeM2 ?? 0)).toFixed(1)}㎡)</td>
                           <td className="py-2.5 text-center font-bold">{u.count} 세대/실</td>
-                          <td className="py-2.5 text-right">{(u.unitSalesPrice).toFixed(2)} 억</td>
-                          <td className="py-2.5 text-right font-bold text-slate-900">{(u.totalSalesPrice).toFixed(2)} 억</td>
+                          <td className="py-2.5 text-right">{((u.unitSalesPrice ?? 0)).toFixed(2)} 억</td>
+                          <td className="py-2.5 text-right font-bold text-slate-900">{((u.totalSalesPrice ?? 0)).toFixed(2)} 억</td>
                         </tr>
                       ))}
                       <tr className="font-bold text-sm bg-slate-50 border-t border-gray-200">
                         <td className="py-3 px-2 text-gray-900" colSpan={2}>기획 합계</td>
                         <td className="py-3 text-center">{sResult.totalAllocatedUnits} 세대/실</td>
                         <td className="py-3"></td>
-                        <td className="py-3 text-right text-[#5F7161]">{sResult.financials.totalSalesRevenue.toFixed(2)} 억</td>
+                        <td className="py-3 text-right text-[#5F7161]">{((sResult.financials.totalSalesRevenue ?? 0)).toFixed(2)} 억</td>
                       </tr>
                     </tbody>
                   </table>
@@ -521,7 +1273,7 @@ export default function Step4Report({
                       </tr>
                       <tr className="border-b border-gray-100">
                         <td className="py-2 text-gray-500">10개년 누적 월세 수익 합산</td>
-                        <td className="py-2 text-right font-bold text-[#5F7161]">{(sResult.financials.totalAnnualRent * 10).toFixed(2)} 억원</td>
+                        <td className="py-2 text-[#5F7161] font-bold text-right">{(((sResult.financials.totalAnnualRent ?? 0) * 10)).toFixed(2)} 억원</td>
                       </tr>
                       <tr className="font-bold border-t border-gray-200 text-sm bg-emerald-50/20">
                         <td className="py-2.5 px-2 text-gray-900">수지 총매출가치 (Inflows)</td>
@@ -793,6 +1545,12 @@ export default function Step4Report({
                           <td className="p-2 text-right font-mono text-emerald-700">+{breakdown.creativeDesign}%</td>
                         </tr>
                       )}
+                      {breakdown?.mixedUse !== undefined && breakdown.mixedUse > 0 && (
+                        <tr className="border-b border-gray-100">
+                          <th className="p-2 text-left text-gray-500 font-medium">주거복합 비주거 비율 특례 (Mixed Use)</th>
+                          <td className="p-2 text-right font-mono text-emerald-700">+{breakdown.mixedUse}%</td>
+                        </tr>
+                      )}
                       <tr className="bg-slate-50 font-bold">
                         <th className="p-2 text-left text-gray-900 text-xs">최종 승인 용적률 (Final FAR)</th>
                         <td className="p-2 text-right font-mono text-indigo-650 text-xs">{finalFAR}%</td>
@@ -811,7 +1569,7 @@ export default function Step4Report({
                   <div className="bg-white p-3 rounded-xl border border-gray-100 mt-2 text-[10px]">
                     <span className="text-gray-450 block font-medium">용적률 상승에 따른 순 연면적 이득량:</span>
                     <span className="font-bold text-xs text-[#5F7161] block mt-1">
-                      {((areaSize * (finalFAR - baselineFAR) / 100) * 0.3025).toFixed(1)} 평 ({(areaSize * (finalFAR - baselineFAR) / 100).toLocaleString()} ㎡)
+                      {(((areaSize ?? 0) * ((finalFAR ?? 0) - (baselineFAR ?? 0)) / 100) * 0.3025).toFixed(1)} 평 ({(((areaSize ?? 0) * ((finalFAR ?? 0) - (baselineFAR ?? 0)) / 100)).toLocaleString()} ㎡)
                     </span>
                   </div>
                 </div>
@@ -835,7 +1593,7 @@ export default function Step4Report({
                       <tbody>
                         <tr className="border-b border-gray-100">
                           <th className="p-2 text-left text-gray-500 font-medium">대지 면적 (Land Size)</th>
-                          <td className="p-2 text-right font-mono">{(sInputs.landArea * 0.3025).toFixed(1)}평 ({sInputs.landArea.toLocaleString()}㎡)</td>
+                          <td className="p-2 text-right font-mono">{(((sInputs?.landArea ?? 0) * 0.3025)).toFixed(1)}평 ({(sInputs?.landArea ?? 0).toLocaleString()}㎡)</td>
                         </tr>
                         <tr className="border-b border-gray-100">
                           <th className="p-2 text-left text-gray-500 font-medium">목표 적용 건폐율 (Applied BCR)</th>
@@ -855,7 +1613,7 @@ export default function Step4Report({
                         </tr>
                         <tr className="border-b border-gray-100">
                           <th className="p-2 text-left text-gray-500 font-medium">평당 건축 토목 표준 공사비</th>
-                          <td className="p-2 text-right font-mono font-bold text-rose-700">{(sInputs.constructionCostPerPyung / 10000).toFixed(1)} 천만원 / 평</td>
+                          <td className="p-2 text-right font-mono font-bold text-rose-700">{(((sInputs?.constructionCostPerPyung ?? 0) / 10000)).toFixed(1)} 천만원 / 평</td>
                         </tr>
                         <tr className="border-b border-gray-100">
                           <th className="p-2 text-left text-gray-500 font-medium">기타 부대 제비용 간접 요율</th>
@@ -882,7 +1640,7 @@ export default function Step4Report({
                           <tr key={idx} className="border-b border-gray-100">
                             <td className="p-2 font-bold text-slate-800">{apt.name}</td>
                             <td className="p-2 text-center font-mono">{apt.pyung}평</td>
-                            <td className="p-2 text-right font-mono">{(apt.salesPricePerPyung / 10000).toFixed(1)} 천만원</td>
+                            <td className="p-2 text-right font-mono">{(((apt.salesPricePerPyung ?? 0) / 10000)).toFixed(1)} 천만원</td>
                             <td className="p-2 text-right font-mono font-semibold text-indigo-650">{apt.percentage}%</td>
                           </tr>
                         ))}
@@ -910,7 +1668,7 @@ export default function Step4Report({
                         <tr key={idx} className="border-b border-gray-100">
                           <td className="p-2 font-bold text-slate-800">오피스텔: {of.name}</td>
                           <td className="p-2 font-mono">전용 {of.pyung}평 / 배분율 {of.percentage}%</td>
-                          <td className="p-2 text-right font-mono">{(of.salesPricePerPyung / 10000).toFixed(1)} 천만원</td>
+                          <td className="p-2 text-right font-mono">{(((of.salesPricePerPyung ?? 0) / 10000)).toFixed(1)} 천만원</td>
                           <td className="p-2 text-right text-gray-400 font-mono">-</td>
                         </tr>
                       ))}
@@ -920,7 +1678,7 @@ export default function Step4Report({
                         <tr className="border-b border-gray-100">
                           <td className="p-2 font-bold text-slate-800">상업시설 (지하1층)</td>
                           <td className="p-2 font-mono">임대 전용률: {sInputs.retailNetRatio}% / 면적: {sInputs.retailB1Area}평</td>
-                          <td className="p-2 text-right font-mono">{(sInputs.retailB1Price / 10000).toFixed(1)} 천만원</td>
+                          <td className="p-2 text-right font-mono">{(((sInputs?.retailB1Price ?? 0) / 10000)).toFixed(1)} 천만원</td>
                           <td className="p-2 text-right font-mono text-[#5F7161]">보증금 {sInputs.retailB1Deposit}억 / 월세 {sInputs.retailB1Rent}만</td>
                         </tr>
                       )}
@@ -928,7 +1686,7 @@ export default function Step4Report({
                         <tr className="border-b border-gray-100">
                           <td className="p-2 font-bold text-slate-800">상업시설 (지상1층)</td>
                           <td className="p-2 font-mono">임대 전용률: {sInputs.retailNetRatio}% / 면적: {sInputs.retail1FArea}평</td>
-                          <td className="p-2 text-right font-mono">{(sInputs.retail1FPrice / 10000).toFixed(1)} 천만원</td>
+                          <td className="p-2 text-right font-mono">{(((sInputs?.retail1FPrice ?? 0) / 10000)).toFixed(1)} 천만원</td>
                           <td className="p-2 text-right font-mono text-[#5F7161]">보증금 {sInputs.retail1FDeposit}억 / 월세 {sInputs.retail1FRent}만</td>
                         </tr>
                       )}
@@ -936,7 +1694,7 @@ export default function Step4Report({
                         <tr className="border-b border-gray-100">
                           <td className="p-2 font-bold text-slate-800">상업시설 (지상2층)</td>
                           <td className="p-2 font-mono">임대 전용률: {sInputs.retailNetRatio}% / 면적: {sInputs.retail2FArea}평</td>
-                          <td className="p-2 text-right font-mono">{(sInputs.retail2FPrice / 10000).toFixed(1)} 천만원</td>
+                          <td className="p-2 text-right font-mono">{(((sInputs?.retail2FPrice ?? 0) / 10000)).toFixed(1)} 천만원</td>
                           <td className="p-2 text-right font-mono text-[#5F7161]">보증금 {sInputs.retail2FDeposit}억 / 월세 {sInputs.retail2FRent}만</td>
                         </tr>
                       )}
@@ -944,7 +1702,7 @@ export default function Step4Report({
                         <tr className="border-b border-gray-100">
                           <td className="p-2 font-bold text-slate-800">상업시설 (지상3층)</td>
                           <td className="p-2 font-mono">임대 전용률: {sInputs.retailNetRatio}% / 면적: {sInputs.retail3FArea}평</td>
-                          <td className="p-2 text-right font-mono">{(sInputs.retail3FPrice / 10000).toFixed(1)} 천만원</td>
+                          <td className="p-2 text-right font-mono">{(((sInputs?.retail3FPrice ?? 0) / 10000)).toFixed(1)} 천만원</td>
                           <td className="p-2 text-right font-mono text-[#5F7161]">보증금 {sInputs.retail3FDeposit}억 / 월세 {sInputs.retail3FRent}만</td>
                         </tr>
                       )}
@@ -954,7 +1712,7 @@ export default function Step4Report({
                         <tr className="border-b border-gray-100">
                           <td className="p-2 font-bold text-slate-800">레지던스/호텔 (복합)</td>
                           <td className="p-2 font-mono">규모: {sInputs.hotelRoomCount}개 객실 / 실 면적: {sInputs.hotelRoomSizePyung}평</td>
-                          <td className="p-2 text-right font-mono">{(sInputs.hotelPricePerPyung / 10000).toFixed(1)} 천만원</td>
+                          <td className="p-2 text-right font-mono">{(((sInputs?.hotelPricePerPyung ?? 0) / 10000)).toFixed(1)} 천만원</td>
                           <td className="p-2 text-right font-mono text-[#5F7161]">실 보증금 {sInputs.hotelDepositPerRoom}억 / 월세 {sInputs.hotelRentPerRoom}만</td>
                         </tr>
                       )}
@@ -964,7 +1722,7 @@ export default function Step4Report({
                         <tr className="border-b border-gray-100">
                           <td className="p-2 font-bold text-slate-800">업무 오피스 시설</td>
                           <td className="p-2 font-mono">임대 면적: {sInputs.officeArea}평 / 전용률: {sInputs.officeNetRatio}%</td>
-                          <td className="p-2 text-right font-mono">{(sInputs.officePricePerPyung / 10000).toFixed(1)} 천만원</td>
+                          <td className="p-2 text-right font-mono">{(((sInputs?.officePricePerPyung ?? 0) / 10000)).toFixed(1)} 천만원</td>
                           <td className="p-2 text-right font-mono text-[#5F7161]">평 보증금 {sInputs.officeDepositPerPyung}만 / 평 임대료 {sInputs.officeRentPerPyung}만</td>
                         </tr>
                       )}
@@ -985,11 +1743,195 @@ export default function Step4Report({
             )}
           </div>
 
-          {/* APPENDIX E: AI Q&A CONSULTATION LOGS */}
+
+          {/* APPENDIX E: SURROUNDING SUCCESSFUL DEVELOPMENT CASES */}
+          <div className="space-y-4 page-break pt-6 border-t border-dashed border-gray-200">
+            <h3 className="font-bold text-gray-850 text-sm border-b border-gray-150 pb-1.5 flex items-center gap-1.5">
+              <TrendingUp className="w-4 h-4 text-[#5F7161]" />
+              <span>[부록 E] 현재 필지와 유사한 조건을 가진 주변 지역 개발 성공 사례 리스트</span>
+            </h3>
+
+            <p className="text-[11px] text-[#8D7B68] leading-relaxed">
+              본 대지의 용도지역(<strong className="text-gray-900">{zoning}</strong>) 및 개발 스케일과 유사한 인근 구역의 성공 사례를 분석한 데이터입니다. 타 사업지들이 적극 도입한 <strong>용적률 완화 가점 포인트(기부채납, 창의 디자인, 개방형 녹지 등)</strong> 및 사업 성공 전략을 벤치마킹하여 인허가 승인율을 극대화할 수 있습니다.
+            </p>
+
+            <div className="border border-gray-150 rounded-2xl overflow-hidden bg-white">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-[11px] leading-normal">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-gray-150 text-gray-500 font-semibold text-[10px]">
+                      <th className="p-3 w-1/4">성공 사례명 / 위치</th>
+                      <th className="p-3 w-1/5">대지 요약 / 용도지역</th>
+                      <th className="p-3">적용 인센티브 완화 혜택</th>
+                      <th className="p-3 w-28 text-center">최종 FAR / 높이</th>
+                      <th className="p-3 w-1/4">기획 성과 및 성공 전략</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(zoning.includes('상업') || zoning.includes('준주거')) ? (
+                      <>
+                        <tr className="border-b border-gray-100 hover:bg-slate-50/50">
+                          <td className="p-3">
+                            <div className="font-bold text-gray-900">도심형 하이브리드 타워 (A-스퀘어)</div>
+                            <div className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
+                              <MapPin className="w-3 h-3" /> 인근 450m 이내
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-semibold text-gray-700">{zoning}</div>
+                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">대지 2,450㎡ (유사 크기)</div>
+                          </td>
+                          <td className="p-3 space-y-1">
+                            <span className="inline-block bg-emerald-50 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">건물 기부채납 +20%p</span>
+                            <span className="inline-block bg-indigo-50 text-indigo-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">비주거 복합가점 +15%p</span>
+                            <span className="inline-block bg-slate-100 text-slate-700 text-[9px] font-medium px-1.5 py-0.5 rounded">공개공지 +8%p</span>
+                          </td>
+                          <td className="p-3 text-center">
+                            <div className="font-bold text-indigo-650 font-mono">398.5%</div>
+                            <div className="text-[10px] text-gray-500 font-mono mt-0.5">지상 38층</div>
+                          </td>
+                          <td className="p-3 text-gray-600 leading-relaxed text-[10.5px]">
+                            상업·문화시설 배분 가점을 최대 수혜 적용하여 공사비 회수 기여. 저층부 스트리트 몰 연계로 분양 개시 3주 만에 전 실 완판 기록.
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100 hover:bg-slate-50/50">
+                          <td className="p-3">
+                            <div className="font-bold text-gray-900">메트로 오피스텔 랜드마크 (B-스퀘어)</div>
+                            <div className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
+                              <MapPin className="w-3 h-3" /> 인근 820m 이내
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-semibold text-gray-700">{zoning}</div>
+                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">대지 3,120㎡</div>
+                          </td>
+                          <td className="p-3 space-y-1">
+                            <span className="inline-block bg-indigo-50 text-indigo-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">창의디자인 최우수 +40%p</span>
+                            <span className="inline-block bg-emerald-50 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">기부채납(도서관) +25%p</span>
+                            <span className="inline-block bg-slate-100 text-slate-700 text-[9px] font-medium px-1.5 py-0.5 rounded">역세권 청년임대 +30%p</span>
+                          </td>
+                          <td className="p-3 text-center">
+                            <div className="font-bold text-indigo-650 font-mono">448.2%</div>
+                            <div className="text-[10px] text-gray-500 font-mono mt-0.5">지상 45층</div>
+                          </td>
+                          <td className="p-3 text-gray-600 leading-relaxed text-[10.5px]">
+                            도시·건축 창의혁신 디자인 공모 당선으로 일조권 사선제한 규제를 완전히 배제 승인받음. 초고층 하이엔드 복합 주거 랜드마크로 도약.
+                          </td>
+                        </tr>
+                        <tr className="hover:bg-slate-50/50">
+                          <td className="p-3">
+                            <div className="font-bold text-gray-900">친환경 그린 스마트 복합센터 (C-메트로)</div>
+                            <div className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
+                              <MapPin className="w-3 h-3" /> 인근 1.1km 이내
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-semibold text-gray-700">{zoning}</div>
+                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">대지 1,890㎡</div>
+                          </td>
+                          <td className="p-3 space-y-1">
+                            <span className="inline-block bg-emerald-50 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">개방형 녹지 40% +48%p</span>
+                            <span className="inline-block bg-slate-100 text-slate-700 text-[9px] font-medium px-1.5 py-0.5 rounded mr-1">녹색건축인증 1등급 +12%p</span>
+                          </td>
+                          <td className="p-3 text-center">
+                            <div className="font-bold text-indigo-650 font-mono">389.0%</div>
+                            <div className="text-[10px] text-gray-500 font-mono mt-0.5">지상 32층</div>
+                          </td>
+                          <td className="p-3 text-gray-600 leading-relaxed text-[10.5px]">
+                            지상층 대지의 40%를 완전히 개방형 시민 공원녹지로 내어주고 상향 보너스를 획득. 입주사 테라스 정원을 분양 마케팅 포인트로 활용하여 분양가 +15% 프리미엄 획득.
+                          </td>
+                        </tr>
+                      </>
+                    ) : (
+                      <>
+                        <tr className="border-b border-gray-100 hover:bg-slate-50/50">
+                          <td className="p-3">
+                            <div className="font-bold text-gray-900">숲세권 테라스 포레 (D-Forest)</div>
+                            <div className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
+                              <MapPin className="w-3 h-3" /> 인근 650m 이내
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-semibold text-gray-700">{zoning}</div>
+                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">대지 2,800㎡ (유사 크기)</div>
+                          </td>
+                          <td className="p-3 space-y-1">
+                            <span className="inline-block bg-emerald-50 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">토지 기부채납(소공원) +15%p</span>
+                            <span className="inline-block bg-indigo-50 text-indigo-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">우수한 디자인 혁신 +20%p</span>
+                            <span className="inline-block bg-slate-100 text-slate-700 text-[9px] font-medium px-1.5 py-0.5 rounded">장기전세 결합 +15%p</span>
+                          </td>
+                          <td className="p-3 text-center">
+                            <div className="font-bold text-indigo-650 font-mono">248.5%</div>
+                            <div className="text-[10px] text-gray-500 font-mono mt-0.5">지상 25층</div>
+                          </td>
+                          <td className="p-3 text-gray-600 leading-relaxed text-[10.5px]">
+                            도로 확장에 치우치던 기부채납을 단지 내 소공원 조성 방식으로 우회 기획하여 단지 쾌적성을 확보함과 동시에 용적률 한계 돌파. 평균 분양 경쟁률 45:1 완판 성공.
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100 hover:bg-slate-50/50">
+                          <td className="p-3">
+                            <div className="font-bold text-gray-900">센트럴 시그니처 에코단지 (E-Central)</div>
+                            <div className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
+                              <MapPin className="w-3 h-3" /> 인근 980m 이내
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-semibold text-gray-700">{zoning}</div>
+                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">대지 3,450㎡</div>
+                          </td>
+                          <td className="p-3 space-y-1">
+                            <span className="inline-block bg-indigo-50 text-indigo-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">공공임대주택 특례 +30%p</span>
+                            <span className="inline-block bg-emerald-50 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">공개공지 정원 +10%p</span>
+                            <span className="inline-block bg-slate-100 text-slate-700 text-[9px] font-medium px-1.5 py-0.5 rounded">제로에너지빌딩 +8%p</span>
+                          </td>
+                          <td className="p-3 text-center">
+                            <div className="font-bold text-indigo-650 font-mono">278.4%</div>
+                            <div className="text-[10px] text-gray-500 font-mono mt-0.5">지상 28층</div>
+                          </td>
+                          <td className="p-3 text-gray-600 leading-relaxed text-[10.5px]">
+                            임대주택 기입채납을 적극 설계 반영하여 법정 용적률 상한의 1.2배 상향 승인을 취득함. 또한 부설 주차장 완화 조항 연동을 통하여 지하 토공사비를 12% 가량 획기적으로 경감.
+                          </td>
+                        </tr>
+                        <tr className="hover:bg-slate-50/50">
+                          <td className="p-3">
+                            <div className="font-bold text-gray-900">개방형 가든 시티 (F-Garden)</div>
+                            <div className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
+                              <MapPin className="w-3 h-3" /> 인근 1.4km 이내
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-semibold text-gray-700">{zoning}</div>
+                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">대지 2,100㎡</div>
+                          </td>
+                          <td className="p-3 space-y-1">
+                            <span className="inline-block bg-emerald-50 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">개방형 녹지 30% +36%p</span>
+                            <span className="inline-block bg-indigo-50 text-indigo-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">특별건축구역 지정 +25%p</span>
+                          </td>
+                          <td className="p-3 text-center">
+                            <div className="font-bold text-indigo-650 font-mono">299.2%</div>
+                            <div className="text-[10px] text-gray-500 font-mono mt-0.5">지상 30층</div>
+                          </td>
+                          <td className="p-3 text-gray-600 leading-relaxed text-[10.5px]">
+                            생태형 개방 녹지와 특별건축구역 조항을 통합 접수. 동간 배치를 입체화하고 정북 방향 일조 사선 완화를 적용하여 슬림한 타워형 배치 구축 성공. 주변 시세 대비 완공 시점 평당 가격 최고가 갱신.
+                          </td>
+                        </tr>
+                      </>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-[#5F7161]/5 border border-[#5F7161]/15 text-[10.5px] leading-relaxed text-[#5F7161]">
+              <strong>💡 벤치마킹 시사점:</strong> 주변 성공 사업장들은 단순 도로/공지 무상 양도보다는, <span className="font-semibold text-[#3E362E]">공공 활용도가 높은 저층 복합 건물 기부채납</span>이나 <span className="font-semibold text-[#3E362E]">개방형 도심 숲(개방형 녹지)</span> 등의 소프트웨어형 아이템을 기획하여 지자체 심의위원회의 높은 지지와 가산 승인을 최우선적으로 확보한 패턴을 보이고 있습니다.
+            </div>
+          </div>
+
+          {/* APPENDIX F: AI Q&A CONSULTATION LOGS */}
           <div className="space-y-4 page-break pt-6 border-t border-dashed border-gray-200">
             <h3 className="font-bold text-gray-850 text-sm border-b border-gray-150 pb-1.5 flex items-center gap-1.5">
               <MessageSquare className="w-4 h-4 text-[#5F7161]" />
-              <span>[부록 E] 인공지능(AI) 법률 및 인허가 규제 자문/질의응답 전문 기록 (AI Consultation Transcript)</span>
+              <span>[부록 F] 인공지능(AI) 법률 및 인허가 규제 자문/질의응답 전문 기록 (AI Consultation Transcript)</span>
             </h3>
 
             <div className="bg-[#FAF9F5] p-5 rounded-2xl border border-gray-150 space-y-4">
