@@ -38,6 +38,18 @@ export interface FARRelaxationResult {
     openSpace: number;
     eco: number;
     rental: number;
+    hotel?: number;
+    specialArchitecturalZone?: number;
+    openGreenSpace?: number;
+    creativeDesign?: number;
+    donationLand?: number;
+    donationBuilding?: number;
+    donationCash?: number;
+    donatedLandArea?: number;
+    donatedBuildingArea?: number;
+    donatedCashAmount?: number;
+    facilityType?: string;
+    landAppraisalValue?: number;
   };
   explanation: string;
 }

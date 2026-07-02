@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FARRelaxationInput, FARRelaxationResult, LandRegulatoryAnalysis } from '../types';
-import { ArrowRight, HelpCircle, ShieldCheck, Award, Home, Trees, Coins, Sliders } from 'lucide-react';
+import { ArrowRight, HelpCircle, ShieldCheck, Award, Home, Trees, Coins, Sliders, Hotel, Sparkles, Leaf, Building2 } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface Step2RelaxationProps {
@@ -19,7 +19,51 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
   const landArea = currentLand ? currentLand.areaSize : 500;
   const baselineFAR = currentLand ? currentLand.baselineFAR : 200;
 
-  const [donatedArea, setDonatedArea] = useState<number>(savedResult ? (savedResult.breakdown.donation > 0 ? 15 : 0) : 0);
+  // 기부채납 유형별 상태 변수
+  const [donatedArea, setDonatedArea] = useState<number>(
+    savedResult && savedResult.breakdown.donatedLandArea !== undefined
+      ? savedResult.breakdown.donatedLandArea
+      : (savedResult && savedResult.breakdown.donation > 0 ? 15 : 0)
+  );
+  
+  const [hasDonatedLand, setHasDonatedLand] = useState<boolean>(
+    savedResult && savedResult.breakdown.donatedLandArea !== undefined
+      ? savedResult.breakdown.donatedLandArea > 0
+      : (savedResult && savedResult.breakdown.donation > 0)
+  );
+
+  const [hasDonatedBuilding, setHasDonatedBuilding] = useState<boolean>(
+    savedResult && savedResult.breakdown.donatedBuildingArea !== undefined
+      ? savedResult.breakdown.donatedBuildingArea > 0
+      : false
+  );
+  const [donatedBuildingArea, setDonatedBuildingArea] = useState<number>(
+    savedResult && savedResult.breakdown.donatedBuildingArea !== undefined
+      ? savedResult.breakdown.donatedBuildingArea
+      : 0
+  );
+  const [facilityType, setFacilityType] = useState<'community' | 'childcare' | 'library' | 'startup'>(
+    savedResult && savedResult.breakdown.facilityType
+      ? (savedResult.breakdown.facilityType as any)
+      : 'community'
+  );
+
+  const [hasDonatedCash, setHasDonatedCash] = useState<boolean>(
+    savedResult && savedResult.breakdown.donatedCashAmount !== undefined
+      ? savedResult.breakdown.donatedCashAmount > 0
+      : false
+  );
+  const [donatedCashAmount, setDonatedCashAmount] = useState<number>(
+    savedResult && savedResult.breakdown.donatedCashAmount !== undefined
+      ? savedResult.breakdown.donatedCashAmount
+      : 0
+  );
+  const [landAppraisalValue, setLandAppraisalValue] = useState<number>(
+    savedResult && savedResult.breakdown.landAppraisalValue !== undefined
+      ? savedResult.breakdown.landAppraisalValue
+      : 800 // default 800만원/㎡
+  );
+
   const [hasPublicOpenSpace, setHasPublicOpenSpace] = useState<boolean>(savedResult ? savedResult.breakdown.openSpace > 0 : false);
   const [publicOpenSpaceRatio, setPublicOpenSpaceRatio] = useState<number>(savedResult ? 6 : 5);
   const [ecoFriendlyCert, setEcoFriendlyCert] = useState<'none' | 'green' | 'energy' | 'both'>(
@@ -28,44 +72,96 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
       : 'none'
   );
   const [rentalHousingRatio, setRentalHousingRatio] = useState<number>(savedResult ? (savedResult.breakdown.rental > 0 ? 10 : 0) : 0);
+  
+  const [hasHotelIncentive, setHasHotelIncentive] = useState<boolean>(
+    savedResult && savedResult.breakdown.hotel && savedResult.breakdown.hotel > 0 ? true : false
+  );
+  const [hotelIncentiveLevel, setHotelIncentiveLevel] = useState<'standard' | 'premium' | 'luxury'>(
+    savedResult && savedResult.breakdown.hotel
+      ? (savedResult.breakdown.hotel >= 50 ? 'luxury' : savedResult.breakdown.hotel >= 30 ? 'premium' : 'standard')
+      : 'standard'
+  );
+
+  const [hasSpecialArchitecturalZone, setHasSpecialArchitecturalZone] = useState<boolean>(
+    savedResult && savedResult.breakdown.specialArchitecturalZone && savedResult.breakdown.specialArchitecturalZone > 0 ? true : false
+  );
+  const [specialArchitecturalZoneType, setSpecialArchitecturalZoneType] = useState<'standard' | 'excellence' | 'innovative'>(
+    savedResult && savedResult.breakdown.specialArchitecturalZone
+      ? (savedResult.breakdown.specialArchitecturalZone >= 20 ? 'innovative' : savedResult.breakdown.specialArchitecturalZone >= 15 ? 'excellence' : 'standard')
+      : 'standard'
+  );
+
+  const [hasOpenGreenSpace, setHasOpenGreenSpace] = useState<boolean>(
+    savedResult && savedResult.breakdown.openGreenSpace && savedResult.breakdown.openGreenSpace > 0 ? true : false
+  );
+  const [openGreenSpaceRatio, setOpenGreenSpaceRatio] = useState<number>(
+    savedResult && savedResult.breakdown.openGreenSpace
+      ? Math.round(savedResult.breakdown.openGreenSpace / 1.2)
+      : 25
+  );
+
+  const [hasCreativeDesign, setHasCreativeDesign] = useState<boolean>(
+    savedResult && savedResult.breakdown.creativeDesign && savedResult.breakdown.creativeDesign > 0 ? true : false
+  );
+  const [creativeDesignLevel, setCreativeDesignLevel] = useState<'standard' | 'excellence'>(
+    savedResult && savedResult.breakdown.creativeDesign
+      ? (savedResult.breakdown.creativeDesign >= 40 ? 'excellence' : 'standard')
+      : 'standard'
+  );
+
+  // Unified calculations
+  const buildingEquivalentArea = hasDonatedBuilding ? (donatedBuildingArea * 0.3) : 0;
+  const cashEquivalentArea = hasDonatedCash ? (donatedCashAmount * 10000 / landAppraisalValue) : 0;
+  const totalEquivalentDonatedArea = (hasDonatedLand ? donatedArea : 0) + buildingEquivalentArea + cashEquivalentArea;
+  const remainingArea = Math.max(1, landArea - (hasDonatedLand ? donatedArea : 0));
+
+  const donationLandBonus = remainingArea > 0 ? parseFloat((baselineFAR * 1.5 * ((hasDonatedLand ? donatedArea : 0) / remainingArea)).toFixed(2)) : 0;
+  const donationBuildingBonus = remainingArea > 0 ? parseFloat((baselineFAR * 1.5 * (buildingEquivalentArea / remainingArea)).toFixed(2)) : 0;
+  const donationCashBonus = remainingArea > 0 ? parseFloat((baselineFAR * 1.5 * (cashEquivalentArea / remainingArea)).toFixed(2)) : 0;
+  const donationBonus = parseFloat((donationLandBonus + donationBuildingBonus + donationCashBonus).toFixed(2));
+
+  const openSpaceBonus = hasPublicOpenSpace ? parseFloat((baselineFAR * 0.12 * (publicOpenSpaceRatio / 10)).toFixed(2)) : 0;
+  
+  let ecoBonus = 0;
+  if (ecoFriendlyCert === 'green') ecoBonus = parseFloat((baselineFAR * 0.05).toFixed(2));
+  else if (ecoFriendlyCert === 'energy') ecoBonus = parseFloat((baselineFAR * 0.08).toFixed(2));
+  else if (ecoFriendlyCert === 'both') ecoBonus = parseFloat((baselineFAR * 0.12).toFixed(2));
+
+  const rentalBonus = parseFloat((rentalHousingRatio * 1.5).toFixed(2));
+
+  const hotelBonus = hasHotelIncentive 
+    ? (hotelIncentiveLevel === 'standard' ? 15 : hotelIncentiveLevel === 'premium' ? 30 : 50) 
+    : 0;
+
+  const specialArchitecturalZoneBonus = hasSpecialArchitecturalZone 
+    ? (specialArchitecturalZoneType === 'standard' ? 10 : specialArchitecturalZoneType === 'excellence' ? 15 : 25) 
+    : 0;
+
+  const openGreenSpaceBonus = hasOpenGreenSpace ? parseFloat((openGreenSpaceRatio * 1.2).toFixed(2)) : 0;
+
+  const creativeDesignBonus = hasCreativeDesign 
+    ? (creativeDesignLevel === 'standard' ? 20 : 40) 
+    : 0;
+
+  const currentTotalFAR = parseFloat((baselineFAR + donationBonus + openSpaceBonus + ecoBonus + rentalBonus + hotelBonus + specialArchitecturalZoneBonus + openGreenSpaceBonus + creativeDesignBonus).toFixed(1));
 
   // Auto-run calculation whenever inputs change
   useEffect(() => {
-    // 1. Calculate Donation Incentive
-    // Formula in Korea urban planning usually: Baseline * 1.5 * (Donated Area / Net Area)
-    let donationBonus = 0;
-    const remainingArea = landArea - donatedArea;
-    if (donatedArea > 0 && remainingArea > 0) {
-      donationBonus = parseFloat((baselineFAR * 1.5 * (donatedArea / remainingArea)).toFixed(2));
-    }
-
-    // 2. Public Open Space (공개공지) Incentive
-    // Usually provides up to 1.2x baseline FAR based on ratio of open space area.
-    // Let's model: if enabled, gives (publicOpenSpaceRatio * 2)% bonus to FAR, capped at 15% bonus.
-    let openSpaceBonus = 0;
-    if (hasPublicOpenSpace) {
-      openSpaceBonus = parseFloat((baselineFAR * 0.12 * (publicOpenSpaceRatio / 10)).toFixed(2));
-    }
-
-    // 3. Green/Eco-Friendly certification
-    // Green architecture rating / Energy efficiency index:
-    // none: 0%, green: +5%, energy: +8%, both: +12%
-    let ecoBonus = 0;
-    if (ecoFriendlyCert === 'green') ecoBonus = parseFloat((baselineFAR * 0.05).toFixed(2));
-    else if (ecoFriendlyCert === 'energy') ecoBonus = parseFloat((baselineFAR * 0.08).toFixed(2));
-    else if (ecoFriendlyCert === 'both') ecoBonus = parseFloat((baselineFAR * 0.12).toFixed(2));
-
-    // 4. Public Rental Housing (국민임대/역세권 청년임대)
-    // Increases legal cap. For example, if you allocate X% of gross area, you can receive additional FAR.
-    // Model: adds rentalHousingRatio * 1.5 percent point bonus.
-    let rentalBonus = parseFloat((rentalHousingRatio * 1.5).toFixed(2));
-
-    const finalFAR = parseFloat((baselineFAR + donationBonus + openSpaceBonus + ecoBonus + rentalBonus).toFixed(2));
-
     // Generate friendly explanation
     let explParts: string[] = [];
     if (donationBonus > 0) {
-      explParts.push(`기부채납 면적 ${donatedArea}㎡ 확보에 따라 기본 용적률의 약 1.5배 가중치를 적용받아 +${donationBonus}%p 가산되었습니다.`);
+      const parts = [];
+      if (hasDonatedLand && donatedArea > 0) {
+        parts.push(`토지 기부채납 면적 ${donatedArea}㎡ 확보 (+${donationLandBonus}%p)`);
+      }
+      if (hasDonatedBuilding && donatedBuildingArea > 0) {
+        const facLabel = facilityType === 'community' ? '주민공동시설' : facilityType === 'childcare' ? '국공립어린이집' : facilityType === 'library' ? '공공도서관' : '청년창업지원센터';
+        parts.push(`건물 기부채납 연면적 ${donatedBuildingArea}㎡ 기여 (${facLabel}, 환산부지 ${buildingEquivalentArea.toFixed(1)}㎡, +${donationBuildingBonus}%p)`);
+      }
+      if (hasDonatedCash && donatedCashAmount > 0) {
+        parts.push(`현금 기부채납 ${donatedCashAmount}억원 납부 (환산부지 ${cashEquivalentArea.toFixed(1)}㎡, +${donationCashBonus}%p)`);
+      }
+      explParts.push(`기부채납 공공기여 가산점: 총 환산부지 ${totalEquivalentDonatedArea.toFixed(1)}㎡를 통한 용적률 완화 가점 +${donationBonus}%p가 반영되었습니다. (${parts.join(', ')})`);
     }
     if (openSpaceBonus > 0) {
       explParts.push(`상시 개방되는 공개공지(${publicOpenSpaceRatio}%) 설치로 도시경관 기여도 완화 기준 +${openSpaceBonus}%p 가 적용됩니다.`);
@@ -77,35 +173,86 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
     if (rentalBonus > 0) {
       explParts.push(`공공 기여 임대주택 지분 분양(${rentalHousingRatio}%) 연계를 통해 역세권 고밀 복합 개발 완화 혜택 +${rentalBonus}%p 가 반영되어 최대치 규제 허들을 상향 조율했습니다.`);
     }
+    if (hotelBonus > 0) {
+      const hotelLabel = hotelIncentiveLevel === 'luxury' ? '특급 관광호텔급 특례' : hotelIncentiveLevel === 'premium' ? '우수 비즈니스 호텔급' : '중소형 관광숙박';
+      explParts.push(`관광진흥 조례에 의거한 [${hotelLabel}] 도입 지정에 따른 특별 인센티브 수혜로 용적률 +${hotelBonus}%p가 전격 가산 완화되었습니다.`);
+    }
+    if (specialArchitecturalZoneBonus > 0) {
+      const sazLabel = specialArchitecturalZoneType === 'innovative' ? '창의혁신 유도형' : specialArchitecturalZoneType === 'excellence' ? '디자인 특화형' : '일반 지정형';
+      explParts.push(`특별건축구역 [${sazLabel}] 지정에 따라 도시 미관 향상 및 창의적 입면 기여 인센티브 +${specialArchitecturalZoneBonus}%p 가 가산되었습니다.`);
+    }
+    if (openGreenSpaceBonus > 0) {
+      explParts.push(`녹지생태도심 가이드라인에 따른 개방형 녹지비율(${openGreenSpaceRatio}%) 조성을 통해 도심 녹지 생태 공간 기여 인센티브 +${openGreenSpaceBonus}%p가 연동 산정되었습니다.`);
+    }
+    if (creativeDesignBonus > 0) {
+      const designLabel = creativeDesignLevel === 'excellence' ? '최우수 디자인 혁신' : '우수 디자인 혁신';
+      explParts.push(`서울시/지자체 도시·건축 창의혁신 디자인 공모 및 심의 통과 [${designLabel}] 특례 조항에 따라 용적률 +${creativeDesignBonus}%p가 대폭 가산 완화되었습니다.`);
+    }
 
     const explanation = explParts.length > 0 
       ? explParts.join('\n\n')
       : '현재 완화 옵션이 가동되지 않았습니다. 기부채납, 공개공지, 친환경 자격 등을 선택하여 추가 용적률 혜택을 시뮬레이션 하세요.';
 
     const calcResult: FARRelaxationResult = {
-      finalFAR,
+      finalFAR: currentTotalFAR,
       breakdown: {
         base: baselineFAR,
         donation: donationBonus,
         openSpace: openSpaceBonus,
         eco: ecoBonus,
-        rental: rentalBonus
+        rental: rentalBonus,
+        hotel: hotelBonus,
+        specialArchitecturalZone: specialArchitecturalZoneBonus,
+        openGreenSpace: openGreenSpaceBonus,
+        creativeDesign: creativeDesignBonus,
+        
+        donationLand: donationLandBonus,
+        donationBuilding: donationBuildingBonus,
+        donationCash: donationCashBonus,
+        donatedLandArea: hasDonatedLand ? donatedArea : 0,
+        donatedBuildingArea: hasDonatedBuilding ? donatedBuildingArea : 0,
+        donatedCashAmount: hasDonatedCash ? donatedCashAmount : 0,
+        facilityType,
+        landAppraisalValue
       },
       explanation
     };
 
     onCalculationComplete(calcResult);
-  }, [landArea, baselineFAR, donatedArea, hasPublicOpenSpace, publicOpenSpaceRatio, ecoFriendlyCert, rentalHousingRatio]);
+  }, [
+    landArea, 
+    baselineFAR, 
+    donatedArea, 
+    hasDonatedLand,
+    hasDonatedBuilding,
+    donatedBuildingArea,
+    facilityType,
+    hasDonatedCash,
+    donatedCashAmount,
+    landAppraisalValue,
+    hasPublicOpenSpace, 
+    publicOpenSpaceRatio, 
+    ecoFriendlyCert, 
+    rentalHousingRatio, 
+    hasHotelIncentive, 
+    hotelIncentiveLevel,
+    hasSpecialArchitecturalZone,
+    specialArchitecturalZoneType,
+    hasOpenGreenSpace,
+    openGreenSpaceRatio,
+    hasCreativeDesign,
+    creativeDesignLevel,
+    currentTotalFAR
+  ]);
 
   // Max legal range indicator for UI
-  const maxLegalFAR = Math.round(baselineFAR * 1.5);
-  const currentTotalFAR = parseFloat((
-    baselineFAR + 
-    (donatedArea > 0 ? (baselineFAR * 1.5 * (donatedArea / (landArea - donatedArea))) : 0) + 
-    (hasPublicOpenSpace ? (baselineFAR * 0.12 * (publicOpenSpaceRatio / 10)) : 0) +
-    (ecoFriendlyCert === 'both' ? baselineFAR * 0.12 : ecoFriendlyCert === 'green' ? baselineFAR * 0.05 : ecoFriendlyCert === 'energy' ? baselineFAR * 0.08 : 0) +
-    (rentalHousingRatio * 1.5)
-  ).toFixed(1));
+  const maxLegalFAR = Math.round(
+    baselineFAR * 1.5 + 
+    (hasHotelIncentive ? 50 : 0) + 
+    (hasSpecialArchitecturalZone ? 25 : 0) + 
+    (hasOpenGreenSpace ? 60 : 0) + 
+    (hasCreativeDesign ? 40 : 0)
+  );
 
   // Percentage bar fill helper
   const barWidthPercent = Math.min(100, Math.max(10, (currentTotalFAR / maxLegalFAR) * 100));
@@ -139,31 +286,217 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
           {/* Controls - Left */}
           <div className="lg:col-span-7 space-y-6">
             
-            {/* Input 1: Land Contribution (기부채납) */}
-            <div className="p-4 rounded-xl border border-gray-100 bg-[#FCFAF7] space-y-3">
-              <div className="flex justify-between items-center">
+            {/* Input 1: Comprehensive Public Contribution (기부채납) */}
+            <div className="p-4 rounded-xl border border-gray-100 bg-[#FCFAF7] space-y-4">
+              <div className="flex justify-between items-center border-b border-[#EDDBC7]/60 pb-2">
                 <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
                   <Coins className="w-4 h-4 text-[#5F7161]" />
-                  1. 기부채납 부지 면적공기 (도로·공원 등)
+                  1. 기부채납(공공 기여) 종합 계획
                 </span>
-                <span className="text-xs font-semibold text-indigo-700">{donatedArea}㎡ 기여</span>
+                <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
+                  총 완화 가점 +{donationBonus.toFixed(1)}%p
+                </span>
               </div>
-              <p className="text-[11px] text-[#8D7B68]">
-                국가나 지자체에 무상 양도하는 도로 확장분, 소공원 부지 면적입니다. (전체 {landArea}㎡ 중 배분)
+              <p className="text-[11px] text-[#8D7B68] leading-relaxed">
+                서울시 및 지자체 조례에 따라 공공 기여 방식은 <strong className="text-[#3E362E]">토지</strong>뿐만 아니라, 공공 수요가 높은 <strong className="text-[#3E362E]">건물(공공시설)</strong> 및 <strong className="text-[#3E362E]">현금(재정 기여)</strong> 기부채납도 모두 인정되어 통합 합산 연산됩니다.
               </p>
-              <input
-                type="range"
-                min="0"
-                max={Math.floor(landArea * 0.25)}
-                step="1"
-                value={donatedArea}
-                onChange={(e) => setDonatedArea(Number(e.target.value))}
-                className="w-full accent-[#5F7161]"
-              />
-              <div className="flex justify-between text-[10px] text-gray-400">
-                <span>0㎡ (기여 없음)</span>
-                <span>최대 {Math.floor(landArea * 0.25)}㎡ (총 면적의 25%)</span>
+
+              {/* Sub-item A: Land Donation */}
+              <div className="pt-2 border-t border-gray-100/60 space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      checked={hasDonatedLand}
+                      onChange={(e) => {
+                        setHasDonatedLand(e.target.checked);
+                        if (!e.target.checked) setDonatedArea(0);
+                      }}
+                      className="w-3.5 h-3.5 rounded text-[#5F7161] focus:ring-[#5F7161]"
+                    />
+                    A. 토지 기부채납 (부지 무상 양도)
+                  </label>
+                  {hasDonatedLand && (
+                    <span className="text-[11px] font-bold text-[#5F7161]">{donatedArea}㎡ 확보</span>
+                  )}
+                </div>
+                {hasDonatedLand && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="pl-5 space-y-1.5"
+                  >
+                    <input
+                      type="range"
+                      min="0"
+                      max={Math.floor(landArea * 0.25)}
+                      step="1"
+                      value={donatedArea}
+                      onChange={(e) => setDonatedArea(Number(e.target.value))}
+                      className="w-full accent-[#5F7161]"
+                    />
+                    <div className="flex justify-between text-[9px] text-gray-400">
+                      <span>0㎡</span>
+                      <span>최대 {Math.floor(landArea * 0.25)}㎡ (총 면적의 25%)</span>
+                    </div>
+                  </motion.div>
+                )}
               </div>
+
+              {/* Sub-item B: Building Donation */}
+              <div className="pt-2 border-t border-gray-100/60 space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      checked={hasDonatedBuilding}
+                      onChange={(e) => {
+                        setHasDonatedBuilding(e.target.checked);
+                        if (!e.target.checked) setDonatedBuildingArea(0);
+                      }}
+                      className="w-3.5 h-3.5 rounded text-[#5F7161] focus:ring-[#5F7161]"
+                    />
+                    B. 건물 기부채납 (공공시설 설치 및 양도)
+                  </label>
+                  {hasDonatedBuilding && (
+                    <span className="text-[11px] font-bold text-[#5F7161]">{donatedBuildingArea}㎡ 기여</span>
+                  )}
+                </div>
+                {hasDonatedBuilding && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="pl-5 space-y-3"
+                  >
+                    <p className="text-[10px] text-gray-400 leading-normal">
+                      어린이집, 도서관 등을 건축하여 지자체에 기부하는 경우로, 표준건축비와 대지감정평가 비율에 맞춰 부지 면적으로 환산 적용됩니다 (약 1㎡ ➔ 0.3㎡ 대지 환산).
+                    </p>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[10px] text-gray-500">
+                        <span>공급 연면적:</span>
+                        <span className="font-semibold text-gray-700">{donatedBuildingArea}㎡ (환산 대지: {buildingEquivalentArea.toFixed(1)}㎡)</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1000"
+                        step="10"
+                        value={donatedBuildingArea}
+                        onChange={(e) => setDonatedBuildingArea(Number(e.target.value))}
+                        className="w-full accent-[#5F7161]"
+                      />
+                      <div className="flex justify-between text-[9px] text-gray-400">
+                        <span>0㎡</span>
+                        <span>최대 1,000㎡</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-gray-400 font-semibold block">기부채납 공공시설 용도 선택:</span>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {[
+                          { value: 'community', label: '주민공동' },
+                          { value: 'childcare', label: '어린이집' },
+                          { value: 'library', label: '도서관' },
+                          { value: 'startup', label: '청년창업' },
+                        ].map((item) => (
+                          <button
+                            key={item.value}
+                            type="button"
+                            onClick={() => setFacilityType(item.value as any)}
+                            className={`py-1 text-[9px] rounded-md border text-center font-medium transition ${
+                              facilityType === item.value
+                                ? 'border-[#5F7161] bg-[#5F7161]/5 text-[#5F7161] font-semibold'
+                                : 'border-gray-200 hover:bg-gray-50 text-gray-500'
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Sub-item C: Cash Donation */}
+              <div className="pt-2 border-t border-gray-100/60 space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      checked={hasDonatedCash}
+                      onChange={(e) => {
+                        setHasDonatedCash(e.target.checked);
+                        if (!e.target.checked) setDonatedCashAmount(0);
+                      }}
+                      className="w-3.5 h-3.5 rounded text-[#5F7161] focus:ring-[#5F7161]"
+                    />
+                    C. 현금 기부채납 (재정 기여 및 펀딩)
+                  </label>
+                  {hasDonatedCash && (
+                    <span className="text-[11px] font-bold text-[#5F7161]">{donatedCashAmount}억원 기여</span>
+                  )}
+                </div>
+                {hasDonatedCash && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="pl-5 space-y-3"
+                  >
+                    <p className="text-[10px] text-gray-400 leading-normal">
+                      토지나 건물 대신 현금을 직접 납부하는 공공기여 방식입니다. 납부액을 인근 공공감정가격으로 환산하여 equivalent 부지 면적으로 환산 산정합니다.
+                    </p>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[10px] text-gray-500">
+                        <span>공동 납입액:</span>
+                        <span className="font-semibold text-gray-700">{donatedCashAmount}억원 (환산 대지: {cashEquivalentArea.toFixed(1)}㎡)</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="5"
+                        value={donatedCashAmount}
+                        onChange={(e) => setDonatedCashAmount(Number(e.target.value))}
+                        className="w-full accent-[#5F7161]"
+                      />
+                      <div className="flex justify-between text-[9px] text-gray-400">
+                        <span>0억원</span>
+                        <span>최대 100억원</span>
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-white border border-gray-200/60 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-gray-500 font-medium">대지 감정평가액 설정:</span>
+                        <span className="text-[10px] font-bold text-gray-700">{landAppraisalValue}만 원/㎡</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="300"
+                        max="2000"
+                        step="50"
+                        value={landAppraisalValue}
+                        onChange={(e) => setLandAppraisalValue(Number(e.target.value))}
+                        className="w-full h-1 accent-[#5F7161]"
+                      />
+                      <div className="flex justify-between text-[8px] text-gray-400">
+                        <span>300만원/㎡</span>
+                        <span>2,000만원/㎡ (평당 약 6,600만원)</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Donation Summary Panel */}
+              {totalEquivalentDonatedArea > 0 && (
+                <div className="p-2.5 rounded-lg bg-[#5F7161]/5 border border-[#5F7161]/15 text-[10px] text-[#5F7161] flex justify-between items-center">
+                  <span>총 합산 환산 기부 면적: <strong>{totalEquivalentDonatedArea.toFixed(1)}㎡</strong></span>
+                  <span>(실제 남은 대지면적: {remainingArea.toFixed(0)}㎡)</span>
+                </div>
+              )}
             </div>
 
             {/* Input 2: Public Open Space (공개공지) */}
@@ -270,6 +603,197 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
               </div>
             </div>
 
+            {/* Input 5: Tourism Accommodation Facility (관광숙박시설 완화 인센티브) */}
+            <div className="p-4 rounded-xl border border-gray-100 bg-[#FCFAF7] space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
+                  <Hotel className="w-4 h-4 text-[#5F7161]" />
+                  5. 관광숙박시설(관광호텔 등) 완화 인센티브 추가
+                </span>
+                <input
+                  type="checkbox"
+                  checked={hasHotelIncentive}
+                  onChange={(e) => setHasHotelIncentive(e.target.checked)}
+                  className="w-4 h-4 rounded text-[#5F7161] focus:ring-[#5F7161]"
+                />
+              </div>
+              <p className="text-[11px] text-[#8D7B68]">
+                관광진흥 조례 및 지자체 건축 특별 조항에 의거, 관광숙박 목적의 시설 설계를 기획할 때 부여되는 고밀 특별 완화 수혜 혜택입니다.
+              </p>
+
+              {hasHotelIncentive && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="pt-2 pl-3 border-l-2 border-[#EDDBC7] space-y-2"
+                >
+                  <span className="text-[10px] text-gray-400 font-semibold block">숙박시설 인센티브 등급 선택</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { value: 'standard', label: '일반/중소형 (+15%p)' },
+                      { value: 'premium', label: '비즈니스 호텔 (+30%p)' },
+                      { value: 'luxury', label: '특급 관광호텔 (+50%p)' },
+                    ].map((item) => (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => setHotelIncentiveLevel(item.value as any)}
+                        className={`py-1.5 px-2 text-[10px] rounded-lg border text-center font-medium transition ${
+                          hotelIncentiveLevel === item.value
+                            ? 'border-[#5F7161] bg-[#5F7161]/5 text-[#5F7161] font-semibold'
+                            : 'border-gray-200 hover:bg-gray-50 text-gray-500'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Input 6: Special Architectural Zone (특별건축구역) */}
+            <div className="p-4 rounded-xl border border-gray-100 bg-[#FCFAF7] space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
+                  <Building2 className="w-4 h-4 text-[#5F7161]" />
+                  6. 특별건축구역 지정 인센티브
+                </span>
+                <input
+                  type="checkbox"
+                  checked={hasSpecialArchitecturalZone}
+                  onChange={(e) => setHasSpecialArchitecturalZone(e.target.checked)}
+                  className="w-4 h-4 rounded text-[#5F7161] focus:ring-[#5F7161]"
+                />
+              </div>
+              <p className="text-[11px] text-[#8D7B68]">
+                디자인 자유도와 공공성 확보를 위해 특별건축구역으로 지정받을 경우, 일조 사선제한 및 높이 규제가 유연화되며 완화 특례 혜택이 부여됩니다.
+              </p>
+
+              {hasSpecialArchitecturalZone && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="pt-2 pl-3 border-l-2 border-[#EDDBC7] space-y-2"
+                >
+                  <span className="text-[10px] text-gray-400 font-semibold block">지정 및 특화 기획 등급 선택</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { value: 'standard', label: '일반 지정 (+10%p)' },
+                      { value: 'excellence', label: '디자인 특화 (+15%p)' },
+                      { value: 'innovative', label: '창의혁신 유도 (+25%p)' },
+                    ].map((item) => (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => setSpecialArchitecturalZoneType(item.value as any)}
+                        className={`py-1.5 px-2 text-[10px] rounded-lg border text-center font-medium transition ${
+                          specialArchitecturalZoneType === item.value
+                            ? 'border-[#5F7161] bg-[#5F7161]/5 text-[#5F7161] font-semibold'
+                            : 'border-gray-200 hover:bg-gray-50 text-gray-500'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Input 7: Open Green Space (개방형 녹지) */}
+            <div className="p-4 rounded-xl border border-gray-100 bg-[#FCFAF7] space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
+                  <Leaf className="w-4 h-4 text-[#5F7161]" />
+                  7. 개방형 녹지(Open Green Space) 도입 인센티브
+                </span>
+                <input
+                  type="checkbox"
+                  checked={hasOpenGreenSpace}
+                  onChange={(e) => setHasOpenGreenSpace(e.target.checked)}
+                  className="w-4 h-4 rounded text-[#5F7161] focus:ring-[#5F7161]"
+                />
+              </div>
+              <p className="text-[11px] text-[#8D7B68]">
+                녹지생태도심 재창조 가이드라인에 부합하여, 지상부에 시민들을 위한 개방형 숲 및 테마 공원을 조성할 때 기여도 비례 추가 완화 혜택을 받습니다.
+              </p>
+
+              {hasOpenGreenSpace && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="pt-2 pl-3 border-l-2 border-[#EDDBC7] space-y-2"
+                >
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-500">조성 녹지 면적 비율:</span>
+                    <span className="font-semibold text-[#5F7161]">{openGreenSpaceRatio}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="10"
+                    max="50"
+                    step="5"
+                    value={openGreenSpaceRatio}
+                    onChange={(e) => setOpenGreenSpaceRatio(Number(e.target.value))}
+                    className="w-full accent-[#5F7161]"
+                  />
+                  <div className="flex justify-between text-[10px] text-gray-400">
+                    <span>10% 확보 (+12%p)</span>
+                    <span>50% 녹지숲 완충 (+60%p)</span>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Input 8: Creative & Innovative Design (도시·건축 창의혁신 디자인) */}
+            <div className="p-4 rounded-xl border border-gray-100 bg-[#FCFAF7] space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-[#5F7161]" />
+                  8. 창의·혁신 디자인 설계 인센티브
+                </span>
+                <input
+                  type="checkbox"
+                  checked={hasCreativeDesign}
+                  onChange={(e) => setHasCreativeDesign(e.target.checked)}
+                  className="w-4 h-4 rounded text-[#5F7161] focus:ring-[#5F7161]"
+                />
+              </div>
+              <p className="text-[11px] text-[#8D7B68]">
+                서울시 "도시·건축 디자인 혁신 방안"에 정합하여 독창적이고 예술적인 입면 및 혁신 외관 공모에 선정 시 부여받는 강력한 인센티브입니다.
+              </p>
+
+              {hasCreativeDesign && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="pt-2 pl-3 border-l-2 border-[#EDDBC7] space-y-2"
+                >
+                  <span className="text-[10px] text-gray-400 font-semibold block">디자인 심의 등급 선택</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: 'standard', label: '우수 디자인 가점 (+20%p)' },
+                      { value: 'excellence', label: '최우수 디자인 혁신 (+40%p)' },
+                    ].map((item) => (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => setCreativeDesignLevel(item.value as any)}
+                        className={`py-1.5 px-2 text-[10px] rounded-lg border text-center font-medium transition ${
+                          creativeDesignLevel === item.value
+                            ? 'border-[#5F7161] bg-[#5F7161]/5 text-[#5F7161] font-semibold'
+                            : 'border-gray-200 hover:bg-gray-50 text-gray-500'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </div>
+
           </div>
 
           {/* Results Gauge - Right Side */}
@@ -296,7 +820,7 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
                 </div>
                 <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-indigo-600 transition-all duration-300"
+                    className="h-full bg-[#5F7161] transition-all duration-300"
                     style={{ width: `${barWidthPercent}%` }}
                     id="far-bar-indicator"
                   ></div>
@@ -331,10 +855,34 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
                     +{ecoFriendlyCert === 'both' ? (baselineFAR * 0.12).toFixed(1) : ecoFriendlyCert === 'green' ? (baselineFAR * 0.05).toFixed(1) : ecoFriendlyCert === 'energy' ? (baselineFAR * 0.08).toFixed(1) : '0'}%
                   </span>
                 </div>
-                <div className="flex justify-between text-[#2C251F] font-bold">
+                <div className="flex justify-between text-gray-600 pb-1.5 border-b border-[#E5E2DD]">
                   <span>공임상생 주택 약정 비율형:</span>
-                  <span className={`font-bold ${rentalHousingRatio > 0 ? 'text-indigo-600' : 'text-gray-400'}`}>
+                  <span className={`font-semibold ${rentalHousingRatio > 0 ? 'text-[#5F7161]' : 'text-gray-400'}`}>
                     +{(rentalHousingRatio * 1.5).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="flex justify-between text-gray-600 pb-1.5 border-b border-[#E5E2DD]">
+                  <span>관광숙박시설 도입 특례형:</span>
+                  <span className={`font-semibold ${hasHotelIncentive ? 'text-[#5F7161]' : 'text-gray-400'}`}>
+                    +{hasHotelIncentive ? (hotelIncentiveLevel === 'standard' ? 15 : hotelIncentiveLevel === 'premium' ? 30 : 50) : 0}%
+                  </span>
+                </div>
+                <div className="flex justify-between text-gray-600 pb-1.5 border-b border-[#E5E2DD]">
+                  <span>특별건축구역 지정 가점형:</span>
+                  <span className={`font-semibold ${hasSpecialArchitecturalZone ? 'text-[#5F7161]' : 'text-gray-400'}`}>
+                    +{hasSpecialArchitecturalZone ? (specialArchitecturalZoneType === 'standard' ? 10 : specialArchitecturalZoneType === 'excellence' ? 15 : 25) : 0}%
+                  </span>
+                </div>
+                <div className="flex justify-between text-gray-600 pb-1.5 border-b border-[#E5E2DD]">
+                  <span>개방형 녹지 생태도심 기여형:</span>
+                  <span className={`font-semibold ${hasOpenGreenSpace ? 'text-[#5F7161]' : 'text-gray-400'}`}>
+                    +{hasOpenGreenSpace ? (openGreenSpaceRatio * 1.2).toFixed(1) : 0}%
+                  </span>
+                </div>
+                <div className="flex justify-between text-[#2C251F] font-bold pb-1">
+                  <span>창의혁신 디자인 인센티브형:</span>
+                  <span className={`font-bold ${hasCreativeDesign ? 'text-indigo-600' : 'text-gray-400'}`}>
+                    +{hasCreativeDesign ? (creativeDesignLevel === 'standard' ? 20 : 40) : 0}%
                   </span>
                 </div>
               </div>
@@ -347,11 +895,15 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
                 지자체 도시계획심의 위원회 가이드라인
               </span>
               <p className="whitespace-pre-line text-slate-600 font-normal">
-                {donatedArea > 0 || hasPublicOpenSpace || ecoFriendlyCert !== 'none' || rentalHousingRatio > 0
+                {donatedArea > 0 || hasPublicOpenSpace || ecoFriendlyCert !== 'none' || rentalHousingRatio > 0 || hasHotelIncentive || hasSpecialArchitecturalZone || hasOpenGreenSpace || hasCreativeDesign
                   ? `본 완화 수지 시뮬레이션은 서울시 도시계획 특별 배분조례에 부합하도록 즉각 대응 반영되었습니다.\n\n` + 
                     `- ${donatedArea > 0 ? `도로·공공 시설용 토지 기부면적 ${donatedArea}㎡에 인센티브를 연산해 지자체 기여도가 매우 우수합니다.` : ''}\n` +
                     `- ${hasPublicOpenSpace ? `도심 쌈지 숲 테마의 공개공지는 도시 쾌적성을 극대화하여 인센티브 조건에 적극 소구합니다.` : ''}\n` +
-                    `- ${rentalHousingRatio > 0 ? `공공임대 주택 추가 배치는 역세권 청년주택 등 고밀 완화 특례조항 기입을 보장합니다.` : ''}`
+                    `- ${rentalHousingRatio > 0 ? `공공임대 주택 추가 배치는 역세권 청년주택 등 고밀 완화 특례조항 기입을 보장합니다.` : ''}\n` +
+                    `- ${hasHotelIncentive ? `관광숙박시설(특례등급 ${hotelIncentiveLevel === 'luxury' ? '특급' : hotelIncentiveLevel === 'premium' ? '우수 비즈니스' : '일반'}) 배정 설계를 통하여 특별조례 기준에 도합 가산점이 부여됩니다.` : ''}\n` +
+                    `- ${hasSpecialArchitecturalZone ? `특별건축구역 지정을 통해 사선 제한 규제 등을 입체적으로 해소하며 우수한 도시 미관을 기획합니다.` : ''}\n` +
+                    `- ${hasOpenGreenSpace ? `지상부의 풍부한 개방형 녹지공간(${openGreenSpaceRatio}%) 구성은 친자연주의 생태도심 기준에 부합하여 가점 수혜를 촉진합니다.` : ''}\n` +
+                    `- ${hasCreativeDesign ? `독창적인 랜드마크 창의혁신 디자인 설계가 반영되어 기획 완성도 수준이 매우 우수합니다.` : ''}`
                   : '기부채납 또는 공개공지 확보 등 상향 옵션을 좌측 슬라이더에서 조절해 보세요. 산정된 최종 용적률 수치가 즉시 Step 3 건축 설계 모델에 대입됩니다.'}
               </p>
             </div>

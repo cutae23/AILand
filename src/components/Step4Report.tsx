@@ -352,9 +352,27 @@ export default function Step4Report({
                       <td className="py-2.5 text-right font-semibold text-gray-800">{breakdown.base}%</td>
                     </tr>
                     <tr className="border-b border-gray-100">
-                      <td className="py-2.5 text-gray-600">대지 무상 기부채납 인센티브</td>
+                      <td className="py-2.5 text-gray-600">공공기여 기부채납 인센티브 (합산)</td>
                       <td className="py-2.5 text-right font-semibold text-emerald-650">+{breakdown.donation}%</td>
                     </tr>
+                    {breakdown.donationLand !== undefined && breakdown.donationLand > 0 && (
+                      <tr className="border-b border-gray-100 text-[11px] bg-slate-50/40">
+                        <td className="py-1.5 pl-4 text-gray-500">└ 토지 기부채납 (+{breakdown.donatedLandArea}㎡)</td>
+                        <td className="py-1.5 text-right font-medium text-emerald-600">+{breakdown.donationLand}%</td>
+                      </tr>
+                    )}
+                    {breakdown.donationBuilding !== undefined && breakdown.donationBuilding > 0 && (
+                      <tr className="border-b border-gray-100 text-[11px] bg-slate-50/40">
+                        <td className="py-1.5 pl-4 text-gray-500">└ 건물 기부채납 (+{breakdown.donatedBuildingArea}㎡, {breakdown.facilityType === 'community' ? '주민공동' : breakdown.facilityType === 'childcare' ? '어린이집' : breakdown.facilityType === 'library' ? '도서관' : '청년창업'})</td>
+                        <td className="py-1.5 text-right font-medium text-emerald-600">+{breakdown.donationBuilding}%</td>
+                      </tr>
+                    )}
+                    {breakdown.donationCash !== undefined && breakdown.donationCash > 0 && (
+                      <tr className="border-b border-gray-100 text-[11px] bg-slate-50/40">
+                        <td className="py-1.5 pl-4 text-gray-500">└ 현금 기부채납 (+{breakdown.donatedCashAmount}억원)</td>
+                        <td className="py-1.5 text-right font-medium text-emerald-600">+{breakdown.donationCash}%</td>
+                      </tr>
+                    )}
                     <tr className="border-b border-gray-100">
                       <td className="py-2.5 text-gray-600">공개공지 조경 정원 확보</td>
                       <td className="py-2.5 text-right font-semibold text-emerald-650">+{breakdown.openSpace}%</td>
@@ -367,6 +385,30 @@ export default function Step4Report({
                       <td className="py-2.5 text-gray-600">청년주택 및 의무임대 기여 지분</td>
                       <td className="py-2.5 text-right font-semibold text-emerald-650">+{breakdown.rental}%</td>
                     </tr>
+                    {breakdown.hotel !== undefined && breakdown.hotel > 0 && (
+                      <tr className="border-b border-gray-100">
+                        <td className="py-2.5 text-gray-600">관광숙박시설 완화 인센티브</td>
+                        <td className="py-2.5 text-right font-semibold text-emerald-650">+{breakdown.hotel}%</td>
+                      </tr>
+                    )}
+                    {breakdown.specialArchitecturalZone !== undefined && breakdown.specialArchitecturalZone > 0 && (
+                      <tr className="border-b border-gray-100">
+                        <td className="py-2.5 text-gray-600">특별건축구역 지정 가점</td>
+                        <td className="py-2.5 text-right font-semibold text-emerald-650">+{breakdown.specialArchitecturalZone}%</td>
+                      </tr>
+                    )}
+                    {breakdown.openGreenSpace !== undefined && breakdown.openGreenSpace > 0 && (
+                      <tr className="border-b border-gray-100">
+                        <td className="py-2.5 text-gray-600">개방형 녹지 생태도심 기여</td>
+                        <td className="py-2.5 text-right font-semibold text-emerald-650">+{breakdown.openGreenSpace}%</td>
+                      </tr>
+                    )}
+                    {breakdown.creativeDesign !== undefined && breakdown.creativeDesign > 0 && (
+                      <tr className="border-b border-gray-100">
+                        <td className="py-2.5 text-gray-600">창의혁신 디자인 설계 가점</td>
+                        <td className="py-2.5 text-right font-semibold text-emerald-650">+{breakdown.creativeDesign}%</td>
+                      </tr>
+                    )}
                     <tr className="font-bold border-t border-gray-200 text-sm">
                       <td className="py-3 text-gray-900">최종 인허가 완화 용적률 (FAR)</td>
                       <td className="py-3 text-right text-indigo-600">{finalFAR}%</td>
@@ -694,9 +736,27 @@ export default function Step4Report({
                         <td className="p-2 text-right font-mono font-bold text-slate-950">{breakdown?.base ?? baselineFAR}%</td>
                       </tr>
                       <tr className="border-b border-gray-100">
-                        <th className="p-2 text-left text-gray-500 font-medium">기부채납 공여 완화 (Donated Land)</th>
+                        <th className="p-2 text-left text-gray-500 font-medium">기부채납 총 공공기여 완화 (Public Contribution Total)</th>
                         <td className="p-2 text-right font-mono text-emerald-700">+{breakdown?.donation ?? 0}%</td>
                       </tr>
+                      {breakdown?.donationLand !== undefined && breakdown.donationLand > 0 && (
+                        <tr className="border-b border-gray-100 bg-slate-50/30">
+                          <th className="p-2 pl-4 text-left text-gray-400 font-normal">└ 토지 기부채납 (Land Contribution)</th>
+                          <td className="p-2 text-right font-mono text-emerald-600">+{breakdown.donationLand}%</td>
+                        </tr>
+                      )}
+                      {breakdown?.donationBuilding !== undefined && breakdown.donationBuilding > 0 && (
+                        <tr className="border-b border-gray-100 bg-slate-50/30">
+                          <th className="p-2 pl-4 text-left text-gray-400 font-normal">└ 건물 기부채납 (Building: {breakdown.donatedBuildingArea}㎡)</th>
+                          <td className="p-2 text-right font-mono text-emerald-600">+{breakdown.donationBuilding}%</td>
+                        </tr>
+                      )}
+                      {breakdown?.donationCash !== undefined && breakdown.donationCash > 0 && (
+                        <tr className="border-b border-gray-100 bg-slate-50/30">
+                          <th className="p-2 pl-4 text-left text-gray-400 font-normal">└ 현금 기부채납 (Cash: {breakdown.donatedCashAmount}억)</th>
+                          <td className="p-2 text-right font-mono text-emerald-600">+{breakdown.donationCash}%</td>
+                        </tr>
+                      )}
                       <tr className="border-b border-gray-100">
                         <th className="p-2 text-left text-gray-500 font-medium">공개공지 확보 완화 (Public Open Space)</th>
                         <td className="p-2 text-right font-mono text-emerald-700">+{breakdown?.openSpace ?? 0}%</td>
@@ -709,6 +769,30 @@ export default function Step4Report({
                         <th className="p-2 text-left text-gray-500 font-medium">청년/의무 임대 기여 완화 (Rental Housing)</th>
                         <td className="p-2 text-right font-mono text-emerald-700">+{breakdown?.rental ?? 0}%</td>
                       </tr>
+                      {breakdown?.hotel !== undefined && breakdown.hotel > 0 && (
+                        <tr className="border-b border-gray-100">
+                          <th className="p-2 text-left text-gray-500 font-medium">관광숙박시설 도입 특례 (Tourism Hotel)</th>
+                          <td className="p-2 text-right font-mono text-emerald-700">+{breakdown.hotel}%</td>
+                        </tr>
+                      )}
+                      {breakdown?.specialArchitecturalZone !== undefined && breakdown.specialArchitecturalZone > 0 && (
+                        <tr className="border-b border-gray-100">
+                          <th className="p-2 text-left text-gray-500 font-medium">특별건축구역 지정 가점 (Special Architectural)</th>
+                          <td className="p-2 text-right font-mono text-emerald-700">+{breakdown.specialArchitecturalZone}%</td>
+                        </tr>
+                      )}
+                      {breakdown?.openGreenSpace !== undefined && breakdown.openGreenSpace > 0 && (
+                        <tr className="border-b border-gray-100">
+                          <th className="p-2 text-left text-gray-500 font-medium">개방형 녹지 생태도심 기여 (Open Green Space)</th>
+                          <td className="p-2 text-right font-mono text-emerald-700">+{breakdown.openGreenSpace}%</td>
+                        </tr>
+                      )}
+                      {breakdown?.creativeDesign !== undefined && breakdown.creativeDesign > 0 && (
+                        <tr className="border-b border-gray-100">
+                          <th className="p-2 text-left text-gray-500 font-medium">창의혁신 디자인 설계 가점 (Creative Design)</th>
+                          <td className="p-2 text-right font-mono text-emerald-700">+{breakdown.creativeDesign}%</td>
+                        </tr>
+                      )}
                       <tr className="bg-slate-50 font-bold">
                         <th className="p-2 text-left text-gray-900 text-xs">최종 승인 용적률 (Final FAR)</th>
                         <td className="p-2 text-right font-mono text-indigo-650 text-xs">{finalFAR}%</td>
