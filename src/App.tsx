@@ -10,9 +10,10 @@ import Step3Scenario from './components/Step3Scenario';
 import Step4Report from './components/Step4Report';
 import { LandRegulatoryAnalysis, FARRelaxationResult } from './types';
 import { MapPin, Building2, HelpCircle, CheckCircle, Sliders, FileText, ChevronRight, Calculator, User, Compass, ServerCrash } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
-  const [activeStep, setActiveStep] = useState<1 | 2 | 3 | 4>(4);
+  const [activeStep, setActiveStep] = useState<1 | 2 | 3 | 4 | 5>(5);
   
   // App-wide state sharing logic between the steps - pre-populated for Baegot
   const [regulatoryAnalysis, setRegulatoryAnalysis] = useState<LandRegulatoryAnalysis | null>({
@@ -69,6 +70,32 @@ export default function App() {
     }
   });
 
+  // Step 1 inputs state
+  const [step1Inputs, setStep1Inputs] = useState<{
+    selectedSampleId: string;
+    customerLink: string;
+    imagePreview: string | null;
+    usageScaleList: any[];
+  } | null>({
+    selectedSampleId: 'siheung-baegot',
+    customerLink: '',
+    imagePreview: null,
+    usageScaleList: [
+      { id: '1', usage: '공동주택 (다세대 / 아파트)', scale: '지상 5층, 연면적 약 1,500㎡ 규모' }
+    ]
+  });
+
+  const [showSaveToast, setShowSaveToast] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string>('');
+
+  const triggerToast = (message: string) => {
+    setToastMessage(message);
+    setShowSaveToast(true);
+    setTimeout(() => {
+      setShowSaveToast(false);
+    }, 2500);
+  };
+
   const [chatHistory, setChatHistory] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([
     {
       role: 'assistant',
@@ -90,7 +117,8 @@ export default function App() {
       },
       explanation: '기본 용적률 상태 수지표입니다.'
     });
-    // Move layout helper
+    // Reset scenarioResult when a new analysis is complete
+    setScenarioResult(null);
   };
 
   const handleRelaxationComplete = (result: FARRelaxationResult) => {
@@ -116,7 +144,10 @@ export default function App() {
           <nav className="space-y-6">
             {/* Step 1 button */}
             <button
-              onClick={() => setActiveStep(1)}
+              onClick={() => {
+                triggerToast('Step 1 규제 검토 데이터가 실시간 저장되었습니다.');
+                setActiveStep(1);
+              }}
               className="w-full text-left focus:outline-none group"
             >
               <div className={`flex items-center gap-4 transition duration-200 ${
@@ -128,7 +159,7 @@ export default function App() {
                   01
                 </span>
                 <div className="flex flex-col">
-                  <span className="text-xs tracking-wide">규제 법령 검토</span>
+                  <span className="text-xs tracking-wide font-bold">해당필지 규제검토</span>
                   <span className="text-[10px] text-gray-400 font-normal">Step 1: 토지이음 연동</span>
                 </div>
                 {regulatoryAnalysis && (
@@ -140,7 +171,7 @@ export default function App() {
             {/* Step 2 button */}
             <button
               onClick={() => {
-                // Friendly constraint: hint info but allow switching
+                triggerToast('Step 2 인센티브 완화 수치가 실시간 저장되었습니다.');
                 setActiveStep(2);
               }}
               className="w-full text-left focus:outline-none group"
@@ -154,7 +185,7 @@ export default function App() {
                   02
                 </span>
                 <div className="flex flex-col">
-                  <span className="text-xs tracking-wide">용적률 완화 시뮬</span>
+                  <span className="text-xs tracking-wide font-bold">인센티브 가능여부</span>
                   <span className="text-[10px] text-gray-400 font-normal">Step 2: 인센티브 완화</span>
                 </div>
                 {relaxationResult && relaxationResult.finalFAR > (regulatoryAnalysis?.baselineFAR || 200) && (
@@ -165,7 +196,10 @@ export default function App() {
 
             {/* Step 3 button */}
             <button
-              onClick={() => setActiveStep(3)}
+              onClick={() => {
+                triggerToast('Step 3 상품 기획 구성 배치가 실시간 저장되었습니다.');
+                setActiveStep(3);
+              }}
               className="w-full text-left focus:outline-none group"
             >
               <div className={`flex items-center gap-4 transition duration-200 ${
@@ -177,15 +211,18 @@ export default function App() {
                   03
                 </span>
                 <div className="flex flex-col">
-                  <span className="text-xs tracking-wide">공동주택 시나리오</span>
-                  <span className="text-[10px] text-gray-400 font-normal">Step 3: 세대배분 & 수지</span>
+                  <span className="text-xs tracking-wide font-bold">계획안 개요</span>
+                  <span className="text-[10px] text-gray-400 font-normal">Step 3: 상품 기획 및 배치</span>
                 </div>
               </div>
             </button>
 
             {/* Step 4 button */}
             <button
-              onClick={() => setActiveStep(4)}
+              onClick={() => {
+                triggerToast('Step 4 재무 수지 수치표가 실시간 저장되었습니다.');
+                setActiveStep(4);
+              }}
               className="w-full text-left focus:outline-none group"
             >
               <div className={`flex items-center gap-4 transition duration-200 ${
@@ -197,8 +234,31 @@ export default function App() {
                   04
                 </span>
                 <div className="flex flex-col">
-                  <span className="text-xs tracking-wide">종합 분석 리포트</span>
-                  <span className="text-[10px] text-gray-400 font-normal">Step 4: PDF 발급 & 수지</span>
+                  <span className="text-xs tracking-wide font-bold">사업성분석</span>
+                  <span className="text-[10px] text-gray-400 font-normal">Step 4: 재무 시뮬레이션</span>
+                </div>
+              </div>
+            </button>
+
+            {/* Step 5 button */}
+            <button
+              onClick={() => {
+                triggerToast('종합 개발 분석 보고서 발급 단계로 이동했습니다.');
+                setActiveStep(5);
+              }}
+              className="w-full text-left focus:outline-none group"
+            >
+              <div className={`flex items-center gap-4 transition duration-200 ${
+                activeStep === 5 ? 'text-[#5F7161] font-semibold' : 'text-[#A89F94] hover:text-[#3E362E]'
+              }`}>
+                <span className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs transition font-serif ${
+                  activeStep === 5 ? 'border-[#5F7161] bg-[#5F7161]/5 font-bold' : 'border-[#D1CEC8]'
+                }`}>
+                  05
+                </span>
+                <div className="flex flex-col">
+                  <span className="text-xs tracking-wide font-bold">종합보고서</span>
+                  <span className="text-[10px] text-gray-400 font-normal">Step 5: PDF 발급 및 평가</span>
                 </div>
                 {scenarioResult && (
                   <CheckCircle className="w-4 h-4 text-emerald-600 ml-auto" />
@@ -274,12 +334,19 @@ export default function App() {
 
             {activeStep === 3 && (
               <>
-                <h1 className="text-2xl sm:text-3xl font-serif text-[#2C251F] font-bold">공동주택 세대 배분 & 예상 사업 수지선</h1>
-                <p className="text-sm text-[#8D7B68] mt-1">지정 비율에 맞춘 세대수 배분 산출 및 평당 분양가를 감안한 토지사업 영업이익을 파악합니다.</p>
+                <h1 className="text-2xl sm:text-3xl font-serif text-[#2C251F] font-bold">계획안 개요 (건축 기획 및 상품 구성)</h1>
+                <p className="text-sm text-[#8D7B68] mt-1">공동주택/오피스텔 등 용도별 기획 면적과 세대수를 배분하고 공용 면적 및 법정 주차대수 정합성을 설계합니다.</p>
               </>
             )}
 
             {activeStep === 4 && (
+              <>
+                <h1 className="text-2xl sm:text-3xl font-serif text-[#2C251F] font-bold">사업성 분석 (재무 수지 및 시뮬레이션)</h1>
+                <p className="text-sm text-[#8D7B68] mt-1">토지 매입비와 건축 예산, 실거래 기준 AI 추천 분양/임대가를 바탕으로 영업이익과 ROI/IRR/BEP를 분석합니다.</p>
+              </>
+            )}
+
+            {activeStep === 5 && (
               <>
                 <h1 className="text-2xl sm:text-3xl font-serif text-[#2C251F] font-bold">종합 개발 사업 타당성 평가서</h1>
                 <p className="text-sm text-[#8D7B68] mt-1">대지 규제 및 완화 조례, 상품 구성과 20개년 현금 수지 시뮬레이션 결과를 합산한 최종 보고서입니다.</p>
@@ -290,7 +357,10 @@ export default function App() {
           {/* Quick-toggle mobile helper */}
           <div className="flex md:hidden items-center gap-2 bg-white p-1 rounded-xl border border-[#E5E2DD] w-full sm:w-auto overflow-x-auto">
             <button
-              onClick={() => setActiveStep(1)}
+              onClick={() => {
+                triggerToast('Step 1 규제 검토 데이터가 실시간 저장되었습니다.');
+                setActiveStep(1);
+              }}
               className={`flex-1 sm:flex-initial text-xs px-3.5 py-2 rounded-lg font-medium transition ${
                 activeStep === 1 ? 'bg-[#5F7161] text-white' : 'text-[#8D7B68] hover:bg-gray-50'
               }`}
@@ -298,28 +368,48 @@ export default function App() {
               1. 규제검토
             </button>
             <button
-              onClick={() => setActiveStep(2)}
+              onClick={() => {
+                triggerToast('Step 2 인센티브 완화 수치가 실시간 저장되었습니다.');
+                setActiveStep(2);
+              }}
               className={`flex-1 sm:flex-initial text-xs px-3.5 py-2 rounded-lg font-medium transition ${
                 activeStep === 2 ? 'bg-[#5F7161] text-white' : 'text-[#8D7B68] hover:bg-gray-50'
               }`}
             >
-              2. 용적률완화
+              2. 인센티브완화
             </button>
             <button
-              onClick={() => setActiveStep(3)}
+              onClick={() => {
+                triggerToast('Step 3 상품 기획 구성 배치가 실시간 저장되었습니다.');
+                setActiveStep(3);
+              }}
               className={`flex-1 sm:flex-initial text-xs px-3.5 py-2 rounded-lg font-medium transition ${
                 activeStep === 3 ? 'bg-[#5F7161] text-white' : 'text-[#8D7B68] hover:bg-gray-50'
               }`}
             >
-              3. 개발시나리오
+              3. 계획안개요
             </button>
             <button
-              onClick={() => setActiveStep(4)}
+              onClick={() => {
+                triggerToast('Step 4 재무 수지 수치표가 실시간 저장되었습니다.');
+                setActiveStep(4);
+              }}
               className={`flex-1 sm:flex-initial text-xs px-3.5 py-2 rounded-lg font-medium transition ${
                 activeStep === 4 ? 'bg-[#5F7161] text-white' : 'text-[#8D7B68] hover:bg-gray-50'
               }`}
             >
-              4. 종합보고서
+              4. 사업성분석
+            </button>
+            <button
+              onClick={() => {
+                triggerToast('종합 개발 분석 보고서 발급 단계로 이동했습니다.');
+                setActiveStep(5);
+              }}
+              className={`flex-1 sm:flex-initial text-xs px-3.5 py-2 rounded-lg font-medium transition ${
+                activeStep === 5 ? 'bg-[#5F7161] text-white' : 'text-[#8D7B68] hover:bg-gray-50'
+              }`}
+            >
+              5. 종합보고서
             </button>
           </div>
         </header>
@@ -332,6 +422,8 @@ export default function App() {
               savedAnalysis={regulatoryAnalysis}
               chatHistory={chatHistory}
               setChatHistory={setChatHistory}
+              savedInputs={step1Inputs}
+              onSaveInputs={setStep1Inputs}
             />
           )}
 
@@ -348,10 +440,22 @@ export default function App() {
               currentLand={regulatoryAnalysis}
               currentRelaxation={relaxationResult}
               onScenarioChange={setScenarioResult}
+              activeStep={3}
+              savedScenario={scenarioResult}
             />
           )}
 
           {activeStep === 4 && (
+            <Step3Scenario
+              currentLand={regulatoryAnalysis}
+              currentRelaxation={relaxationResult}
+              onScenarioChange={setScenarioResult}
+              activeStep={4}
+              savedScenario={scenarioResult}
+            />
+          )}
+
+          {activeStep === 5 && (
             <Step4Report
               currentLand={regulatoryAnalysis}
               currentRelaxation={relaxationResult}
@@ -372,22 +476,38 @@ export default function App() {
             {activeStep > 1 && (
               <button
                 type="button"
-                onClick={() => setActiveStep((prev) => (prev - 1) as any)}
+                onClick={() => {
+                  triggerToast('이전 단계로 이동하며 변경사항이 안전하게 저장되었습니다.');
+                  setActiveStep((prev) => (prev - 1) as any);
+                }}
                 className="px-5 py-2.5 bg-white border border-[#E5E2DD] hover:bg-gray-50 text-xs font-semibold rounded-xl text-gray-700 transition"
               >
                 이전 단계로
               </button>
             )}
 
-            {activeStep < 4 ? (
+            {/* Manual Save Button */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerToast(`현재 Step ${activeStep}의 기획안 상태가 성공적으로 임시 저장되었습니다.`);
+              }}
+              className="px-4 py-2.5 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-xl transition flex items-center gap-1.5 shadow-sm"
+            >
+              <CheckCircle className="w-4 h-4" />
+              <span>현재 단계 저장</span>
+            </button>
+
+            {activeStep < 5 ? (
               <button
                 type="button"
                 onClick={() => {
+                  triggerToast(`Step ${activeStep}의 데이터가 안전하게 저장되어 다음 단계를 진행합니다.`);
                   setActiveStep((prev) => (prev + 1) as any);
                 }}
                 className="px-6 py-2.5 bg-[#5F7161] hover:bg-[#4E5E50] text-white text-xs font-semibold rounded-xl tracking-wide transition flex items-center gap-1.5 shadow-sm"
               >
-                <span>다음 단계 진행</span>
+                <span>저장 후 다음 단계 진행</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             ) : (
@@ -399,6 +519,14 @@ export default function App() {
                     setRegulatoryAnalysis(null);
                     setRelaxationResult(null);
                     setScenarioResult(null);
+                    setStep1Inputs({
+                      selectedSampleId: '',
+                      customerLink: '',
+                      imagePreview: null,
+                      usageScaleList: [
+                        { id: '1', usage: '공동주택 (다세대 / 아파트)', scale: '지상 5층, 연면적 약 1,500㎡ 규모' }
+                      ]
+                    });
                     setChatHistory([
                       {
                         role: 'assistant',
@@ -417,6 +545,25 @@ export default function App() {
         </footer>
 
       </main>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {showSaveToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-xl border border-gray-800"
+          >
+            <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 animate-bounce" />
+            <div className="flex flex-col">
+              <span className="text-xs font-bold">기획 데이터 안전하게 저장됨</span>
+              <span className="text-[10px] text-gray-400">{toastMessage}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

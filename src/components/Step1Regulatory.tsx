@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { SAMPLE_LANDS } from '../sampleLands';
 import { LandRegulatoryAnalysis, SampleLand } from '../types';
 import { MapPin, Link2, Upload, AlertTriangle, CheckCircle, Info, Landmark, HelpCircle, FileText, ArrowRight, RefreshCw, Send, Sparkles, MessageSquare, Loader2 } from 'lucide-react';
@@ -14,17 +14,31 @@ interface Step1RegulatoryProps {
   savedAnalysis: LandRegulatoryAnalysis | null;
   chatHistory: Array<{ role: 'user' | 'assistant', content: string }>;
   setChatHistory: React.Dispatch<React.SetStateAction<Array<{ role: 'user' | 'assistant', content: string }>>>;
+  savedInputs?: {
+    selectedSampleId: string;
+    customerLink: string;
+    imagePreview: string | null;
+    usageScaleList: any[];
+  } | null;
+  onSaveInputs?: (inputs: {
+    selectedSampleId: string;
+    customerLink: string;
+    imagePreview: string | null;
+    usageScaleList: any[];
+  }) => void;
 }
 
 export default function Step1Regulatory({ 
   onAnalysisComplete, 
   savedAnalysis,
   chatHistory,
-  setChatHistory
+  setChatHistory,
+  savedInputs,
+  onSaveInputs
 }: Step1RegulatoryProps) {
-  const [selectedSampleId, setSelectedSampleId] = useState<string>('');
-  const [customerLink, setCustomerLink] = useState<string>('');
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedSampleId, setSelectedSampleId] = useState<string>(() => savedInputs?.selectedSampleId ?? '');
+  const [customerLink, setCustomerLink] = useState<string>(() => savedInputs?.customerLink ?? '');
+  const [imagePreview, setImagePreview] = useState<string | null>(() => savedInputs?.imagePreview ?? null);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingStep, setLoadingStep] = useState<string>('');
@@ -66,9 +80,21 @@ export default function Step1Regulatory({
     scale: string;
   }
 
-  const [usageScaleList, setUsageScaleList] = useState<UsageScaleItem[]>([
+  const [usageScaleList, setUsageScaleList] = useState<UsageScaleItem[]>(() => savedInputs?.usageScaleList ?? [
     { id: '1', usage: '공동주택 (다세대 / 아파트)', scale: '지상 5층, 연면적 약 1,500㎡ 규모' }
   ]);
+
+  // Sync inputs to parent
+  useEffect(() => {
+    if (onSaveInputs) {
+      onSaveInputs({
+        selectedSampleId,
+        customerLink,
+        imagePreview,
+        usageScaleList
+      });
+    }
+  }, [selectedSampleId, customerLink, imagePreview, usageScaleList, onSaveInputs]);
 
   const handleAddUsageScale = () => {
     setUsageScaleList([
@@ -447,7 +473,7 @@ export default function Step1Regulatory({
                       value={customApiKey}
                       onChange={(e) => {
                         setCustomApiKey(e.target.value);
-                        if (isApiKeySaved) setIsApiKeySaved(false); // input touched, reset saved state until clicked save
+                        if (isApiKeySaved) setIsApiKeySaved(false);
                       }}
                       className="w-full text-xs sm:text-sm pl-8 pr-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 text-gray-800 bg-white font-mono"
                     />
@@ -491,173 +517,110 @@ export default function Step1Regulatory({
                 </div>
               </div>
 
-              {/* Method A: Drag and Drop Screenshot */}
+              {/* Method A: Eum Link or Address Direct Input */}
+              <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Link2 className="w-3.5 h-3.5 text-indigo-600" />
+                    토지이음 주소 또는 고유 링크 입력 <span className="text-gray-400 text-[10px] font-normal">(필수)</span>
+                  </label>
+                  <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[9px] font-bold rounded">
+                    🗺️ 실시간 이음 파싱
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  placeholder="예: 서울특별시 강남구 역삼동 700-1 또는 토지이음 복사 링크"
+                  value={customerLink}
+                  onChange={(e) => {
+                    setCustomerLink(e.target.value);
+                    if (selectedSampleId) setSelectedSampleId('');
+                  }}
+                  className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 text-gray-800 bg-white"
+                />
+
+                {/* Preset Sample Land Selectors */}
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[10px] text-gray-400 font-bold block">💡 빠른 선택용 추천 대지 샘플:</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { id: 'siheung-baegot', name: '시흥 배곧 (일반상업)' },
+                      { id: 'gangnam-yeoksam', name: '강남 역삼 (일반상업)' },
+                      { id: 'seocho-banpo', name: '서초 반포 (3종주거)' },
+                      { id: 'yeonnam-forest', name: '연남 숲길 (2종주거)' }
+                    ].map((sample) => (
+                      <button
+                        key={sample.id}
+                        type="button"
+                        onClick={() => handleSelectSample(sample.id)}
+                        className={`px-2 py-1.5 rounded-lg text-[10px] font-semibold border transition text-center truncate ${
+                          selectedSampleId === sample.id
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                            : 'bg-white text-gray-600 border-gray-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        {sample.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Method B: Drag and Drop Screenshot */}
               <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100/80">
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
                     <Upload className="w-3.5 h-3.5 text-indigo-600" />
-                    방법 A: 토지이용계획확인서 규제도면 캡쳐 <span className="text-gray-400 text-[10px] font-normal">(선택)</span>
+                    토지이용계획확인서 규제도면 캡쳐 등록 <span className="text-gray-400 text-[10px] font-normal">(선택)</span>
                   </label>
-                  <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded animate-pulse">
-                    🚨 최대한 많이 캡쳐해 주세요!
-                  </span>
-                </div>
-
-                {/* Important Tip Callout */}
-                <p className="text-[10px] text-amber-700 mb-3 leading-relaxed bg-amber-50 p-2.5 rounded-lg border border-amber-200/50">
-                  <strong>💡 [추천 안내]</strong> 토지이용계획서의 지적도, 지역지구 지정현황 및 관련 고시 법령 영역를 <strong>최대한 넓고 선명하게 캡쳐</strong>하여 등록할 시, 용지 성격에 맞는 8대 규제 필터링의 신뢰도가 대폭 늘어납니다.
-                </p>
-
-                <div
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition ${
-                    isDragOver
-                      ? 'border-indigo-500 bg-indigo-50/25'
-                      : imagePreview
-                      ? 'border-green-500/40 bg-zinc-50'
-                      : 'border-zinc-200 hover:border-gray-300 bg-white hover:bg-gray-50/30'
-                  }`}
-                >
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    accept="image/*"
-                    className="hidden"
-                  />
-                  {imagePreview ? (
-                    <div className="space-y-2">
-                      <img
-                        src={imagePreview}
-                        alt="Screen upload preview"
-                        className="max-h-28 mx-auto rounded border shadow-xs"
-                      />
-                      <p className="text-xs text-green-600 font-medium">✨ 규제 캡쳐 도면이 성공적으로 모델 조서 대장에 반영되었습니다.</p>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setImagePreview(null);
-                        }}
-                        className="text-[11px] text-rose-500 hover:underline font-semibold"
-                      >
-                        이미지 제거하기
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5 py-2">
-                      <Upload className="w-8 h-8 text-indigo-400 mx-auto" />
-                      <p className="text-xs text-gray-600">
-                        <span className="text-indigo-600 font-bold">클릭하여 규제 도면 캡쳐 등록</span> 또는 Drag-and-drop
-                      </p>
-                      <p className="text-[10px] text-gray-400">지적 고시선, 행위제한내용이 담겨 있는 도면 파일 (*.jpg, *.png)</p>
-                    </div>
+                  {imagePreview && (
+                    <button
+                      type="button"
+                      onClick={() => setImagePreview(null)}
+                      className="text-[10px] text-rose-600 hover:text-rose-800 font-semibold"
+                    >
+                      도면 제거
+                    </button>
                   )}
                 </div>
-              </div>
 
-              {/* Method B: Expected Building Usage & Scale (Dynamic multi-usage matching) */}
-              <div className="bg-indigo-50/20 p-4 rounded-xl border border-indigo-100/50 space-y-4">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-650 animate-bounce" />
-                    방법 B: 개발 예정 용도 및 규모 기획 (복합 용도 추가 가능)
-                  </label>
-                  <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-850 rounded text-[9px] font-bold">
-                    기획 개수: {usageScaleList.length}개
-                  </span>
-                </div>
-                <p className="text-[10px] text-gray-500 leading-relaxed">
-                  개발하고자 하시는 <strong>용도를 각각 적고 용도별로 계획 규모(층수, 세대수, 연면적 등)</strong>를 자세히 지정해 주세요. 인허가 모델이 각 용도 간 주차장 대수 가중치와 조례 완화 혜택을 매칭합니다.
-                </p>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  className="hidden"
+                  accept="image/*"
+                />
 
-                {/* List of dynamic usage-scale pairs */}
-                <div className="space-y-2.5">
-                  {usageScaleList.map((item, index) => (
-                    <div key={item.id} className="p-3 bg-white border border-indigo-100/60 rounded-xl relative shadow-xs space-y-2.5">
-                      <div className="flex items-center justify-between border-b border-gray-50 pb-1.5">
-                        <span className="text-[11px] font-extrabold text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded">
-                          기획 #{index + 1}
-                        </span>
-                        {usageScaleList.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveUsageScale(item.id)}
-                            className="text-[10px] text-red-500 hover:text-red-700 hover:underline font-bold"
-                          >
-                            지우기
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                        <div className="md:col-span-5 space-y-1">
-                          <label className="block text-[10px] text-gray-400 font-bold uppercase">사용 방법 및 용도</label>
-                          <input
-                            type="text"
-                            value={item.usage}
-                            onChange={(e) => handleUpdateUsageScale(item.id, 'usage', e.target.value)}
-                            placeholder="예: 공동주택(다세대), 상가(근생), 오피스텔 등"
-                            className="w-full text-xs px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-gray-50/30 text-gray-800"
-                          />
-                        </div>
-                        <div className="md:col-span-7 space-y-1">
-                          <label className="block text-[10px] text-gray-400 font-bold uppercase">해당 용도 규모 (층수 및 연면적 등)</label>
-                          <input
-                            type="text"
-                            value={item.scale}
-                            onChange={(e) => handleUpdateUsageScale(item.id, 'scale', e.target.value)}
-                            placeholder="예: 지상 1~4층 12가구, 또는 지상 1층 연면적 300㎡ 상가"
-                            className="w-full text-xs px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-gray-50/30 text-gray-800"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Interactive Row Controllers */}
-                <div className="flex flex-col sm:flex-row gap-2 pt-1 border-t border-indigo-100/40">
-                  <button
-                    type="button"
-                    onClick={handleAddUsageScale}
-                    className="flex-1 py-2 bg-white hover:bg-slate-50 border border-indigo-200 text-indigo-700 font-bold text-xs rounded-lg transition text-center shadow-xs flex items-center justify-center gap-1"
+                {!imagePreview ? (
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition ${
+                      isDragOver
+                        ? 'border-indigo-500 bg-indigo-50/20'
+                        : 'border-gray-200 hover:border-indigo-500/50 bg-white'
+                    }`}
                   >
-                    + 신규 용도 및 규모 기획 추가
-                  </button>
-                  
-                  {/* Preset Injectors */}
-                  <div className="flex items-center gap-1.5 self-center">
-                    <span className="text-[10px] text-gray-400 font-medium">인기 복합조합 추천:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setUsageScaleList([
-                          { id: '1', usage: '지상 1~2층 근린생활시설 (리테일 상가)', scale: '총 2개층, 연면적 약 350㎡ 규모' },
-                          { id: '2', usage: '지상 3~7층 공동주택 (다세대 주택)', scale: '총 5개층, 연면적 1,000㎡ (총 15세대 계획)' }
-                        ]);
-                      }}
-                      className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100/50 text-indigo-750 font-semibold text-[9px] rounded border border-indigo-100 transition"
-                    >
-                      상가+다세대 주택
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setUsageScaleList([
-                          { id: '1', usage: '상업용 근린생활시설', scale: '지상 1층 리테일 매장 150㎡' },
-                          { id: '2', usage: '업무시설 (오피스텔)', scale: '지상 2~8층, 전용면적 총 1,200㎡ 규모' }
-                        ]);
-                      }}
-                      className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100/50 text-indigo-750 font-semibold text-[9px] rounded border border-indigo-100 transition"
-                    >
-                      상가+오피스텔
-                    </button>
+                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2 animate-bounce" />
+                    <p className="text-xs text-gray-700 font-medium">이곳에 규제지적도 캡쳐 이미지를 드래그하거나 클릭하여 업로드</p>
+                    <p className="text-[10px] text-gray-400 mt-1">PNG, JPG, JPEG 형식 지원 (자동 압축 및 최적화 판독 지원)</p>
                   </div>
-                </div>
+                ) : (
+                  <div className="relative rounded-lg overflow-hidden border border-gray-200 bg-white p-2">
+                    <img
+                      src={imagePreview}
+                      alt="Uploaded land regulation"
+                      className="max-h-40 mx-auto object-contain rounded"
+                    />
+                    <div className="text-center text-[10px] text-emerald-600 font-bold mt-1.5 flex items-center justify-center gap-1">
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      도면 이미지 등록 완료 (AI 시각 판독 활성화)
+                    </div>
+                  </div>
+                )}
               </div>
 
               {error && (

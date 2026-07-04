@@ -479,7 +479,7 @@ export default function Step4Report({
                   <td className="p-3 text-gray-800 font-medium">{zoning}</td>
                   <td className="p-3 bg-slate-50/50 font-bold text-gray-700 w-1/4">대지면적</td>
                   <td className="p-3 text-gray-800 font-mono font-bold">
-                    {areaSize.toLocaleString()} ㎡ ({((areaSize ?? 0) * 0.3025).toFixed(1)} 평)
+                    {(areaSize ?? 0).toLocaleString()} ㎡ ({((areaSize ?? 0) * 0.3025).toFixed(1)} 평)
                   </td>
                 </tr>
                 <tr className="border-b border-gray-100">
