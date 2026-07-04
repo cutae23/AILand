@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { LandRegulatoryAnalysis, FARRelaxationResult, ScenarioResult, AllocatedUnitResult } from '../types';
-import { CircleDollarSign, Coins, TrendingUp, Building2, Layers, Compass, HelpCircle, ArrowRight, Table, Sparkles, Loader2, RefreshCw, AlertTriangle, Home, Briefcase, Info, Plus, Trash2, Calculator, Activity } from 'lucide-react';
+import { CircleDollarSign, Coins, TrendingUp, Building2, Layers, Compass, HelpCircle, ArrowRight, Table, Sparkles, Loader2, RefreshCw, AlertTriangle, Home, Briefcase, Info, Plus, Trash2, Calculator, Activity, Puzzle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 
 interface Step3ScenarioProps {
@@ -23,6 +23,19 @@ interface HousingConfig {
   pyung: number;
   salesPricePerPyung: number; // 만원 단위 (AI 분석 산출)
   count: number; // 직접 입력 세대수
+}
+
+interface CustomUsageConfig {
+  id: string;
+  name: string;
+  areaPyung: number;
+  netRatio: number;
+  type: 'sales' | 'lease';
+  pricePerPyung: number; // 만원/평 (분양 시)
+  depositPerPyung: number; // 만원/평 (임대 시)
+  rentPerPyung: number; // 만원/평/월 (임대 시)
+  parkingCriteria: number; // ㎡당 1대 (기본값: 134)
+  auxAreaPyung: number; // 부대시설 면적 (평)
 }
 
 export default function Step3Scenario({ currentLand, currentRelaxation, onScenarioChange, activeStep = 3, savedScenario }: Step3ScenarioProps) {
@@ -179,12 +192,107 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   const [officeType, setOfficeType] = useState<'sales' | 'lease'>(() => inputs?.officeType ?? 'sales'); // 분양 vs 임대
   const [officeNetRatio, setOfficeNetRatio] = useState<number>(() => inputs?.officeNetRatio ?? 65); // 전용률 (%)
 
+  // Custom/Other Usages state variables
+  const [customUsages, setCustomUsages] = useState<CustomUsageConfig[]>(() => inputs?.customUsages ?? []);
+
   // Step 4 Scenario and Commercial tabs
   const [selectedScenarioId, setSelectedScenarioId] = useState<string>('base');
   const [activeCommercialTab, setActiveCommercialTab] = useState<'demographics' | 'competitors' | 'tenants' | 'risks'>('demographics');
 
   // Input tab control
-  const [activeInputTab, setActiveInputTab] = useState<'residential' | 'hotel' | 'retail' | 'office' | 'building-spec' | 'scenario-strategy'>('residential');
+  const [activeInputTab, setActiveInputTab] = useState<'residential' | 'hotel' | 'retail' | 'office' | 'custom-usage' | 'building-spec' | 'scenario-strategy'>('residential');
+
+  const handleAddCustomUsage = (template?: string) => {
+    const newId = `custom_usage_${Date.now()}`;
+    let name = '새 기획 용도';
+    let areaPyung = 100;
+    let netRatio = 60;
+    let type: 'sales' | 'lease' = 'sales';
+    let pricePerPyung = 2000;
+    let depositPerPyung = 200;
+    let rentPerPyung = 10;
+    let parkingCriteria = 134; // default
+    let auxAreaPyung = 10;
+
+    if (template === 'retail_complex') {
+      name = '근린생활시설 및 상가';
+      areaPyung = 150;
+      netRatio = 55;
+      pricePerPyung = 3000;
+      depositPerPyung = 300;
+      rentPerPyung = 20;
+      parkingCriteria = 134;
+    } else if (template === 'sports') {
+      name = '운동 및 체육시설';
+      areaPyung = 200;
+      netRatio = 70;
+      pricePerPyung = 1500;
+      depositPerPyung = 150;
+      rentPerPyung = 8;
+      parkingCriteria = 150;
+    } else if (template === 'cultural') {
+      name = '문화 및 집회시설';
+      areaPyung = 300;
+      netRatio = 65;
+      pricePerPyung = 1800;
+      depositPerPyung = 200;
+      rentPerPyung = 10;
+      parkingCriteria = 100;
+    } else if (template === 'education') {
+      name = '교육연구시설 (학원/연구실)';
+      areaPyung = 120;
+      netRatio = 65;
+      pricePerPyung = 1600;
+      depositPerPyung = 150;
+      rentPerPyung = 8;
+      parkingCriteria = 150;
+    } else if (template === 'senior') {
+      name = '노유자시설 (복지/돌봄)';
+      areaPyung = 80;
+      netRatio = 70;
+      pricePerPyung = 1400;
+      depositPerPyung = 100;
+      rentPerPyung = 6;
+      parkingCriteria = 200;
+    } else if (template === 'medical') {
+      name = '의료시설 (클리닉/의원)';
+      areaPyung = 150;
+      netRatio = 65;
+      pricePerPyung = 2500;
+      depositPerPyung = 300;
+      rentPerPyung = 15;
+      parkingCriteria = 100;
+    }
+
+    setCustomUsages(prev => [
+      ...prev,
+      {
+        id: newId,
+        name,
+        areaPyung,
+        netRatio,
+        type,
+        pricePerPyung,
+        depositPerPyung,
+        rentPerPyung,
+        parkingCriteria,
+        auxAreaPyung
+      }
+    ]);
+  };
+
+  const handleDeleteCustomUsage = (id: string) => {
+    setCustomUsages(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleUpdateCustomUsageField = (id: string, field: keyof CustomUsageConfig, value: any) => {
+    setCustomUsages(prev => prev.map(item => {
+      if (item.id === id) {
+        return { ...item, [field]: value };
+      }
+      return item;
+    }));
+  };
 
   // Sync handlers for land price
   const handleLandPurchasePriceChange = (val: number) => {
@@ -439,11 +547,15 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
     const officeNetAreaM2 = officeNetAreaPyung * PYUNG_TO_M2;
     const officeAboveGFA = officeNetAreaM2 / (officeNetRatio / 100);
 
+    // Custom/Other Usages Above-ground GFAs
+    const customAboveGFATotal = customUsages.reduce((sum, item) => sum + (item.areaPyung * PYUNG_TO_M2 / (item.netRatio / 100)), 0);
+
     // [USER ADDITIONS] Include auxiliary area (부대시설 면적)
-    const auxiliaryAreaM2 = auxiliaryArea * PYUNG_TO_M2;
+    const customAuxAreaTotalPyung = customUsages.reduce((sum, item) => sum + item.auxAreaPyung, 0);
+    const auxiliaryAreaM2 = (auxiliaryArea + customAuxAreaTotalPyung) * PYUNG_TO_M2;
 
     // Sum of ground-floor areas including auxiliary area
-    const aboveGroundGFA = parseFloat((aptAboveGFA + officetelAboveGFA + hotelAboveGFA + retailAboveGFA + officeAboveGFA + auxiliaryAreaM2).toFixed(2));
+    const aboveGroundGFA = parseFloat((aptAboveGFA + officetelAboveGFA + hotelAboveGFA + retailAboveGFA + officeAboveGFA + customAboveGFATotal + auxiliaryAreaM2).toFixed(2));
     
     // [USER ADDITIONS] Floor-by-floor building height and underground depth calculation
     let totalBuildingHeight = 0;
@@ -483,13 +595,23 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
     const retailTotalGFA = retailAboveGFA + retailB1GFA;
     const retailLegalParking = retailTotalGFA / 134;
 
-    // 업무시설: 100㎡당 1대
-    const officeLegalParking = officeAboveGFA / 100;
+    // 업무시설: 100㎡당 1대 (업무 공용부대시설 면적 포함)
+    const officeAuxAreaM2 = officeAuxArea * PYUNG_TO_M2;
+    const officeTotalGFAForParking = officeAboveGFA + officeAuxAreaM2;
+    const officeLegalParking = officeTotalGFAForParking / 100;
 
-    // 숙박시설: 134㎡당 1대
-    const hotelLegalParking = hotelAboveGFA / 134;
+    // 숙박시설: 134㎡당 1대 (호텔 부대복리시설 면적 포함)
+    const hotelAuxAreaM2 = hotelAuxArea * PYUNG_TO_M2;
+    const hotelTotalGFAForParking = hotelAboveGFA + hotelAuxAreaM2;
+    const hotelLegalParking = hotelTotalGFAForParking / 134;
 
-    const totalLegalParking = aptLegalParking + officetelLegalParking + retailLegalParking + officeLegalParking + hotelLegalParking;
+    // 추가 기획 용도 법정 주차대수 산식
+    const customLegalParking = customUsages.reduce((sum, item) => {
+      const gfa = (item.areaPyung * PYUNG_TO_M2 / (item.netRatio / 100)) + (item.auxAreaPyung * PYUNG_TO_M2);
+      return sum + (gfa / item.parkingCriteria);
+    }, 0);
+
+    const totalLegalParking = aptLegalParking + officetelLegalParking + retailLegalParking + officeLegalParking + hotelLegalParking + customLegalParking;
     
     // Designed Parking Spaces
     const designedParkingCount = designedParkingSpaces !== null 
@@ -600,6 +722,23 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
       });
     }
 
+    // E. Custom Usages added to allocatedUnits
+    customUsages.forEach(item => {
+      const isSales = item.type === 'sales';
+      const valueBillion = isSales
+        ? parseFloat(((item.areaPyung * item.pricePerPyung) / 10000).toFixed(2))
+        : parseFloat(((item.areaPyung * item.depositPerPyung + (item.areaPyung * item.rentPerPyung * 12 * 10)) / 10000).toFixed(2));
+      allocatedUnits.push({
+        id: item.id,
+        name: `${item.name} (${Math.round(item.areaPyung)}평, ${isSales ? '분양형' : '임대형'})`,
+        sizeM2: Math.round(item.areaPyung * PYUNG_TO_M2),
+        pyung: item.areaPyung,
+        count: 1,
+        unitSalesPrice: valueBillion,
+        totalSalesPrice: valueBillion
+      });
+    });
+
     const totalAllocatedUnits = allocatedUnits.length > 0 ? allocatedUnits.reduce((acc, curr) => acc + curr.count, 0) : 0;
 
     // Numerical solver for Internal Rate of Return (IRR)
@@ -654,8 +793,11 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
         (retail3FArea * (retail3FPrice * pricePerPyungMultiplier))
       ) : 0;
       const officeSalesVal = officeType === 'sales' ? (officeArea * (officePricePerPyung * pricePerPyungMultiplier)) : 0;
+      const customSalesVal = customUsages.reduce((sum, item) => {
+        return sum + (item.type === 'sales' ? (item.areaPyung * (item.pricePerPyung * pricePerPyungMultiplier)) : 0);
+      }, 0);
 
-      const totalSalesRevenue = parseFloat(((aptSales + officetelSales + hotelSalesVal + retailSalesVal + officeSalesVal) / 10000).toFixed(2));
+      const totalSalesRevenue = parseFloat(((aptSales + officetelSales + hotelSalesVal + retailSalesVal + officeSalesVal + customSalesVal) / 10000).toFixed(2));
 
       // Lease Deposits
       const hotelDepositsVal = hotelType === 'lease' ? (hotelRoomCount * (hotelDepositPerRoom * rentMultiplier)) : 0;
@@ -666,8 +808,11 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
         (retail3FArea * (retail3FDeposit * rentMultiplier))
       ) : 0;
       const officeDepositsVal = officeType === 'lease' ? (officeArea * (officeDepositPerPyung * rentMultiplier)) : 0;
+      const customDepositsVal = customUsages.reduce((sum, item) => {
+        return sum + (item.type === 'lease' ? (item.areaPyung * (item.depositPerPyung * rentMultiplier)) : 0);
+      }, 0);
 
-      const totalLeaseDeposits = parseFloat(((hotelDepositsVal + retailDepositsVal + officeDepositsVal) / 10000).toFixed(2));
+      const totalLeaseDeposits = parseFloat(((hotelDepositsVal + retailDepositsVal + officeDepositsVal + customDepositsVal) / 10000).toFixed(2));
 
       // Monthly Rent -> Annual Rent
       const hotelAnnualRentVal = hotelType === 'lease' ? (hotelRoomCount * (hotelRentPerRoom * rentMultiplier) * 12) : 0;
@@ -678,14 +823,21 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
          (retail3FArea * (retail3FRent * rentMultiplier))) * 12
       ) : 0;
       const officeAnnualRentVal = officeType === 'lease' ? (officeArea * (officeRentPerPyung * rentMultiplier) * 12) : 0;
+      const customAnnualRentVal = customUsages.reduce((sum, item) => {
+        return sum + (item.type === 'lease' ? (item.areaPyung * (item.rentPerPyung * rentMultiplier) * 12) : 0);
+      }, 0);
 
-      const totalAnnualRent = parseFloat(((hotelAnnualRentVal + retailAnnualRentVal + officeAnnualRentVal) / 10000).toFixed(2));
+      const totalAnnualRent = parseFloat(((hotelAnnualRentVal + retailAnnualRentVal + officeAnnualRentVal + customAnnualRentVal) / 10000).toFixed(2));
+
+      const customAllSalesVal = customUsages.reduce((sum, item) => {
+        return sum + (item.areaPyung * (item.pricePerPyung * pricePerPyungMultiplier));
+      }, 0);
 
       const finalSalesRevenue = exitStrategy === 'sales'
         ? parseFloat(((aptSales + officetelSales + 
                       (hotelRoomCount * hotelRoomSizePyung * (hotelPricePerPyung * pricePerPyungMultiplier)) + 
                       ((retailB1Area * (retailB1Price * pricePerPyungMultiplier)) + (retail1FArea * (retail1FPrice * pricePerPyungMultiplier)) + (retail2FArea * (retail2FPrice * pricePerPyungMultiplier)) + (retail3FArea * (retail3FPrice * pricePerPyungMultiplier))) + 
-                      (officeArea * (officePricePerPyung * pricePerPyungMultiplier))) / 10000).toFixed(2))
+                      (officeArea * (officePricePerPyung * pricePerPyungMultiplier)) + customAllSalesVal) / 10000).toFixed(2))
         : totalSalesRevenue;
 
       const finalLeaseDeposits = exitStrategy === 'sales' ? 0 : totalLeaseDeposits;
@@ -921,7 +1073,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
     wallCommonRatioApt, generalCommonRatioApt, wallCommonRatioOt, generalCommonRatioOt, parkingAreaPerCar,
     designedParkingSpaces, machineryRatio, auxiliaryArea, aboveGroundFloors, undergroundFloors, 
     defaultFloorHeight, customFloorHeights, exitStrategy,
-    aptAuxArea, officetelAuxArea, hotelAuxArea, officeAuxArea, selectedScenarioId
+    aptAuxArea, officetelAuxArea, hotelAuxArea, officeAuxArea, selectedScenarioId, customUsages
   ]);
 
   useEffect(() => {
@@ -937,7 +1089,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           wallCommonRatioApt, generalCommonRatioApt, wallCommonRatioOt, generalCommonRatioOt, parkingAreaPerCar,
           designedParkingSpaces, machineryRatio, auxiliaryArea, aboveGroundFloors, undergroundFloors, 
           defaultFloorHeight, customFloorHeights, exitStrategy,
-          aptAuxArea, officetelAuxArea, hotelAuxArea, officeAuxArea
+          aptAuxArea, officetelAuxArea, hotelAuxArea, officeAuxArea, customUsages
         },
         result
       });
@@ -1387,7 +1539,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
             <div className={activeStep === 4 ? 'hidden' : 'space-y-6'}>
               {/* Input tabs */}
-            <div className="grid grid-cols-3 sm:grid-cols-6 border-b border-gray-100 mb-5 bg-gray-50/50 p-1 rounded-xl gap-1">
+            <div className="grid grid-cols-3 sm:grid-cols-7 border-b border-gray-100 mb-5 bg-gray-50/50 p-1 rounded-xl gap-1">
               <button
                 type="button"
                 onClick={() => setActiveInputTab('residential')}
@@ -1415,6 +1567,13 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                 className={`text-center py-2 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${activeInputTab === 'office' ? 'bg-white text-[#2C251F] shadow-sm border border-gray-100' : 'text-gray-500 hover:text-[#5F7161]'}`}
               >
                 업무시설
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveInputTab('custom-usage')}
+                className={`text-center py-2 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${activeInputTab === 'custom-usage' ? 'bg-white text-[#2C251F] shadow-sm border border-gray-100' : 'text-gray-500 hover:text-[#5F7161]'}`}
+              >
+                추가용도 🧩
               </button>
               <button
                 type="button"
@@ -2378,6 +2537,276 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
               </div>
             )}
 
+            {activeInputTab === 'custom-usage' && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="border-b border-gray-100 pb-3 flex justify-between items-start">
+                  <div>
+                    <h3 className="text-xs font-bold text-[#8D7B68] uppercase tracking-widest flex items-center gap-1.5">
+                      <Puzzle className="w-4 h-4 text-violet-600" />
+                      추가 개발 용도 기획 (임의 용도 추가)
+                    </h3>
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      공동주택/호텔/상가/오피스 외에 체육/문화/교육/복지/의료시설 등 원하시는 모든 용도를 자유롭게 추가·기획할 수 있습니다.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 justify-end">
+                    <button
+                      type="button"
+                      onClick={() => handleAddCustomUsage()}
+                      className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-violet-600 text-white hover:bg-violet-700 transition flex items-center gap-1 shadow-sm cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> 용도 추가
+                    </button>
+                  </div>
+                </div>
+
+                {/* Templates Selector */}
+                <div className="bg-violet-50/40 border border-violet-100/60 p-4 rounded-xl">
+                  <span className="text-[10px] font-bold text-violet-900 block mb-2 uppercase tracking-wide">💡 빠른 용도 템플릿 추가</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleAddCustomUsage('retail_complex')}
+                      className="p-2 text-left bg-white border border-gray-200 hover:border-violet-300 rounded-lg text-[10px] font-medium text-gray-700 transition hover:shadow-sm cursor-pointer"
+                    >
+                      <strong className="text-violet-700 block text-[11px] font-bold mb-0.5">근린생활시설</strong>
+                      상가 및 소매점 기획
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddCustomUsage('sports')}
+                      className="p-2 text-left bg-white border border-gray-200 hover:border-violet-300 rounded-lg text-[10px] font-medium text-gray-700 transition hover:shadow-sm cursor-pointer"
+                    >
+                      <strong className="text-violet-700 block text-[11px] font-bold mb-0.5">운동 및 체육</strong>
+                      헬스장, 골프연습장 등
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddCustomUsage('cultural')}
+                      className="p-2 text-left bg-white border border-gray-200 hover:border-violet-300 rounded-lg text-[10px] font-medium text-gray-700 transition hover:shadow-sm cursor-pointer"
+                    >
+                      <strong className="text-violet-700 block text-[11px] font-bold mb-0.5">문화 및 집회</strong>
+                      미술관, 전시장, 극장 등
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddCustomUsage('education')}
+                      className="p-2 text-left bg-white border border-gray-200 hover:border-violet-300 rounded-lg text-[10px] font-medium text-gray-700 transition hover:shadow-sm cursor-pointer"
+                    >
+                      <strong className="text-violet-700 block text-[11px] font-bold mb-0.5">교육연구시설</strong>
+                      학원, 보육원, 연구실 등
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddCustomUsage('senior')}
+                      className="p-2 text-left bg-white border border-gray-200 hover:border-violet-300 rounded-lg text-[10px] font-medium text-gray-700 transition hover:shadow-sm cursor-pointer"
+                    >
+                      <strong className="text-violet-700 block text-[11px] font-bold mb-0.5">노유자시설</strong>
+                      실버케어, 아동복지 등
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddCustomUsage('medical')}
+                      className="p-2 text-left bg-white border border-gray-200 hover:border-violet-300 rounded-lg text-[10px] font-medium text-gray-700 transition hover:shadow-sm cursor-pointer"
+                    >
+                      <strong className="text-violet-700 block text-[11px] font-bold mb-0.5">의료시설</strong>
+                      내과/이비인후과 의원 등
+                    </button>
+                  </div>
+                </div>
+
+                {/* List of Custom Usages */}
+                {customUsages.length === 0 ? (
+                  <div className="text-center py-12 border border-dashed border-gray-200 rounded-2xl bg-gray-50/30">
+                    <Puzzle className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-xs font-bold text-gray-400">등록된 추가 개발 용도가 없습니다.</p>
+                    <p className="text-[10px] text-gray-400 mt-1">상단 버튼이나 템플릿을 클릭하여 프로젝트에 새로운 개발 용도를 기획해 보세요.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {customUsages.map((item) => {
+                      const PYUNG_TO_M2 = 3.30578;
+                      const gfaM2 = (item.areaPyung * PYUNG_TO_M2 / (item.netRatio / 100)) + (item.auxAreaPyung * PYUNG_TO_M2);
+                      const parkingCount = gfaM2 / item.parkingCriteria;
+                      const valueBillion = item.type === 'sales'
+                        ? (item.areaPyung * item.pricePerPyung) / 10000
+                        : (item.areaPyung * item.depositPerPyung + (item.areaPyung * item.rentPerPyung * 12 * 10)) / 10000;
+
+                      return (
+                        <div key={item.id} className="bg-white border border-gray-150 rounded-2xl p-4 space-y-4 shadow-sm relative">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCustomUsage(item.id)}
+                            className="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition cursor-pointer"
+                            title="용도 삭제"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-start">
+                            {/* Name and template type */}
+                            <div className="md:col-span-3 space-y-1">
+                              <label className="block text-[11px] font-semibold text-gray-500">용도 구분명</label>
+                              <input
+                                type="text"
+                                value={item.name}
+                                onChange={(e) => handleUpdateCustomUsageField(item.id, 'name', e.target.value)}
+                                className="w-full text-[11px] font-bold p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-500 text-gray-800"
+                                placeholder="예: 스포츠 피트니스 센터"
+                              />
+                              <div className="pt-2 text-[10px] text-gray-400 space-y-0.5 font-medium bg-gray-50/50 p-2 rounded-lg border border-gray-100">
+                                <div className="flex justify-between">
+                                  <span>지상층 연면적:</span>
+                                  <strong className="text-gray-700">{gfaM2.toFixed(1)} ㎡</strong>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>법정 주차대수:</span>
+                                  <strong className="text-gray-700">{parkingCount.toFixed(1)} 대</strong>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>사업 가치 평가액:</span>
+                                  <strong className="text-violet-700">{valueBillion.toFixed(2)} 억</strong>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Scale config */}
+                            <div className="md:col-span-5 grid grid-cols-2 gap-3 bg-gray-50/30 p-3 rounded-xl border border-gray-100">
+                              <div className="space-y-1">
+                                <label className="block text-[11px] font-semibold text-gray-500 flex justify-between">
+                                  <span>전용면적 설정</span>
+                                  <span className="text-[10px] text-gray-400">{(item.areaPyung * 3.3).toFixed(1)}㎡</span>
+                                </label>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    value={item.areaPyung || ''}
+                                    onChange={(e) => handleUpdateCustomUsageField(item.id, 'areaPyung', parseFloat(e.target.value) || 0)}
+                                    className="w-full text-right text-[11px] font-bold p-2 pr-6 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-500 text-gray-800"
+                                  />
+                                  <span className="absolute right-2.5 top-2.5 text-[10px] font-bold text-gray-400">평</span>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="block text-[11px] font-semibold text-gray-500 flex justify-between">
+                                  <span>부대시설 면적</span>
+                                  <span className="text-[10px] text-gray-400">{(item.auxAreaPyung * 3.3).toFixed(1)}㎡</span>
+                                </label>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    value={item.auxAreaPyung || ''}
+                                    onChange={(e) => handleUpdateCustomUsageField(item.id, 'auxAreaPyung', parseFloat(e.target.value) || 0)}
+                                    className="w-full text-right text-[11px] font-bold p-2 pr-6 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-500 text-gray-800"
+                                  />
+                                  <span className="absolute right-2.5 top-2.5 text-[10px] font-bold text-gray-400">평</span>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="block text-[11px] font-semibold text-gray-500">전용률 설정</label>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    value={item.netRatio || ''}
+                                    onChange={(e) => handleUpdateCustomUsageField(item.id, 'netRatio', parseFloat(e.target.value) || 0)}
+                                    className="w-full text-right text-[11px] font-bold p-2 pr-6 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-500 text-gray-800"
+                                  />
+                                  <span className="absolute right-2.5 top-2.5 text-[10px] font-bold text-gray-400">%</span>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="block text-[11px] font-semibold text-gray-500 flex justify-between" title="시설 연면적 X ㎡당 1대 기준">
+                                  <span>법정주차 기준</span>
+                                  <span className="text-[10px] text-gray-400">1대 기준</span>
+                                </label>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    value={item.parkingCriteria || ''}
+                                    onChange={(e) => handleUpdateCustomUsageField(item.id, 'parkingCriteria', parseFloat(e.target.value) || 0)}
+                                    className="w-full text-right text-[11px] font-bold p-2 pr-6 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-500 text-gray-800"
+                                  />
+                                  <span className="absolute right-2.5 top-2.5 text-[10px] font-bold text-gray-400">㎡</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Financial/Business Model config */}
+                            <div className="md:col-span-4 bg-violet-50/20 p-3 rounded-xl border border-violet-100/50 space-y-3">
+                              <div className="space-y-1">
+                                <label className="block text-[11px] font-semibold text-violet-900">사업 전략 선택</label>
+                                <div className="grid grid-cols-2 gap-1 bg-white p-0.5 rounded-lg border border-gray-150">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateCustomUsageField(item.id, 'type', 'sales')}
+                                    className={`py-1 text-[10px] font-bold rounded-md transition cursor-pointer ${item.type === 'sales' ? 'bg-violet-600 text-white' : 'text-gray-500 hover:text-violet-700'}`}
+                                  >
+                                    분양형 (전량매각)
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateCustomUsageField(item.id, 'type', 'lease')}
+                                    className={`py-1 text-[10px] font-bold rounded-md transition cursor-pointer ${item.type === 'lease' ? 'bg-violet-600 text-white' : 'text-gray-500 hover:text-violet-700'}`}
+                                  >
+                                    임대형 (보증금+월세)
+                                  </button>
+                                </div>
+                              </div>
+
+                              {item.type === 'sales' ? (
+                                <div className="space-y-1">
+                                  <label className="block text-[11px] font-semibold text-violet-900">평당 예상 분양가</label>
+                                  <div className="relative">
+                                    <input
+                                      type="number"
+                                      value={item.pricePerPyung || ''}
+                                      onChange={(e) => handleUpdateCustomUsageField(item.id, 'pricePerPyung', parseFloat(e.target.value) || 0)}
+                                      className="w-full text-right text-[11px] font-bold p-2 pr-10 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-500 text-gray-800"
+                                    />
+                                    <span className="absolute right-2.5 top-2.5 text-[10px] font-bold text-gray-400">만원/평</span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div className="space-y-1">
+                                    <label className="block text-[11px] font-semibold text-violet-900">평당 임대 보증금</label>
+                                    <div className="relative">
+                                      <input
+                                        type="number"
+                                        value={item.depositPerPyung || ''}
+                                        onChange={(e) => handleUpdateCustomUsageField(item.id, 'depositPerPyung', parseFloat(e.target.value) || 0)}
+                                        className="w-full text-right text-[11px] font-bold p-2 pr-6 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-500 text-gray-800"
+                                      />
+                                      <span className="absolute right-2.5 top-2.5 text-[10px] font-bold text-gray-400">만원</span>
+                                    </div>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="block text-[11px] font-semibold text-violet-900">평당 월 임대료</label>
+                                    <div className="relative">
+                                      <input
+                                        type="number"
+                                        value={item.rentPerPyung || ''}
+                                        onChange={(e) => handleUpdateCustomUsageField(item.id, 'rentPerPyung', parseFloat(e.target.value) || 0)}
+                                        className="w-full text-right text-[11px] font-bold p-2 pr-6 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-500 text-gray-800"
+                                      />
+                                      <span className="absolute right-2.5 top-2.5 text-[10px] font-bold text-gray-400">만원</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             {activeInputTab === 'building-spec' && (
               <div className="space-y-5 animate-fadeIn">
                 <div className="border-b border-gray-100 pb-3">
@@ -2453,9 +2882,20 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
                   {/* 층고 설정 */}
                   <div className="p-3.5 bg-[#FCFAF7] border border-gray-100 rounded-xl space-y-2">
-                    <div className="flex justify-between font-semibold text-xs text-gray-700">
+                    <div className="flex justify-between items-center font-semibold text-xs text-gray-700">
                       <span>기본 기준층 층고 설정</span>
-                      <span className="font-extrabold text-[#5F7161]">{defaultFloorHeight} m</span>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="1.0"
+                          max="10.0"
+                          value={defaultFloorHeight}
+                          onChange={(e) => setDefaultFloorHeight(Math.max(1.0, Math.min(10.0, Number(e.target.value) || 3.0)))}
+                          className="w-14 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-indigo-500 font-mono"
+                        />
+                        <span className="font-extrabold text-[#5F7161]">m</span>
+                      </div>
                     </div>
                     <input
                       type="range"
@@ -2479,16 +2919,26 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                     <div className="space-y-3 text-xs">
                       {/* 공동주택 */}
                       <div className="space-y-1">
-                        <div className="flex justify-between font-medium">
+                        <div className="flex justify-between items-center font-medium">
                           <span className="text-gray-600">공동주택 부대시설 (피트니스, 시니어클럽 등)</span>
-                          <span className="font-bold text-gray-800">{aptAuxArea} 평</span>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              min="0"
+                              max="1000"
+                              value={aptAuxArea}
+                              onChange={(e) => setAptAuxArea(Math.max(0, Math.min(1000, Number(e.target.value) || 0)))}
+                              className="w-14 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-indigo-500 font-mono"
+                            />
+                            <span className="font-bold text-gray-800">평</span>
+                          </div>
                         </div>
                         <input
                           type="range"
                           min="0"
                           max="100"
                           step="1"
-                          value={aptAuxArea}
+                          value={Math.min(aptAuxArea, 100)}
                           onChange={(e) => setAptAuxArea(Number(e.target.value))}
                           className="w-full accent-[#5F7161]"
                         />
@@ -2496,16 +2946,26 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
                       {/* 오피스텔 */}
                       <div className="space-y-1">
-                        <div className="flex justify-between font-medium">
+                        <div className="flex justify-between items-center font-medium">
                           <span className="text-gray-600">오피스텔 부대시설 (라운지, 공유세탁실 등)</span>
-                          <span className="font-bold text-gray-800">{officetelAuxArea} 평</span>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              min="0"
+                              max="1000"
+                              value={officetelAuxArea}
+                              onChange={(e) => setOfficetelAuxArea(Math.max(0, Math.min(1000, Number(e.target.value) || 0)))}
+                              className="w-14 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-indigo-500 font-mono"
+                            />
+                            <span className="font-bold text-gray-800">평</span>
+                          </div>
                         </div>
                         <input
                           type="range"
                           min="0"
                           max="50"
                           step="1"
-                          value={officetelAuxArea}
+                          value={Math.min(officetelAuxArea, 50)}
                           onChange={(e) => setOfficetelAuxArea(Number(e.target.value))}
                           className="w-full accent-[#5F7161]"
                         />
@@ -2513,16 +2973,26 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
                       {/* 호텔 */}
                       <div className="space-y-1">
-                        <div className="flex justify-between font-medium">
+                        <div className="flex justify-between items-center font-medium">
                           <span className="text-gray-600">호텔 부대복리시설 (레스토랑, 로비, 세미나룸 등)</span>
-                          <span className="font-bold text-gray-800">{hotelAuxArea} 평</span>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              min="0"
+                              max="1000"
+                              value={hotelAuxArea}
+                              onChange={(e) => setHotelAuxArea(Math.max(0, Math.min(1000, Number(e.target.value) || 0)))}
+                              className="w-14 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-indigo-500 font-mono"
+                            />
+                            <span className="font-bold text-gray-800">평</span>
+                          </div>
                         </div>
                         <input
                           type="range"
                           min="0"
                           max="200"
                           step="5"
-                          value={hotelAuxArea}
+                          value={Math.min(hotelAuxArea, 200)}
                           onChange={(e) => setHotelAuxArea(Number(e.target.value))}
                           className="w-full accent-[#5F7161]"
                         />
@@ -2530,16 +3000,26 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
                       {/* 업무시설 */}
                       <div className="space-y-1">
-                        <div className="flex justify-between font-medium">
+                        <div className="flex justify-between items-center font-medium">
                           <span className="text-gray-600">업무시설 공용부대시설 (회의실, 라운지 등)</span>
-                          <span className="font-bold text-gray-800">{officeAuxArea} 평</span>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              min="0"
+                              max="1000"
+                              value={officeAuxArea}
+                              onChange={(e) => setOfficeAuxArea(Math.max(0, Math.min(1000, Number(e.target.value) || 0)))}
+                              className="w-14 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-indigo-500 font-mono"
+                            />
+                            <span className="font-bold text-gray-800">평</span>
+                          </div>
                         </div>
                         <input
                           type="range"
                           min="0"
                           max="100"
                           step="1"
-                          value={officeAuxArea}
+                          value={Math.min(officeAuxArea, 100)}
                           onChange={(e) => setOfficeAuxArea(Number(e.target.value))}
                           className="w-full accent-[#5F7161]"
                         />
@@ -2988,21 +3468,27 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {result.allocatedUnits.map((u) => {
                       const isRes = u.id.startsWith('apt_') || u.id.startsWith('officetel_');
-                      const isHotel = u.id === 'hotel';
-                      const isOffice = u.id === 'office';
+                      const isHotel = u.id === 'hotel' || u.id === 'facility_hotel';
+                      const isOffice = u.id === 'office' || u.id === 'facility_office';
                       const isRetail = u.id.startsWith('retail_');
+                      const isCustom = u.id.startsWith('custom_usage_');
 
                       let badgeColor = "bg-emerald-50 text-emerald-800";
+                      let badgeName = isRes ? '주거' : isHotel ? '호텔' : isOffice ? '업무' : isRetail ? '상가' : '기타';
                       if (isHotel) badgeColor = "bg-purple-50 text-purple-800";
                       if (isOffice) badgeColor = "bg-indigo-50 text-indigo-800";
                       if (isRetail) badgeColor = "bg-orange-50 text-orange-800";
+                      if (isCustom) {
+                        badgeColor = "bg-violet-50 text-violet-800";
+                        badgeName = "추가용도";
+                      }
 
                       return (
                         <div key={u.id} className="p-3 bg-gray-50/50 rounded-xl text-xs flex justify-between items-center border border-gray-50">
                           <div>
                             <div className="flex items-center gap-1.5">
                               <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${badgeColor}`}>
-                                {isRes ? '주거' : isHotel ? '호텔' : isOffice ? '업무' : '상가'}
+                                {badgeName}
                               </span>
                               <span className="font-bold text-gray-800 text-[11px]">{u.name.split(' (')[0]}</span>
                             </div>
@@ -3127,9 +3613,9 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                             <span className="font-bold text-gray-800">{(result?.officeLegalParking ?? 0).toFixed(1)} 대</span>
                           </div>
                           <p className="font-mono text-[9.5px] text-slate-500 pl-3">
-                            기준: 시설 연면적 100㎡당 1대
+                            기준: 시설 연면적 100㎡당 1대 (업무 공용부대시설 면적 포함)
                             <br />
-                            계산: 업무 연면적 {(result?.officeAboveGFA ?? 0).toFixed(1)}㎡ ÷ 100 = {(result?.officeLegalParking ?? 0).toFixed(1)}대
+                            계산: (업무 {(result?.officeAboveGFA ?? 0).toFixed(1)}㎡ + 부대 {(officeAuxArea * 3.30578).toFixed(1)}㎡) ÷ 100 = {(result?.officeLegalParking ?? 0).toFixed(1)}대
                           </p>
 
                           {/* 숙박시설 */}
@@ -3138,9 +3624,9 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                             <span className="font-bold text-gray-800">{(result?.hotelLegalParking ?? 0).toFixed(1)} 대</span>
                           </div>
                           <p className="font-mono text-[9.5px] text-slate-500 pl-3">
-                            기준: 시설 연면적 134㎡당 1대
+                            기준: 시설 연면적 134㎡당 1대 (호텔 부대복리시설 면적 포함)
                             <br />
-                            계산: 호텔 연면적 {(result?.hotelAboveGFA ?? 0).toFixed(1)}㎡ ÷ 134 = {(result?.hotelLegalParking ?? 0).toFixed(1)}대
+                            계산: (호텔 {(result?.hotelAboveGFA ?? 0).toFixed(1)}㎡ + 부대 {(hotelAuxArea * 3.30578).toFixed(1)}㎡) ÷ 134 = {(result?.hotelLegalParking ?? 0).toFixed(1)}대
                           </p>
 
                           {/* 합계 */}

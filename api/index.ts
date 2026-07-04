@@ -36,6 +36,17 @@ export interface SampleLand {
 
 export const SAMPLE_LANDS: SampleLand[] = [
   {
+    id: 'siheung-baegot',
+    address: '경기도 시흥시 배곧동 주상복합 공동주택 신축 대지',
+    zoning: '일반상업지역, 지구단위계획구역, 고도제한지구',
+    areaSize: 15450, // m²
+    baselineFAR: 400, // %
+    baselineBCR: 60, // %
+    heightLimit: '최고 49층 이하 (지구단위계획 기준)',
+    description: '시흥 배곧 지구단위계획구역 내 일반상업지역으로, 초고층 주상복합(공동주택, 근생, 운동시설, 업무) 개발에 완벽히 최적화된 대형 필지입니다.',
+    eumLink: 'https://www.eum.go.kr/web/am/amUserLandReg.jsp?pCode=4139013400'
+  },
+  {
     id: 'gangnam-yeoksam',
     address: '서울특별시 강남구 역삼동 테헤란로**지번 (이면도로 상업용지)',
     zoning: '일반상업지역, 지구단위계획구역',
@@ -47,7 +58,7 @@ export const SAMPLE_LANDS: SampleLand[] = [
     eumLink: 'https://www.eum.go.kr/web/am/amUserLandReg.jsp?pCode=1168010100'
   },
   {
-    id: 'mapo-yeonnam',
+    id: 'yeonnam-forest',
     address: '서울특별시 마포구 연남동 경의선숲길 인근 단독주택지',
     zoning: '제2종일반주거지역 (7층이하)',
     areaSize: 228, // m²
