@@ -538,32 +538,6 @@ export default function Step1Regulatory({
                   }}
                   className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 text-gray-800 bg-white"
                 />
-
-                {/* Preset Sample Land Selectors */}
-                <div className="space-y-1.5 pt-1">
-                  <span className="text-[10px] text-gray-400 font-bold block">💡 빠른 선택용 추천 대지 샘플:</span>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {[
-                      { id: 'siheung-baegot', name: '시흥 배곧 (일반상업)' },
-                      { id: 'gangnam-yeoksam', name: '강남 역삼 (일반상업)' },
-                      { id: 'seocho-banpo', name: '서초 반포 (3종주거)' },
-                      { id: 'yeonnam-forest', name: '연남 숲길 (2종주거)' }
-                    ].map((sample) => (
-                      <button
-                        key={sample.id}
-                        type="button"
-                        onClick={() => handleSelectSample(sample.id)}
-                        className={`px-2 py-1.5 rounded-lg text-[10px] font-semibold border transition text-center truncate ${
-                          selectedSampleId === sample.id
-                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                            : 'bg-white text-gray-600 border-gray-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        {sample.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
 
               {/* Method B: Drag and Drop Screenshot */}

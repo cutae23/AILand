@@ -90,6 +90,10 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
   // [USER ADDITIONS] New State: exitStrategy
   const [exitStrategy, setExitStrategy] = useState<'sales' | 'lease-exit' | 'lease-permanent'>(() => inputs?.exitStrategy ?? 'sales');
+
+  // [USER ADDITIONS] New States: Typical Floor Range (기준층 범위 설정)
+  const [typicalFloorStart, setTypicalFloorStart] = useState<number>(() => inputs?.typicalFloorStart ?? 2);
+  const [typicalFloorEnd, setTypicalFloorEnd] = useState<number>(() => inputs?.typicalFloorEnd ?? 7);
   
   // Financial parameters
   const getOfficialLandPricePerM2 = () => {
@@ -198,6 +202,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   // Step 4 Scenario and Commercial tabs
   const [selectedScenarioId, setSelectedScenarioId] = useState<string>('base');
   const [activeCommercialTab, setActiveCommercialTab] = useState<'demographics' | 'competitors' | 'tenants' | 'risks'>('demographics');
+  const [activeSummaryTab, setActiveSummaryTab] = useState<'general' | 'area' | 'parking' | 'amenity'>('general');
 
   // Input tab control
   const [activeInputTab, setActiveInputTab] = useState<'residential' | 'hotel' | 'retail' | 'office' | 'custom-usage' | 'building-spec' | 'scenario-strategy'>('residential');
@@ -527,6 +532,11 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   // 3. Dynamic Calculation logic
   const result = useMemo(() => {
     const PYUNG_TO_M2 = 3.30578;
+
+    // Bounded typical floor values
+    const actualTypicalStart = Math.min(Math.max(1, typicalFloorStart), aboveGroundFloors);
+    const actualTypicalEnd = Math.min(Math.max(actualTypicalStart, typicalFloorEnd), aboveGroundFloors);
+    const typicalFloorCount = Math.max(1, actualTypicalEnd - actualTypicalStart + 1);
 
     // A. Net area & Above-ground Gross Floor Area (GFA)
     const aptNetArea = aptConfigs.reduce((sum, item) => sum + (item.count * item.sizeM2), 0);
@@ -1052,6 +1062,9 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
       exitStrategy,
       totalBuildingHeight,
       totalUndergroundDepth,
+      actualTypicalStart,
+      actualTypicalEnd,
+      typicalFloorCount,
       scenarios: scenarioData,
       activeScenarioId: selectedScenarioId,
       // Standard mapped fields to support legacy charts transparently
@@ -1073,7 +1086,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
     wallCommonRatioApt, generalCommonRatioApt, wallCommonRatioOt, generalCommonRatioOt, parkingAreaPerCar,
     designedParkingSpaces, machineryRatio, auxiliaryArea, aboveGroundFloors, undergroundFloors, 
     defaultFloorHeight, customFloorHeights, exitStrategy,
-    aptAuxArea, officetelAuxArea, hotelAuxArea, officeAuxArea, selectedScenarioId, customUsages
+    aptAuxArea, officetelAuxArea, hotelAuxArea, officeAuxArea, selectedScenarioId, customUsages,
+    typicalFloorStart, typicalFloorEnd
   ]);
 
   useEffect(() => {
@@ -1089,7 +1103,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           wallCommonRatioApt, generalCommonRatioApt, wallCommonRatioOt, generalCommonRatioOt, parkingAreaPerCar,
           designedParkingSpaces, machineryRatio, auxiliaryArea, aboveGroundFloors, undergroundFloors, 
           defaultFloorHeight, customFloorHeights, exitStrategy,
-          aptAuxArea, officetelAuxArea, hotelAuxArea, officeAuxArea, customUsages
+          aptAuxArea, officetelAuxArea, hotelAuxArea, officeAuxArea, customUsages,
+          typicalFloorStart, typicalFloorEnd
         },
         result
       });
@@ -2878,6 +2893,57 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                         </div>
                       </div>
                     </div>
+
+                    {/* 기준층 범위 설정 */}
+                    <div className="pt-3.5 border-t border-gray-150/60 space-y-2">
+                      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-1">
+                        <label className="text-[10px] font-bold text-gray-700 flex items-center gap-1.5">
+                          📐 기준층 범위 설정 (지상)
+                        </label>
+                        <span className="text-[9px] text-gray-400">
+                          동일한 구조가 반복되는 지상 구간
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-gray-400 text-[10px]">지상</span>
+                          <input
+                            type="number"
+                            min={1}
+                            max={aboveGroundFloors}
+                            value={typicalFloorStart}
+                            onChange={(e) => {
+                              const val = Math.max(1, Math.min(aboveGroundFloors, parseInt(e.target.value) || 1));
+                              setTypicalFloorStart(val);
+                              if (val > typicalFloorEnd) {
+                                setTypicalFloorEnd(val);
+                              }
+                            }}
+                            className="w-14 text-center text-xs font-bold bg-white border border-gray-200 py-1 rounded-lg focus:outline-none focus:border-[#5F7161] font-mono"
+                          />
+                          <span className="text-gray-500">층</span>
+                        </div>
+                        <span className="text-gray-400 font-bold text-[11px]">~</span>
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-gray-400 text-[10px]">지상</span>
+                          <input
+                            type="number"
+                            min={typicalFloorStart}
+                            max={aboveGroundFloors}
+                            value={typicalFloorEnd}
+                            onChange={(e) => {
+                              const val = Math.max(typicalFloorStart, Math.min(aboveGroundFloors, parseInt(e.target.value) || typicalFloorStart));
+                              setTypicalFloorEnd(val);
+                            }}
+                            className="w-14 text-center text-xs font-bold bg-white border border-gray-200 py-1 rounded-lg focus:outline-none focus:border-[#5F7161] font-mono"
+                          />
+                          <span className="text-gray-500">층</span>
+                        </div>
+                        <div className="ml-auto text-emerald-700 text-[10px] font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                          총 {result.typicalFloorCount}개층
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* 층고 설정 */}
@@ -3320,6 +3386,611 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
           {/* RIGHT: RESULTS (7 Columns) */}
           <div className="lg:col-span-7 space-y-6">
+            {activeStep === 3 && (
+              <div className="p-5 bg-white rounded-2xl border border-gray-150 shadow-sm space-y-5 animate-fadeIn">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <Table className="w-4 h-4 text-[#5F7161]" />
+                      🏢 기획 설계 개요서 (Schematic Architectural Specs)
+                    </h3>
+                    <p className="text-[10px] text-gray-400 font-medium">
+                      대지 규제 정보, 층별 계획 및 용도별 기획 전용/공용면적 구성을 종합한 고정밀 실시간 건축 개요조서입니다.
+                    </p>
+                  </div>
+                  {/* Tab Selectors */}
+                  <div className="flex flex-wrap gap-1 bg-gray-50 p-1 rounded-xl border border-gray-150">
+                    <button
+                      type="button"
+                      onClick={() => setActiveSummaryTab('general')}
+                      className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                        activeSummaryTab === 'general'
+                          ? 'bg-[#5F7161] text-white shadow-xs'
+                          : 'text-gray-500 hover:text-gray-800'
+                      }`}
+                    >
+                      종합 건축개요
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSummaryTab('area')}
+                      className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                        activeSummaryTab === 'area'
+                          ? 'bg-[#5F7161] text-white shadow-xs'
+                          : 'text-gray-500 hover:text-gray-800'
+                      }`}
+                    >
+                      용도별 면적조서
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSummaryTab('parking')}
+                      className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                        activeSummaryTab === 'parking'
+                          ? 'bg-[#5F7161] text-white shadow-xs'
+                          : 'text-gray-500 hover:text-gray-800'
+                      }`}
+                    >
+                      주차대수 산정식
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSummaryTab('amenity')}
+                      className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                        activeSummaryTab === 'amenity'
+                          ? 'bg-[#5F7161] text-white shadow-xs'
+                          : 'text-gray-500 hover:text-gray-800'
+                      }`}
+                    >
+                      부대시설 규정
+                    </button>
+                  </div>
+                </div>
+
+                {/* Tab Content 1: General Specs */}
+                {activeSummaryTab === 'general' && (
+                  <div className="space-y-4 animate-fadeIn">
+                    <div className="overflow-x-auto border border-gray-150 rounded-xl">
+                      <table className="w-full text-[11px] border-collapse text-left">
+                        <thead>
+                          <tr className="bg-[#FAF9F5] border-b border-gray-150 text-gray-600 font-bold">
+                            <th className="py-2.5 px-3 border-r border-gray-150">구분</th>
+                            <th className="py-2.5 px-3 border-r border-gray-150 text-right">기획 설계안</th>
+                            <th className="py-2.5 px-3 border-r border-gray-150 text-right">법정 / 조례 기준</th>
+                            <th className="py-2.5 px-3 text-center">심의 판정</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 text-gray-700">
+                          <tr>
+                            <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">대지 위치</td>
+                            <td colSpan={3} className="py-2 px-3 font-medium text-gray-800">
+                              {currentLand?.address || '강남구 역삼동 대지'} ({currentLand?.zoning || '일반상업지역'})
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">대지 면적</td>
+                            <td className="py-2 px-3 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                              {landArea.toLocaleString()} ㎡ <span className="text-[10px] text-gray-400 font-normal">({Math.round(landArea * 0.3025).toLocaleString()}평)</span>
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono text-gray-400 border-r border-gray-100">-</td>
+                            <td className="py-2 px-3 text-center text-gray-400 font-medium">-</td>
+                          </tr>
+                          <tr>
+                            <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">건축 면적</td>
+                            <td className="py-2 px-3 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                              {Math.min(result.aboveGroundGFA, Math.round(landArea * (appliedBCR / 100))).toLocaleString()} ㎡ <span className="text-[10px] text-gray-400 font-normal">({Math.round(Math.min(result.aboveGroundGFA, Math.round(landArea * (appliedBCR / 100))) * 0.3025).toLocaleString()}평)</span>
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono text-gray-500 border-r border-gray-100">
+                              최대 {(landArea * (currentLand?.baselineBCR || 60) / 100).toLocaleString()} ㎡ <span className="text-[10px] text-gray-400 font-normal">({currentLand?.baselineBCR || 60}%)</span>
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              {appliedBCR <= (currentLand?.baselineBCR || 60) ? (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">🟢 적합</span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-800">🔴 초과</span>
+                              )}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">건폐율 (BCR)</td>
+                            <td className="py-2 px-3 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                              {appliedBCR} %
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono text-gray-500 border-r border-gray-100">
+                              허용 {currentLand?.baselineBCR || 60} %
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              {appliedBCR <= (currentLand?.baselineBCR || 60) ? (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">🟢 통과</span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-800">🔴 초과</span>
+                              )}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">용적률 산정 연면적</td>
+                            <td className="py-2 px-3 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                              {result.aboveGroundGFA.toLocaleString()} ㎡ <span className="text-[10px] text-gray-400 font-normal">({Math.round(result.aboveGroundGFAByPyung).toLocaleString()}평)</span>
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono text-gray-500 border-r border-gray-100">
+                              최대 {(landArea * appliedFAR / 100).toLocaleString()} ㎡ <span className="text-[10px] text-gray-400 font-normal">({appliedFAR}%)</span>
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              {result.consumedFAR <= appliedFAR ? (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">🟢 적합</span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-800">🔴 초과</span>
+                              )}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">용적률 (FAR)</td>
+                            <td className="py-2 px-3 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                              {result.consumedFAR.toFixed(2)} %
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono text-gray-500 border-r border-gray-100">
+                              조례 {appliedFAR} %
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              {result.consumedFAR <= appliedFAR ? (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">🟢 통과</span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-800">🔴 초과</span>
+                              )}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">지하층 연면적</td>
+                            <td className="py-2 px-3 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                              {result.undergroundGFA.toLocaleString()} ㎡ <span className="text-[10px] text-gray-400 font-normal">({Math.round(result.undergroundGFA * 0.3025).toLocaleString()}평)</span>
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono text-gray-400 border-r border-gray-100">-</td>
+                            <td className="py-2 px-3 text-center text-gray-400">-</td>
+                          </tr>
+                          <tr>
+                            <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">총 연면적 合計</td>
+                            <td className="py-2 px-3 text-right font-mono font-bold text-[#5F7161] border-r border-gray-100">
+                              {result.totalGFA.toLocaleString()} ㎡ <span className="text-[10px] text-emerald-600 font-bold">({Math.round(result.totalGFAByPyung).toLocaleString()}평)</span>
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono text-gray-400 border-r border-gray-100">-</td>
+                            <td className="py-2 px-3 text-center text-gray-400">-</td>
+                          </tr>
+                          <tr>
+                            <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">건축 규모</td>
+                            <td colSpan={3} className="py-2 px-3 font-semibold text-gray-800">
+                              지하 {undergroundFloors}층 ~ 지상 {aboveGroundFloors}층 <span className="text-[10px] text-gray-400 font-normal">(지하 깊이: {result.totalUndergroundDepth.toFixed(1)}m / 지상 최고높이: {result.totalBuildingHeight.toFixed(1)}m)</span>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">공개공지 비율</td>
+                            <td className="py-2 px-3 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                              계획: {currentRelaxation?.breakdown.openSpace ? '10%' : '0%'}
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono text-gray-500 border-r border-gray-100">
+                              의무: 10% 대상
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">🟢 양호</span>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">조경 의무면적</td>
+                            <td className="py-2 px-3 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                              계획: {(landArea * 0.15).toFixed(1)} ㎡ (15.0%)
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono text-gray-500 border-r border-gray-100">
+                              법정: {(landArea * 0.15).toFixed(1)} ㎡ (15%)
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">🟢 충족</span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab Content 2: Area Breakdown by Usage */}
+                {activeSummaryTab === 'area' && (
+                  <div className="space-y-4 animate-fadeIn">
+                    <div className="overflow-x-auto border border-gray-150 rounded-xl">
+                      <table className="w-full text-[10px] border-collapse text-left">
+                        <thead>
+                          <tr className="bg-[#FAF9F5] border-b border-gray-150 text-gray-600 font-bold">
+                            <th className="py-2 px-2.5 border-r border-gray-150">용도 구분</th>
+                            <th className="py-2 px-2.5 border-r border-gray-150 text-right">전용면적 (㎡/평)</th>
+                            <th className="py-2 px-2.5 border-r border-gray-150 text-right">공용면적 (㎡/평)</th>
+                            <th className="py-2 px-2.5 border-r border-gray-150 text-right">지상 소계 (㎡/평)</th>
+                            <th className="py-2 px-2.5 border-r border-gray-150 text-right">비율 (%)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 text-gray-700 font-medium">
+                          {/* 1. 공동주택 */}
+                          {result.aptAboveGFA > 0 && (
+                            <tr>
+                              <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">🏠 공동주택 (아파트)</td>
+                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                {result.aptNetArea.toLocaleString()} ㎡<br />
+                                <span className="text-[9px] text-gray-400">({Math.round(result.aptNetArea * 0.3025)}평)</span>
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                {Math.round(result.aptAboveGFA - result.aptNetArea).toLocaleString()} ㎡<br />
+                                <span className="text-[9px] text-gray-400">({Math.round((result.aptAboveGFA - result.aptNetArea) * 0.3025)}평)</span>
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                                {result.aptAboveGFA.toLocaleString()} ㎡<br />
+                                <span className="text-[9px] text-gray-400">({Math.round(result.aptAboveGFA * 0.3025)}평)</span>
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono text-gray-500">
+                                {((result.aptAboveGFA / result.aboveGroundGFA) * 100).toFixed(1)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* 2. 오피스텔 */}
+                          {result.officetelAboveGFA > 0 && (
+                            <tr>
+                              <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">🏢 오피스텔</td>
+                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                {result.officetelNetArea.toLocaleString()} ㎡<br />
+                                <span className="text-[9px] text-gray-400">({Math.round(result.officetelNetArea * 0.3025)}평)</span>
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                {Math.round(result.officetelAboveGFA - result.officetelNetArea).toLocaleString()} ㎡<br />
+                                <span className="text-[9px] text-gray-400">({Math.round((result.officetelAboveGFA - result.officetelNetArea) * 0.3025)}평)</span>
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                                {result.officetelAboveGFA.toLocaleString()} ㎡<br />
+                                <span className="text-[9px] text-gray-400">({Math.round(result.officetelAboveGFA * 0.3025)}평)</span>
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono text-gray-500">
+                                {((result.officetelAboveGFA / result.aboveGroundGFA) * 100).toFixed(1)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* 3. 호텔 */}
+                          {hotelRoomCount > 0 && (
+                            <tr>
+                              <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">🏨 숙박시설 (호텔)</td>
+                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                {(hotelRoomCount * hotelRoomSizePyung * 3.30578).toLocaleString()} ㎡<br />
+                                <span className="text-[9px] text-gray-400">({(hotelRoomCount * hotelRoomSizePyung).toLocaleString()}평)</span>
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                {Math.round(result.hotelAboveGFA - (hotelRoomCount * hotelRoomSizePyung * 3.30578)).toLocaleString()} ㎡<br />
+                                <span className="text-[9px] text-gray-400">({Math.round((result.hotelAboveGFA - (hotelRoomCount * hotelRoomSizePyung * 3.30578)) * 0.3025)}평)</span>
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                                {result.hotelAboveGFA.toLocaleString()} ㎡<br />
+                                <span className="text-[9px] text-gray-400">({Math.round(result.hotelAboveGFA * 0.3025)}평)</span>
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono text-gray-500">
+                                {((result.hotelAboveGFA / result.aboveGroundGFA) * 100).toFixed(1)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* 4. 판매시설 */}
+                          {result.retailTotalGFA > 0 && (
+                            <tr>
+                              <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">🛍️ 판매시설 (상가)</td>
+                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                {((retail1FArea + retail2FArea + retail3FArea + retailB1Area) * 3.30578).toLocaleString()} ㎡<br />
+                                <span className="text-[9px] text-gray-400">({(retail1FArea + retail2FArea + retail3FArea + retailB1Area).toFixed(1)}평)</span>
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                {Math.round(result.retailTotalGFA - ((retail1FArea + retail2FArea + retail3FArea + retailB1Area) * 3.30578)).toLocaleString()} ㎡<br />
+                                <span className="text-[9px] text-gray-400">({Math.round((result.retailTotalGFA - ((retail1FArea + retail2FArea + retail3FArea + retailB1Area) * 3.30578)) * 0.3025)}평)</span>
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                                {result.retailTotalGFA.toLocaleString()} ㎡<br />
+                                <span className="text-[9px] text-gray-400">({Math.round(result.retailTotalGFA * 0.3025)}평)</span>
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono text-gray-500">
+                                {((result.retailAboveGFA / result.aboveGroundGFA) * 100).toFixed(1)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* 5. 업무시설 */}
+                          {officeArea > 0 && (
+                            <tr>
+                              <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">💼 업무시설 (오피스)</td>
+                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                {(officeArea * 3.30578).toLocaleString()} ㎡<br />
+                                <span className="text-[9px] text-gray-400">({officeArea.toLocaleString()}평)</span>
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                {Math.round(result.officeAboveGFA - (officeArea * 3.30578)).toLocaleString()} ㎡<br />
+                                <span className="text-[9px] text-gray-400">({Math.round((result.officeAboveGFA - (officeArea * 3.30578)) * 0.3025)}평)</span>
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                                {result.officeAboveGFA.toLocaleString()} ㎡<br />
+                                <span className="text-[9px] text-gray-400">({Math.round(result.officeAboveGFA * 0.3025)}평)</span>
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono text-gray-500">
+                                {((result.officeAboveGFA / result.aboveGroundGFA) * 100).toFixed(1)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* 6. 추가 기획용도 */}
+                          {customUsages.length > 0 && (
+                            <tr>
+                              <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">✨ 추가개발 용도</td>
+                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                {customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578), 0).toLocaleString()} ㎡<br />
+                                <span className="text-[9px] text-gray-400">({customUsages.reduce((sum, item) => sum + item.areaPyung, 0).toFixed(1)}평)</span>
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                {Math.round(customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578 / (item.netRatio / 100)), 0) - customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578), 0)).toLocaleString()} ㎡<br />
+                                <span className="text-[9px] text-gray-400">({Math.round((customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578 / (item.netRatio / 100)), 0) - customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578), 0)) * 0.3025)}평)</span>
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                                {customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578 / (item.netRatio / 100)), 0).toLocaleString()} ㎡<br />
+                                <span className="text-[9px] text-gray-400">({Math.round(customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578 / (item.netRatio / 100)), 0) * 0.3025)}평)</span>
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono text-gray-500">
+                                {((customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578 / (item.netRatio / 100)), 0) / result.aboveGroundGFA) * 100).toFixed(1)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* 7. 기계실/전기실 & 지하주차장 */}
+                          <tr>
+                            <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">🚗 지하 주차장 / 기계·전기실</td>
+                            <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">-</td>
+                            <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                              {(result.parkingArea + result.machineryArea).toLocaleString()} ㎡<br />
+                              <span className="text-[9px] text-gray-400">({Math.round((result.parkingArea + result.machineryArea) * 0.3025)}평)</span>
+                            </td>
+                            <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                              {(result.parkingArea + result.machineryArea).toLocaleString()} ㎡<br />
+                              <span className="text-[9px] text-gray-400">({Math.round((result.parkingArea + result.machineryArea) * 0.3025)}평)</span>
+                            </td>
+                            <td className="py-2 px-2.5 text-right font-mono text-gray-500">
+                              {(((result.parkingArea + result.machineryArea) / result.totalGFA) * 100).toFixed(1)}% (연면적비)
+                            </td>
+                          </tr>
+                          {/* 8. 합계 */}
+                          <tr className="bg-[#FAF9F5]/60 font-bold text-gray-800">
+                            <td className="py-2.5 px-2.5 border-r border-gray-150">⭐ 연면적 합계 (GFA Total)</td>
+                            <td className="py-2.5 px-2.5 text-right font-mono border-r border-gray-150">
+                              {(result.aptNetArea + result.officetelNetArea + (hotelRoomCount * hotelRoomSizePyung * 3.30578) + ((retail1FArea + retail2FArea + retail3FArea + retailB1Area) * 3.30578) + (officeArea * 3.30578) + customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578), 0)).toLocaleString()} ㎡
+                            </td>
+                            <td className="py-2.5 px-2.5 text-right font-mono border-r border-gray-150">
+                              {(result.totalGFA - (result.aptNetArea + result.officetelNetArea + (hotelRoomCount * hotelRoomSizePyung * 3.30578) + ((retail1FArea + retail2FArea + retail3FArea + retailB1Area) * 3.30578) + (officeArea * 3.30578) + customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578), 0))).toLocaleString()} ㎡
+                            </td>
+                            <td className="py-2.5 px-2.5 text-right font-mono text-[#5F7161] border-r border-gray-150 text-[11px]">
+                              {result.totalGFA.toLocaleString()} ㎡<br />
+                              <span className="text-[10px] text-emerald-700">({Math.round(result.totalGFAByPyung).toLocaleString()}평)</span>
+                            </td>
+                            <td className="py-2.5 px-2.5 text-right font-mono text-emerald-800">100.0%</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab Content 3: Parking Capacity Plan */}
+                {activeSummaryTab === 'parking' && (
+                  <div className="space-y-4 animate-fadeIn">
+                    <div className="overflow-x-auto border border-gray-150 rounded-xl">
+                      <table className="w-full text-[10px] border-collapse text-left">
+                        <thead>
+                          <tr className="bg-[#FAF9F5] border-b border-gray-150 text-gray-600 font-bold">
+                            <th className="py-2 px-2.5 border-r border-gray-150">용도/시설 구분</th>
+                            <th className="py-2 px-2.5 border-r border-gray-150 text-right">기획 규모</th>
+                            <th className="py-2 px-2.5 border-r border-gray-150">법정 설치기준</th>
+                            <th className="py-2 px-2.5 border-r border-gray-150 text-right font-mono text-amber-700">법정 의무</th>
+                            <th className="py-2 px-2.5 border-r border-gray-150 text-right font-mono text-emerald-700">기획 계획</th>
+                            <th className="py-2 px-2.5 text-center">판정</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 text-gray-700 font-medium">
+                          {/* 1. 공동주택 */}
+                          {result.aptAboveGFA > 0 && (
+                            <tr>
+                              <td className="py-2 px-2.5 bg-gray-50/40 border-r border-gray-100">🏠 공동주택 (아파트)</td>
+                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                {aptConfigs.reduce((s, c) => s + c.count, 0)} 세대
+                              </td>
+                              <td className="py-2 px-2.5 text-xs text-gray-500 border-r border-gray-100">
+                                전용 85㎡ 초과: 1.2대, 60~85㎡: 1.0대, 소형: 0.7대
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono text-amber-700 border-r border-gray-100">
+                                {result.aptLegalParking.toFixed(1)} 대
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono text-emerald-700 border-r border-gray-100">
+                                {Math.ceil(result.aptLegalParking * 1.05)} 대
+                              </td>
+                              <td className="py-2 px-2.5 text-center">
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">🟢 충족</span>
+                              </td>
+                            </tr>
+                          )}
+                          {/* 2. 오피스텔 */}
+                          {result.officetelAboveGFA > 0 && (
+                            <tr>
+                              <td className="py-2 px-2.5 bg-gray-50/40 border-r border-gray-100">🏢 오피스텔</td>
+                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                {officetelConfigs.reduce((s, c) => s + c.count, 0)} 실
+                              </td>
+                              <td className="py-2 px-2.5 text-xs text-gray-500 border-r border-gray-100">
+                                전용 60㎡ 초과: 1.0대, 30~60㎡: 0.8대, 소형: 0.5대
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono text-amber-700 border-r border-gray-100">
+                                {result.officetelLegalParking.toFixed(1)} 대
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono text-emerald-700 border-r border-gray-100">
+                                {Math.ceil(result.officetelLegalParking * 1.05)} 대
+                              </td>
+                              <td className="py-2 px-2.5 text-center">
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">🟢 충족</span>
+                              </td>
+                            </tr>
+                          )}
+                          {/* 3. 호텔 */}
+                          {hotelRoomCount > 0 && (
+                            <tr>
+                              <td className="py-2 px-2.5 bg-gray-50/40 border-r border-gray-100">🏨 숙박시설 (호텔)</td>
+                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                {hotelRoomCount} 실 (GFA {Math.round(result.hotelAboveGFA)}㎡)
+                              </td>
+                              <td className="py-2 px-2.5 text-xs text-gray-500 border-r border-gray-100">
+                                시설면적 134 ㎡ 당 1대 (상업지 숙박시설 기준)
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono text-amber-700 border-r border-gray-100">
+                                {result.hotelLegalParking.toFixed(1)} 대
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono text-emerald-700 border-r border-gray-100">
+                                {Math.ceil(result.hotelLegalParking * 1.1)} 대
+                              </td>
+                              <td className="py-2 px-2.5 text-center">
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">🟢 충족</span>
+                              </td>
+                            </tr>
+                          )}
+                          {/* 4. 판매시설 */}
+                          {result.retailTotalGFA > 0 && (
+                            <tr>
+                              <td className="py-2 px-2.5 bg-gray-50/40 border-r border-gray-100">🛍️ 판매시설 (상가)</td>
+                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                GFA {Math.round(result.retailTotalGFA)} ㎡
+                              </td>
+                              <td className="py-2 px-2.5 text-xs text-gray-500 border-r border-gray-100">
+                                시설면적 134 ㎡ 당 1대 (영업/판매시설 기준)
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono text-amber-700 border-r border-gray-100">
+                                {result.retailLegalParking.toFixed(1)} 대
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono text-emerald-700 border-r border-gray-100">
+                                {Math.ceil(result.retailLegalParking * 1.2)} 대
+                              </td>
+                              <td className="py-2 px-2.5 text-center">
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">🟢 충족</span>
+                              </td>
+                            </tr>
+                          )}
+                          {/* 5. 업무시설 */}
+                          {officeArea > 0 && (
+                            <tr>
+                              <td className="py-2 px-2.5 bg-gray-50/40 border-r border-gray-100">💼 업무시설 (오피스)</td>
+                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                GFA {Math.round(result.officeAboveGFA)} ㎡
+                              </td>
+                              <td className="py-2 px-2.5 text-xs text-gray-500 border-r border-gray-100">
+                                시설면적 100 ㎡ 당 1대 (일반 업무시설 기준)
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono text-amber-700 border-r border-gray-100">
+                                {result.officeLegalParking.toFixed(1)} 대
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono text-emerald-700 border-r border-gray-100">
+                                {Math.ceil(result.officeLegalParking * 1.1)} 대
+                              </td>
+                              <td className="py-2 px-2.5 text-center">
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">🟢 충족</span>
+                              </td>
+                            </tr>
+                          )}
+                          {/* 6. 추가 기획용도 */}
+                          {customUsages.length > 0 && (
+                            <tr>
+                              <td className="py-2 px-2.5 bg-gray-50/40 border-r border-gray-100">✨ 추가개발 용도</td>
+                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                GFA {Math.round(customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578 / (item.netRatio / 100)), 0))} ㎡
+                              </td>
+                              <td className="py-2 px-2.5 text-xs text-gray-500 border-r border-gray-100">
+                                개별 지정 기준 ㎡ 당 1대 적용
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono text-amber-700 border-r border-gray-100">
+                                {customUsages.reduce((sum, item) => {
+                                  const gfa = (item.areaPyung * 3.30578 / (item.netRatio / 100)) + (item.auxAreaPyung * 3.30578);
+                                  return sum + (gfa / item.parkingCriteria);
+                                }, 0).toFixed(1)} 대
+                              </td>
+                              <td className="py-2 px-2.5 text-right font-mono text-emerald-700 border-r border-gray-100">
+                                {Math.ceil(customUsages.reduce((sum, item) => {
+                                  const gfa = (item.areaPyung * 3.30578 / (item.netRatio / 100)) + (item.auxAreaPyung * 3.30578);
+                                  return sum + (gfa / item.parkingCriteria);
+                                }, 0) * 1.1)} 대
+                              </td>
+                              <td className="py-2 px-2.5 text-center">
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">🟢 충족</span>
+                              </td>
+                            </tr>
+                          )}
+                          {/* 7. 합계 */}
+                          <tr className="bg-[#FAF9F5]/60 font-bold text-gray-800">
+                            <td colSpan={3} className="py-2.5 px-2.5 border-r border-gray-150">🚗 총 주차대수 合計</td>
+                            <td className="py-2.5 px-2.5 text-right font-mono text-amber-800 border-r border-gray-150">
+                              {result.totalLegalParking.toFixed(1)} 대
+                            </td>
+                            <td className="py-2.5 px-2.5 text-right font-mono text-emerald-800 border-r border-gray-150">
+                              {result.designedParkingCount} 대
+                            </td>
+                            <td className="py-2.5 px-2.5 text-center">
+                              {result.designedParkingCount >= Math.ceil(result.totalLegalParking) ? (
+                                <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-600 text-white animate-pulse">🟢 합격</span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-rose-600 text-white">🔴 미달</span>
+                              )}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab Content 4: Amenity Specs & Guidelines */}
+                {activeSummaryTab === 'amenity' && (
+                  <div className="space-y-4 animate-fadeIn">
+                    <div className="bg-[#FAF9F5] p-3.5 rounded-xl border border-gray-150 space-y-3">
+                      <h4 className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                        <Home className="w-4 h-4 text-[#5F7161]" />
+                        🏡 공동주택 부대복리시설 및 커뮤니티 의무 검토
+                      </h4>
+                      <p className="text-[10px] text-gray-500 leading-relaxed">
+                        대한민국 주택건설기준 규정 및 시흥시 주택조례상 의무 주민공동시설 기준표입니다. (기획 공동주택 세대수를 연동하여 자동 계산됩니다.)
+                      </p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] mt-2">
+                        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-xs space-y-1.5">
+                          <span className="text-gray-400 block font-semibold text-[10px]">주민공동시설 전체 의무면적</span>
+                          <div className="flex justify-between items-baseline">
+                            <span className="font-mono text-gray-500 text-xs">법정 추천기준:</span>
+                            <strong className="text-amber-700 font-mono">
+                              {(() => {
+                                const totalApts = aptConfigs.reduce((s, c) => s + c.count, 0);
+                                if (totalApts <= 0) return '0 ㎡';
+                                if (totalApts >= 1000) return `${(500 + totalApts * 1.5).toFixed(1)} ㎡`;
+                                if (totalApts >= 100) return `${(100 + totalApts * 1.25).toFixed(1)} ㎡`;
+                                return `${(totalApts * 1.0).toFixed(1)} ㎡`;
+                              })()}
+                            </strong>
+                          </div>
+                          <div className="flex justify-between items-baseline border-t border-gray-55 pt-1.5 mt-1.5">
+                            <span className="font-semibold text-gray-700">기획 적용면적:</span>
+                            <strong className="text-emerald-700 font-mono">
+                              {(aptAuxArea * 3.30578).toFixed(1)} ㎡ ({aptAuxArea}평)
+                            </strong>
+                          </div>
+                        </div>
+
+                        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-xs space-y-1.5">
+                          <span className="text-gray-400 block font-semibold text-[10px]">부대복리시설 의무 구비조건</span>
+                          <ul className="space-y-1 text-[10px] text-gray-600 list-disc list-inside">
+                            <li>50세대 이상: 경로당 의무 설치</li>
+                            <li>150세대 이상: 어린이놀이터, 경로당 설치</li>
+                            <li>300세대 이상: 어린이집 추가 의무 설치</li>
+                            <li>500세대 이상: 주민운동시설, 작은도서관 필수</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {activeStep === 4 && (
               <div className="space-y-6">
                 {/* 1. 상황별 시나리오 종합 수지 분석 비교표 */}
@@ -3940,13 +4611,13 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                         {aboveGroundFloors > 1 && (
                           <div className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-100 space-y-2">
                             <div className="flex justify-between items-center">
-                              <span className="font-bold text-gray-800 text-[12px]">🏢 지상 2층 ~ 지상 {aboveGroundFloors}층 (기준 반복층)</span>
+                              <span className="font-bold text-gray-800 text-[12px]">🏢 지상 {result.actualTypicalStart}층 ~ 지상 {result.actualTypicalEnd}층 (기준 반복층)</span>
                               <span className="font-mono text-xs font-bold text-indigo-700">평균 층고: {defaultFloorHeight} m</span>
                             </div>
                             <div className="text-[11px] text-slate-600 space-y-1">
-                              <p>• 층별 평균 계획 면적: <strong>{Math.round((result.aboveGroundGFA - Math.min(result.aboveGroundGFA, Math.round(landArea * (appliedBCR / 100)))) / Math.max(1, aboveGroundFloors - 1)).toLocaleString()} ㎡</strong> (약 {parseFloat(((result.aboveGroundGFA - Math.min(result.aboveGroundGFA, Math.round(landArea * (appliedBCR / 100)))) * 0.3025 / Math.max(1, aboveGroundFloors - 1)).toFixed(1))}평) / 층당</p>
+                              <p>• 층별 평균 계획 면적: <strong>{Math.round((result.aboveGroundGFA - Math.min(result.aboveGroundGFA, Math.round(landArea * (appliedBCR / 100)))) / result.typicalFloorCount).toLocaleString()} ㎡</strong> (약 {parseFloat(((result.aboveGroundGFA - Math.min(result.aboveGroundGFA, Math.round(landArea * (appliedBCR / 100)))) * 0.3025 / result.typicalFloorCount).toFixed(1))}평) / 층당</p>
                               <p className="text-[10px] text-gray-400 font-mono bg-white p-1.5 rounded border border-gray-200/50">
-                                [산식] 기준층 면적 = [지상연면적 ({result.aboveGroundGFA.toLocaleString()}㎡) - 1층면적 ({Math.min(result.aboveGroundGFA, Math.round(landArea * (appliedBCR / 100))).toLocaleString()}㎡)] ÷ {aboveGroundFloors - 1}개층
+                                [산식] 기준층 면적 = [지상연면적 ({result.aboveGroundGFA.toLocaleString()}㎡) - 1층면적 ({Math.min(result.aboveGroundGFA, Math.round(landArea * (appliedBCR / 100))).toLocaleString()}㎡)] ÷ 기준층수 {result.typicalFloorCount}개층
                               </p>
                             </div>
                           </div>
