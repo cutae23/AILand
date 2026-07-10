@@ -118,3 +118,19 @@ export interface SampleLand {
   description: string;
   eumLink: string;
 }
+
+export interface HistoryRecord {
+  id: string;
+  timestamp: string;
+  address: string;
+  zoning: string;
+  regulatoryAnalysis: LandRegulatoryAnalysis;
+  relaxationResult: FARRelaxationResult | null;
+  scenarioResult: any | null;
+  step1Inputs: {
+    selectedSampleId: string;
+    customerLink: string;
+    imagePreview: string | null;
+    usageScaleList: any[];
+  } | null;
+}

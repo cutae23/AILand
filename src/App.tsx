@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Step1Regulatory from './components/Step1Regulatory';
 import Step2Relaxation from './components/Step2Relaxation';
 import Step3Scenario from './components/Step3Scenario';
 import Step4Report from './components/Step4Report';
-import { LandRegulatoryAnalysis, FARRelaxationResult } from './types';
-import { MapPin, Building2, HelpCircle, CheckCircle, Sliders, FileText, ChevronRight, Calculator, User, Compass, ServerCrash } from 'lucide-react';
+import { LandRegulatoryAnalysis, FARRelaxationResult, HistoryRecord } from './types';
+import { MapPin, Building2, HelpCircle, CheckCircle, Sliders, FileText, ChevronRight, Calculator, User, Compass, ServerCrash, History, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
@@ -37,6 +37,45 @@ export default function App() {
     ]
   });
 
+  // History states with persistence
+  const [historyList, setHistoryList] = useState<HistoryRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('archi_planner_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error('Failed to load history', e);
+      return [];
+    }
+  });
+
+  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+
+  // Save history to localstorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('archi_planner_history', JSON.stringify(historyList));
+    } catch (e) {
+      console.error('Failed to save history', e);
+    }
+  }, [historyList]);
+
+  // Synchronize active history record changes
+  useEffect(() => {
+    if (!activeHistoryId) return;
+    setHistoryList(prev => prev.map(rec => {
+      if (rec.id === activeHistoryId) {
+        return {
+          ...rec,
+          regulatoryAnalysis: regulatoryAnalysis || rec.regulatoryAnalysis,
+          relaxationResult: relaxationResult,
+          scenarioResult: scenarioResult,
+          step1Inputs: step1Inputs
+        };
+      }
+      return rec;
+    }));
+  }, [regulatoryAnalysis, relaxationResult, scenarioResult, step1Inputs, activeHistoryId]);
+
   const [showSaveToast, setShowSaveToast] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string>('');
 
@@ -57,8 +96,7 @@ export default function App() {
 
   const handleAnalysisComplete = (analysis: LandRegulatoryAnalysis) => {
     setRegulatoryAnalysis(analysis);
-    // Autofill an initial relaxation result so Step 3 has reasonable starting conditions immediately
-    setRelaxationResult({
+    const initialRelaxation: FARRelaxationResult = {
       finalFAR: analysis.baselineFAR,
       breakdown: {
         base: analysis.baselineFAR,
@@ -68,9 +106,58 @@ export default function App() {
         rental: 0
       },
       explanation: '기본 용적률 상태 수지표입니다.'
-    });
-    // Reset scenarioResult when a new analysis is complete
+    };
+    setRelaxationResult(initialRelaxation);
     setScenarioResult(null);
+
+    // Auto add to history list
+    const newId = Date.now().toString();
+    const formatter = new Intl.DateTimeFormat('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    const nowStr = formatter.format(new Date());
+
+    const newRecord: HistoryRecord = {
+      id: newId,
+      timestamp: nowStr,
+      address: analysis.address,
+      zoning: analysis.zoning,
+      regulatoryAnalysis: analysis,
+      relaxationResult: initialRelaxation,
+      scenarioResult: null,
+      step1Inputs: step1Inputs
+    };
+
+    setHistoryList(prev => [newRecord, ...prev]);
+    setActiveHistoryId(newId);
+    triggerToast('새로운 검토 내역이 이력에 자동 등록되었습니다.');
+  };
+
+  const loadHistoryRecord = (record: HistoryRecord) => {
+    setRegulatoryAnalysis(record.regulatoryAnalysis);
+    setRelaxationResult(record.relaxationResult);
+    setScenarioResult(record.scenarioResult);
+    setStep1Inputs(record.step1Inputs);
+    setActiveHistoryId(record.id);
+    setActiveStep(1); // Return to step 1 to view details
+    triggerToast(`"${record.address.split(' ').slice(1, 4).join(' ')}" 분석 내역을 불러왔습니다.`);
+  };
+
+  const deleteHistoryRecord = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('이 검토 내역을 삭제하시겠습니까?')) {
+      setHistoryList(prev => prev.filter(rec => rec.id !== id));
+      if (activeHistoryId === id) {
+        setActiveHistoryId(null);
+      }
+      triggerToast('검토 내역이 삭제되었습니다.');
+    }
   };
 
   const handleRelaxationComplete = (result: FARRelaxationResult) => {
@@ -218,6 +305,80 @@ export default function App() {
               </div>
             </button>
           </nav>
+        </div>
+
+        {/* Review History Panel */}
+        <div className="flex-1 overflow-y-auto px-8 py-4 border-t border-b border-gray-150/60 bg-white space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[10px] uppercase tracking-widest text-[#A89F94] font-bold flex items-center gap-1.5">
+              <History className="w-3.5 h-3.5 text-[#5F7161]" />
+              검토 이력 ({historyList.length})
+            </h3>
+            {historyList.length > 0 && (
+              <button
+                onClick={() => {
+                  if (confirm('모든 검토 이력을 삭제하시겠습니까?')) {
+                    setHistoryList([]);
+                    setActiveHistoryId(null);
+                    triggerToast('모든 검토 이력이 삭제되었습니다.');
+                  }
+                }}
+                className="text-[9px] text-red-500 hover:text-red-700 font-semibold cursor-pointer"
+              >
+                전체 삭제
+              </button>
+            )}
+          </div>
+
+          {historyList.length === 0 ? (
+            <div className="text-[11px] text-[#A89F94] italic leading-relaxed py-2">
+              최근 분석한 토지 검토 이력이 없습니다. Step 1에서 분석을 완료하면 이력에 자동 저장됩니다.
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+              {historyList.map(rec => {
+                const isActive = rec.id === activeHistoryId;
+                return (
+                  <div
+                    key={rec.id}
+                    onClick={() => loadHistoryRecord(rec)}
+                    className={`group p-2.5 rounded-xl border text-left transition cursor-pointer relative ${
+                      isActive
+                        ? 'bg-emerald-50/55 border-emerald-200 shadow-xs'
+                        : 'bg-[#FCFAF7] border-gray-150 hover:bg-gray-50 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center gap-1">
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold ${
+                        isActive ? 'bg-[#5F7161] text-white' : 'bg-gray-200/80 text-gray-600'
+                      }`}>
+                        {rec.regulatoryAnalysis.baselineFAR}%
+                      </span>
+                      <span className="text-[9px] text-[#A89F94] font-medium font-mono">
+                        {rec.timestamp.split(' ').slice(1).join(' ')}
+                      </span>
+                    </div>
+                    <p className={`text-[11.5px] font-bold mt-1.5 truncate ${
+                      isActive ? 'text-emerald-950' : 'text-gray-800'
+                    }`} title={rec.address}>
+                      {rec.address.replace('서울특별시', '서울').replace('경기도', '경기')}
+                    </p>
+                    <p className="text-[10px] text-[#8D7B68] truncate mt-0.5">
+                      {rec.zoning}
+                    </p>
+                    
+                    <button
+                      onClick={(e) => deleteHistoryRecord(rec.id, e)}
+                      className="absolute right-2.5 bottom-2 opacity-0 group-hover:opacity-100 hover:text-red-650 text-gray-400 hover:bg-red-50 p-1 rounded transition duration-150 cursor-pointer bg-white border border-gray-100"
+                      title="이력 삭제"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Dynamic Project Quick Status Footer inside Sidebar */}
@@ -376,6 +537,9 @@ export default function App() {
               setChatHistory={setChatHistory}
               savedInputs={step1Inputs}
               onSaveInputs={setStep1Inputs}
+              historyList={historyList}
+              onLoadHistory={loadHistoryRecord}
+              onDeleteHistory={deleteHistoryRecord}
             />
           )}
 

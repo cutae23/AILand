@@ -5,8 +5,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { SAMPLE_LANDS } from '../sampleLands';
-import { LandRegulatoryAnalysis, SampleLand } from '../types';
-import { MapPin, Link2, Upload, AlertTriangle, CheckCircle, Info, Landmark, HelpCircle, FileText, ArrowRight, RefreshCw, Send, Sparkles, MessageSquare, Loader2 } from 'lucide-react';
+import { LandRegulatoryAnalysis, SampleLand, HistoryRecord } from '../types';
+import { MapPin, Link2, Upload, AlertTriangle, CheckCircle, Info, Landmark, HelpCircle, FileText, ArrowRight, RefreshCw, Send, Sparkles, MessageSquare, Loader2, History, Trash2, Building2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Step1RegulatoryProps {
@@ -26,6 +26,9 @@ interface Step1RegulatoryProps {
     imagePreview: string | null;
     usageScaleList: any[];
   }) => void;
+  historyList?: HistoryRecord[];
+  onLoadHistory?: (record: HistoryRecord) => void;
+  onDeleteHistory?: (id: string, e: React.MouseEvent) => void;
 }
 
 export default function Step1Regulatory({ 
@@ -34,7 +37,10 @@ export default function Step1Regulatory({
   chatHistory,
   setChatHistory,
   savedInputs,
-  onSaveInputs
+  onSaveInputs,
+  historyList = [],
+  onLoadHistory,
+  onDeleteHistory
 }: Step1RegulatoryProps) {
   const [selectedSampleId, setSelectedSampleId] = useState<string>(() => savedInputs?.selectedSampleId ?? '');
   const [customerLink, setCustomerLink] = useState<string>(() => savedInputs?.customerLink ?? '');
@@ -626,32 +632,104 @@ export default function Step1Regulatory({
             </div>
 
             {/* Right Information Help Panel */}
-            <div className="lg:col-span-5 bg-gray-50/50 p-5 rounded-xl border border-gray-100 flex flex-col justify-between">
+            <div className="lg:col-span-5 bg-slate-50/40 p-5 rounded-xl border border-slate-100 flex flex-col justify-between gap-5">
               <div className="space-y-4">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-700">
-                  <HelpCircle className="w-4 h-4 text-indigo-500" />
-                  <span>검토 프로세스 가이드</span>
+                {/* 1. Predefined Sample Lands */}
+                <div>
+                  <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-indigo-600" />
+                    🚀 원클릭 시뮬레이션용 샘플 필지
+                  </h3>
+                  <div className="space-y-2">
+                    {SAMPLE_LANDS.map((land) => {
+                      const isSelected = selectedSampleId === land.id;
+                      return (
+                        <div
+                          key={land.id}
+                          onClick={() => handleSelectSample(land.id)}
+                          className={`p-3 rounded-xl border text-left transition cursor-pointer relative ${
+                            isSelected
+                              ? 'bg-indigo-50/60 border-indigo-300 shadow-xs'
+                              : 'bg-white border-gray-250/60 hover:bg-gray-50 hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start gap-1">
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
+                              isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {land.baselineFAR}%
+                            </span>
+                            <span className="text-[10px] text-[#8D7B68] font-semibold">{land.areaSize}㎡</span>
+                          </div>
+                          <p className="text-[11.5px] font-bold text-gray-800 mt-1 truncate">
+                            {land.address}
+                          </p>
+                          <p className="text-[10px] text-gray-500 mt-0.5 truncate">
+                            {land.zoning}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="space-y-4 text-xs leading-relaxed text-gray-600">
-                  <div className="flex gap-2">
-                    <span className="w-5 h-5 rounded-full bg-neutral-200 text-neutral-700 flex items-center justify-center font-bold text-[10px] flex-shrink-0">1</span>
-                    <p>
-                      <strong>토지 정보 취득:</strong> 대한민국 <strong>토지이음</strong> 포털 사이트에서 개발할 지번을 입력하고, 축척도 및 법규 규제 사항들을 체크합니다.
-                    </p>
+
+                {/* 2. Recent Analysis History */}
+                <div className="pt-2 border-t border-gray-150/50">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <History className="w-3.5 h-3.5 text-[#5F7161]" />
+                      📂 최근 검토 이력 ({historyList.length})
+                    </h3>
                   </div>
-                  <div className="flex gap-2">
-                    <span className="w-5 h-5 rounded-full bg-neutral-200 text-neutral-700 flex items-center justify-center font-bold text-[10px] flex-shrink-0">2</span>
-                    <p>
-                      <strong>데이터 입력:</strong> 토지이음에 안내된 링크를 입력하거나 규제내용(용적률/건폐율/고도한도)이 드러난 부문을 스크린으로 캡쳐해 등록합니다.
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="w-5 h-5 rounded-full bg-neutral-200 text-neutral-700 flex items-center justify-center font-bold text-[10px] flex-shrink-0">3</span>
-                    <p>
-                      <strong>AI 법규 성적서 검토:</strong> 인공지능이 조례를 탐색하여 정북방향 일조 사선 한계, 도로조건 저해 여부 등을 1차로 신속 검토해 줍니다.
-                    </p>
-                  </div>
+
+                  {historyList.length === 0 ? (
+                    <div className="bg-white p-4 rounded-xl border border-gray-200 text-center">
+                      <p className="text-[11px] text-gray-400 italic">검토 완료한 필지가 아직 없습니다.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                      {historyList.map((rec) => (
+                        <div
+                          key={rec.id}
+                          onClick={() => onLoadHistory?.(rec)}
+                          className="group p-2.5 rounded-xl border border-gray-250/60 bg-white text-left transition hover:bg-gray-50 hover:border-gray-300 cursor-pointer relative"
+                        >
+                          <div className="flex justify-between items-center gap-1">
+                            <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                              {rec.regulatoryAnalysis.baselineFAR}%
+                            </span>
+                            <span className="text-[9px] text-[#A89F94] font-medium font-mono">{rec.timestamp.split(' ').slice(1).join(' ')}</span>
+                          </div>
+                          <p className="text-[11px] font-bold text-gray-800 mt-1 truncate" title={rec.address}>
+                            {rec.address}
+                          </p>
+                          <p className="text-[10px] text-gray-500 mt-0.5 truncate">
+                            {rec.zoning}
+                          </p>
+
+                          <button
+                            onClick={(e) => onDeleteHistory?.(rec.id, e)}
+                            className="absolute right-2.5 bottom-2 opacity-0 group-hover:opacity-100 hover:text-red-650 text-gray-400 hover:bg-red-50 p-1 rounded transition duration-150 cursor-pointer bg-white border border-gray-100"
+                            title="이력 삭제"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
+              </div>
+
+              {/* Standard Process Info */}
+              <div className="bg-white p-3.5 rounded-xl border border-slate-100 text-[11px] text-gray-500 leading-relaxed space-y-1">
+                <span className="font-bold text-gray-700 flex items-center gap-1">
+                  <Info className="w-3.5 h-3.5 text-indigo-500" />
+                  신속 검토 및 법정 주차 비율 규제 안내
+                </span>
+                <p>
+                  인허가 및 사업성 검토 이력은 로컬에 안전하게 저장됩니다. 주차대수 산정 기준 및 지하층/포디움 주차 비율 설정은 <strong>Step 3: 계획안 개요</strong>에서 직접 변경하실 수 있습니다.
+                </p>
               </div>
             </div>
           </div>

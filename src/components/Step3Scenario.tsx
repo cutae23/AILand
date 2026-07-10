@@ -7,6 +7,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { LandRegulatoryAnalysis, FARRelaxationResult, ScenarioResult, AllocatedUnitResult } from '../types';
 import { CircleDollarSign, Coins, TrendingUp, Building2, Layers, Compass, HelpCircle, ArrowRight, Table, Sparkles, Loader2, RefreshCw, AlertTriangle, Home, Briefcase, Info, Plus, Trash2, Calculator, Activity, Puzzle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+import LayoutDiagram from './LayoutDiagram';
 
 interface Step3ScenarioProps {
   currentLand: LandRegulatoryAnalysis | null;
@@ -61,6 +62,17 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   const [parkingAreaPerCar, setParkingAreaPerCar] = useState<number>(() => inputs?.parkingAreaPerCar ?? 38); // m² per car
   const [designedParkingSpaces, setDesignedParkingSpaces] = useState<number | null>(() => inputs?.designedParkingSpaces !== undefined ? inputs.designedParkingSpaces : null);
 
+  // [USER ADDITIONS] Adjustable legal parking criteria and planned parking ratio
+  const [aptParkingOver85, setAptParkingOver85] = useState<number>(() => inputs?.aptParkingOver85 ?? 1.2);
+  const [aptParking60To85, setAptParking60To85] = useState<number>(() => inputs?.aptParking60To85 ?? 1.0);
+  const [aptParkingUnder60, setAptParkingUnder60] = useState<number>(() => inputs?.aptParkingUnder60 ?? 0.7);
+
+  const [otParkingOver60, setOtParkingOver60] = useState<number>(() => inputs?.otParkingOver60 ?? 1.0);
+  const [otParking30To60, setOtParking30To60] = useState<number>(() => inputs?.otParking30To60 ?? 0.8);
+  const [otParkingUnder30, setOtParkingUnder30] = useState<number>(() => inputs?.otParkingUnder30 ?? 0.5);
+
+  const [plannedParkingRatio, setPlannedParkingRatio] = useState<number>(() => inputs?.plannedParkingRatio ?? 110); // 계획주차대수 가산 비율 (%)
+
   // Machinery & Electrical Room parameter settings
   const [machineryRatio, setMachineryRatio] = useState<number>(() => inputs?.machineryRatio ?? 4.0); // % of above ground GFA
 
@@ -69,6 +81,26 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   const [officetelAuxArea, setOfficetelAuxArea] = useState<number>(() => inputs?.officetelAuxArea ?? 5);
   const [hotelAuxArea, setHotelAuxArea] = useState<number>(() => inputs?.hotelAuxArea ?? 5);
   const [officeAuxArea, setOfficeAuxArea] = useState<number>(() => inputs?.officeAuxArea ?? 5);
+
+  // [USER ADDITIONS] Resident Facilities details (주민공동시설 세부 목록 수기 입력)
+  const [useCustomResidentFacilities, setUseCustomResidentFacilities] = useState<boolean>(() => inputs?.useCustomResidentFacilities ?? false);
+  const [residentFacilities, setResidentFacilities] = useState<{ id: string; name: string; area: number }[]>(() => {
+    if (inputs?.residentFacilities) return inputs.residentFacilities;
+    return [
+      { id: '1', name: '경로당 (시니어클럽)', area: 4 },
+      { id: '2', name: '피트니스 센터', area: 5 },
+      { id: '3', name: '작은도서관', area: 3 },
+      { id: '4', name: '어린이집 / 놀이방', area: 3 }
+    ];
+  });
+
+  // Synchronize custom resident facilities to aptAuxArea if enabled
+  useEffect(() => {
+    if (useCustomResidentFacilities) {
+      const sum = residentFacilities.reduce((s, f) => s + f.area, 0);
+      setAptAuxArea(sum);
+    }
+  }, [residentFacilities, useCustomResidentFacilities]);
 
   const auxiliaryArea = aptAuxArea + officetelAuxArea + hotelAuxArea + officeAuxArea;
 
@@ -94,6 +126,16 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   // [USER ADDITIONS] New States: Typical Floor Range (기준층 범위 설정)
   const [typicalFloorStart, setTypicalFloorStart] = useState<number>(() => inputs?.typicalFloorStart ?? 2);
   const [typicalFloorEnd, setTypicalFloorEnd] = useState<number>(() => inputs?.typicalFloorEnd ?? 7);
+
+  // [USER ADDITIONS] Layout Simulation parameters
+  const [useLayoutSimulation, setUseLayoutSimulation] = useState<boolean>(() => inputs?.useLayoutSimulation ?? false);
+  const [towerCount, setTowerCount] = useState<number>(() => inputs?.towerCount ?? 2);
+  const [unitsPerFloorLine, setUnitsPerFloorLine] = useState<number>(() => inputs?.unitsPerFloorLine ?? 4);
+  const [podiumFloors, setPodiumFloors] = useState<number>(() => inputs?.podiumFloors ?? 2);
+  const [buildingSeparationDistance, setBuildingSeparationDistance] = useState<number>(() => inputs?.buildingSeparationDistance ?? 40);
+  const [boundarySeparationDistance, setBoundarySeparationDistance] = useState<number>(() => inputs?.boundarySeparationDistance ?? 12);
+  const [buildingSeparationRatio, setBuildingSeparationRatio] = useState<number>(() => inputs?.buildingSeparationRatio ?? 0.8);
+  const [sunlightBoundaryRatio, setSunlightBoundaryRatio] = useState<number>(() => inputs?.sunlightBoundaryRatio ?? 0.5);
   
   // Financial parameters
   const getOfficialLandPricePerM2 = () => {
@@ -202,7 +244,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   // Step 4 Scenario and Commercial tabs
   const [selectedScenarioId, setSelectedScenarioId] = useState<string>('base');
   const [activeCommercialTab, setActiveCommercialTab] = useState<'demographics' | 'competitors' | 'tenants' | 'risks'>('demographics');
-  const [activeSummaryTab, setActiveSummaryTab] = useState<'general' | 'area' | 'parking' | 'amenity'>('general');
+  const [activeSummaryTab, setActiveSummaryTab] = useState<'general' | 'area' | 'parking' | 'amenity' | 'layout'>('general');
 
   // Input tab control
   const [activeInputTab, setActiveInputTab] = useState<'residential' | 'hotel' | 'retail' | 'office' | 'custom-usage' | 'building-spec' | 'scenario-strategy'>('residential');
@@ -533,9 +575,19 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   const result = useMemo(() => {
     const PYUNG_TO_M2 = 3.30578;
 
+    const totalAptUnits = aptConfigs.reduce((sum, item) => sum + item.count, 0);
+    const totalOtUnits = officetelConfigs.reduce((sum, item) => sum + item.count, 0);
+    const totalResidentialUnits = totalAptUnits + totalOtUnits;
+
+    const unitsPerFloorTotal = towerCount * unitsPerFloorLine;
+    const calculatedTypicalFloors = unitsPerFloorTotal > 0 ? Math.ceil(totalResidentialUnits / unitsPerFloorTotal) : 0;
+    const effectiveAboveGroundFloors = useLayoutSimulation 
+      ? (podiumFloors + calculatedTypicalFloors) 
+      : aboveGroundFloors;
+
     // Bounded typical floor values
-    const actualTypicalStart = Math.min(Math.max(1, typicalFloorStart), aboveGroundFloors);
-    const actualTypicalEnd = Math.min(Math.max(actualTypicalStart, typicalFloorEnd), aboveGroundFloors);
+    const actualTypicalStart = Math.min(Math.max(1, typicalFloorStart), effectiveAboveGroundFloors);
+    const actualTypicalEnd = Math.min(Math.max(actualTypicalStart, typicalFloorEnd), effectiveAboveGroundFloors);
     const typicalFloorCount = Math.max(1, actualTypicalEnd - actualTypicalStart + 1);
 
     // A. Net area & Above-ground Gross Floor Area (GFA)
@@ -567,35 +619,18 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
     // Sum of ground-floor areas including auxiliary area
     const aboveGroundGFA = parseFloat((aptAboveGFA + officetelAboveGFA + hotelAboveGFA + retailAboveGFA + officeAboveGFA + customAboveGFATotal + auxiliaryAreaM2).toFixed(2));
     
-    // [USER ADDITIONS] Floor-by-floor building height and underground depth calculation
-    let totalBuildingHeight = 0;
-    for (let i = 1; i <= aboveGroundFloors; i++) {
-      const key = `${i}F`;
-      totalBuildingHeight += customFloorHeights[key] !== undefined ? customFloorHeights[key] : defaultFloorHeight;
-    }
-
-    let totalUndergroundDepth = 0;
-    for (let i = 1; i <= undergroundFloors; i++) {
-      const key = `B${i}`;
-      totalUndergroundDepth += customFloorHeights[key] !== undefined ? customFloorHeights[key] : 3.5;
-    }
-
-    // Consumed Floor Area Ratio (FAR) = (aboveGroundGFA / landArea) * 100
-    const consumedFAR = landArea > 0 ? parseFloat(((aboveGroundGFA / landArea) * 100).toFixed(2)) : 0;
-    const isFarExceeded = consumedFAR > appliedFAR;
-
     // B. Legal Parking Spaces Auto-estimation based on Korean regulations
-    // 공동주택: 85㎡ 초과: 1.2대, 60㎡~85㎡: 1.0대, 60㎡ 미만: 0.7대
+    // 공동주택: 85㎡ 초과: aptParkingOver85, 60㎡~85㎡: aptParking60To85, 60㎡ 미만: aptParkingUnder60
     const aptLegalParking = aptConfigs.reduce((sum, item) => {
       if (item.count <= 0) return sum;
-      const ratio = item.sizeM2 >= 85 ? 1.2 : item.sizeM2 >= 60 ? 1.0 : 0.7;
+      const ratio = item.sizeM2 >= 85 ? aptParkingOver85 : item.sizeM2 >= 60 ? aptParking60To85 : aptParkingUnder60;
       return sum + (item.count * ratio);
     }, 0);
 
-    // 오피스텔: 60㎡ 초과: 1.0대, 30㎡~60㎡: 0.8대, 30㎡ 미만: 0.5대
+    // 오피스텔: 60㎡ 초과: otParkingOver60, 30㎡~60㎡: otParking30To60, 30㎡ 미만: otParkingUnder30
     const officetelLegalParking = officetelConfigs.reduce((sum, item) => {
       if (item.count <= 0) return sum;
-      const ratio = item.sizeM2 >= 60 ? 1.0 : item.sizeM2 >= 30 ? 0.8 : 0.5;
+      const ratio = item.sizeM2 >= 60 ? otParkingOver60 : item.sizeM2 >= 30 ? otParking30To60 : otParkingUnder30;
       return sum + (item.count * ratio);
     }, 0);
 
@@ -626,7 +661,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
     // Designed Parking Spaces
     const designedParkingCount = designedParkingSpaces !== null 
       ? designedParkingSpaces 
-      : Math.ceil(totalLegalParking * 1.1) || 0;
+      : Math.ceil(totalLegalParking * (plannedParkingRatio / 100)) || 0;
 
     // Total Parking Lot Area
     const parkingArea = parseFloat((designedParkingCount * parkingAreaPerCar).toFixed(2));
@@ -636,6 +671,41 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
     // B. Underground Gross Floor Area (GFA)
     const undergroundGFA = parseFloat((parkingArea + machineryArea + retailB1GFA).toFixed(2));
+
+    // Automatically calculate underground floors when layout simulation is active:
+    // Required basement floor area is roughly 75% of landArea for excavations in Korea.
+    const calculatedUndergroundFloors = undergroundGFA > 0 && landArea > 0
+      ? Math.max(1, Math.ceil(undergroundGFA / (landArea * 0.75)))
+      : 0;
+
+    const effectiveUndergroundFloors = useLayoutSimulation 
+      ? calculatedUndergroundFloors 
+      : undergroundFloors;
+
+    // [USER ADDITIONS] Floor-by-floor building height and underground depth calculation
+    let totalBuildingHeight = 0;
+    for (let i = 1; i <= effectiveAboveGroundFloors; i++) {
+      const key = `${i}F`;
+      totalBuildingHeight += customFloorHeights[key] !== undefined ? customFloorHeights[key] : defaultFloorHeight;
+    }
+
+    let totalUndergroundDepth = 0;
+    for (let i = 1; i <= effectiveUndergroundFloors; i++) {
+      const key = `B${i}`;
+      totalUndergroundDepth += customFloorHeights[key] !== undefined ? customFloorHeights[key] : 3.5;
+    }
+
+    // C. Sunlight and Separation Regulations Check (상업지역 제외)
+    const isCommercialZone = currentLand?.zoning ? (currentLand.zoning.includes('상업') || currentLand.zoning.includes('상업지역')) : false;
+    const requiredSeparationDistance = parseFloat((totalBuildingHeight * buildingSeparationRatio).toFixed(1));
+    const isSeparationSatisfied = isCommercialZone || (buildingSeparationDistance >= requiredSeparationDistance);
+
+    const requiredBoundaryDistance = parseFloat((totalBuildingHeight * sunlightBoundaryRatio).toFixed(1));
+    const isBoundarySatisfied = isCommercialZone || (boundarySeparationDistance >= requiredBoundaryDistance);
+
+    // Consumed Floor Area Ratio (FAR) = (aboveGroundGFA / landArea) * 100
+    const consumedFAR = landArea > 0 ? parseFloat(((aboveGroundGFA / landArea) * 100).toFixed(2)) : 0;
+    const isFarExceeded = consumedFAR > appliedFAR;
 
     // C. Total GFA
     const totalGFA = aboveGroundGFA + undergroundGFA;
@@ -1055,8 +1125,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
       machineryRatio,
       // [USER ADDITIONS]
       auxiliaryArea,
-      aboveGroundFloors,
-      undergroundFloors,
+      aboveGroundFloors: effectiveAboveGroundFloors,
+      undergroundFloors: effectiveUndergroundFloors,
       defaultFloorHeight,
       customFloorHeights,
       exitStrategy,
@@ -1065,6 +1135,25 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
       actualTypicalStart,
       actualTypicalEnd,
       typicalFloorCount,
+      // [USER ADDITIONS] Layout Simulation parameters & checks
+      totalAptUnits,
+      totalOtUnits,
+      totalResidentialUnits,
+      unitsPerFloorTotal,
+      calculatedTypicalFloors,
+      useLayoutSimulation,
+      towerCount,
+      unitsPerFloorLine,
+      podiumFloors,
+      buildingSeparationDistance,
+      boundarySeparationDistance,
+      buildingSeparationRatio,
+      sunlightBoundaryRatio,
+      isCommercialZone,
+      requiredSeparationDistance,
+      isSeparationSatisfied,
+      requiredBoundaryDistance,
+      isBoundarySatisfied,
       scenarios: scenarioData,
       activeScenarioId: selectedScenarioId,
       // Standard mapped fields to support legacy charts transparently
@@ -1087,7 +1176,10 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
     designedParkingSpaces, machineryRatio, auxiliaryArea, aboveGroundFloors, undergroundFloors, 
     defaultFloorHeight, customFloorHeights, exitStrategy,
     aptAuxArea, officetelAuxArea, hotelAuxArea, officeAuxArea, selectedScenarioId, customUsages,
-    typicalFloorStart, typicalFloorEnd
+    typicalFloorStart, typicalFloorEnd,
+    aptParkingOver85, aptParking60To85, aptParkingUnder60, otParkingOver60, otParking30To60, otParkingUnder30, plannedParkingRatio,
+    useLayoutSimulation, towerCount, unitsPerFloorLine, podiumFloors, buildingSeparationDistance, boundarySeparationDistance, buildingSeparationRatio, sunlightBoundaryRatio,
+    useCustomResidentFacilities, residentFacilities
   ]);
 
   useEffect(() => {
@@ -1104,7 +1196,10 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           designedParkingSpaces, machineryRatio, auxiliaryArea, aboveGroundFloors, undergroundFloors, 
           defaultFloorHeight, customFloorHeights, exitStrategy,
           aptAuxArea, officetelAuxArea, hotelAuxArea, officeAuxArea, customUsages,
-          typicalFloorStart, typicalFloorEnd
+          typicalFloorStart, typicalFloorEnd,
+          aptParkingOver85, aptParking60To85, aptParkingUnder60, otParkingOver60, otParking30To60, otParkingUnder30, plannedParkingRatio,
+          useLayoutSimulation, towerCount, unitsPerFloorLine, podiumFloors, buildingSeparationDistance, boundarySeparationDistance, buildingSeparationRatio, sunlightBoundaryRatio,
+          useCustomResidentFacilities, residentFacilities
         },
         result
       });
@@ -1351,7 +1446,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                     <div className="grid grid-cols-3 gap-2.5">
                       <div className="bg-gray-50/50 p-2 rounded-xl text-center border border-gray-100">
                         <span className="text-gray-400 block text-[9px] font-medium">지상 규모</span>
-                        <strong className="text-gray-800 text-[11px] font-bold">{aboveGroundFloors} 층</strong>
+                        <strong className="text-gray-800 text-[11px] font-bold">{result.aboveGroundFloors} 층</strong>
                       </div>
                       <div className="bg-gray-50/50 p-2 rounded-xl text-center border border-gray-100">
                         <span className="text-gray-400 block text-[9px] font-medium">지하 규모</span>
@@ -2836,61 +2931,322 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
                 <div className="space-y-4">
                   {/* 지상 및 지하 층수 설정 */}
-                  <div className="p-3.5 bg-[#FCFAF7] border border-gray-100 rounded-xl space-y-3">
-                    <h4 className="text-[11px] font-bold text-[#2C251F] uppercase tracking-wider">🏢 지상/지하 층수 설정</h4>
-                    <div className="grid grid-cols-2 gap-3 text-xs">
-                      <div className="space-y-1.5">
-                        <label className="block text-[10px] font-semibold text-gray-500">지상 층수</label>
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => setAboveGroundFloors(Math.max(1, aboveGroundFloors - 1))}
-                            className="w-7 h-7 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer"
-                          >
-                            -
-                          </button>
-                          <input
-                            type="number"
-                            value={aboveGroundFloors}
-                            onChange={(e) => setAboveGroundFloors(Math.max(1, parseInt(e.target.value) || 1))}
-                            className="w-12 text-center text-xs font-bold bg-white border border-gray-200 py-1 rounded-lg focus:outline-none"
+                  <div className="p-3.5 bg-[#FCFAF7] border border-gray-100 rounded-xl space-y-4">
+                    <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                      <h4 className="text-[11px] font-bold text-[#2C251F] uppercase tracking-wider flex items-center gap-1.5">
+                        🏢 지상/지하 층수 및 동·호 배치 기획
+                      </h4>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-semibold text-gray-500">배치 시뮬레이터</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const val = !useLayoutSimulation;
+                            setUseLayoutSimulation(val);
+                            if (val) {
+                              setActiveSummaryTab('layout');
+                            }
+                          }}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
+                            useLayoutSimulation ? 'bg-emerald-600' : 'bg-gray-300'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                              useLayoutSimulation ? 'translate-x-4.5' : 'translate-x-1'
+                            }`}
                           />
-                          <button
-                            type="button"
-                            onClick={() => setAboveGroundFloors(aboveGroundFloors + 1)}
-                            className="w-7 h-7 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer"
-                          >
-                            +
-                          </button>
-                          <span className="text-gray-500 text-[11px]">층</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {!useLayoutSimulation ? (
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div className="space-y-1.5">
+                          <label className="block text-[10px] font-semibold text-gray-500">지상 층수 (일반 지정)</label>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setAboveGroundFloors(Math.max(1, aboveGroundFloors - 1))}
+                              className="w-7 h-7 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer"
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              value={aboveGroundFloors}
+                              onChange={(e) => setAboveGroundFloors(Math.max(1, parseInt(e.target.value) || 1))}
+                              className="w-12 text-center text-xs font-bold bg-white border border-gray-200 py-1 rounded-lg focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setAboveGroundFloors(aboveGroundFloors + 1)}
+                              className="w-7 h-7 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer"
+                            >
+                              +
+                            </button>
+                            <span className="text-gray-500 text-[11px]">층</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="block text-[10px] font-semibold text-gray-500">지하 층수</label>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setUndergroundFloors(Math.max(0, undergroundFloors - 1))}
+                              className="w-7 h-7 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer"
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              value={undergroundFloors}
+                              onChange={(e) => setUndergroundFloors(Math.max(0, parseInt(e.target.value) || 0))}
+                              className="w-12 text-center text-xs font-bold bg-white border border-gray-200 py-1 rounded-lg focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setUndergroundFloors(undergroundFloors + 1)}
+                              className="w-7 h-7 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer"
+                            >
+                              +
+                            </button>
+                            <span className="text-gray-500 text-[11px]">층</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3.5 text-xs">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                          <div className="space-y-1">
+                            <label className="block text-[10px] font-semibold text-gray-500">동수 (몇 동)</label>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setTowerCount(Math.max(1, towerCount - 1))}
+                                className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded hover:bg-gray-50 text-[11px] font-bold cursor-pointer"
+                              >
+                                -
+                              </button>
+                              <span className="w-8 text-center font-bold text-gray-700">{towerCount}동</span>
+                              <button
+                                type="button"
+                                onClick={() => setTowerCount(towerCount + 1)}
+                                className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded hover:bg-gray-50 text-[11px] font-bold cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="block text-[10px] font-semibold text-gray-500">조합 (몇 호조합)</label>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setUnitsPerFloorLine(Math.max(1, unitsPerFloorLine - 1))}
+                                className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded hover:bg-gray-50 text-[11px] font-bold cursor-pointer"
+                              >
+                                -
+                              </button>
+                              <span className="w-8 text-center font-bold text-gray-700">{unitsPerFloorLine}호</span>
+                              <button
+                                type="button"
+                                onClick={() => setUnitsPerFloorLine(unitsPerFloorLine + 1)}
+                                className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded hover:bg-gray-50 text-[11px] font-bold cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="block text-[10px] font-semibold text-gray-500">포디움 (지상상업층)</label>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setPodiumFloors(Math.max(0, podiumFloors - 1))}
+                                className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded hover:bg-gray-50 text-[11px] font-bold cursor-pointer"
+                              >
+                                -
+                              </button>
+                              <span className="w-8 text-center font-bold text-gray-700">{podiumFloors}층</span>
+                              <button
+                                type="button"
+                                onClick={() => setPodiumFloors(podiumFloors + 1)}
+                                className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded hover:bg-gray-50 text-[11px] font-bold cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="block text-[10px] font-semibold text-gray-500">지하 층수 (주차/설비)</label>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setUndergroundFloors(Math.max(0, undergroundFloors - 1))}
+                                className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded hover:bg-gray-50 text-[11px] font-bold cursor-pointer"
+                              >
+                                -
+                              </button>
+                              <span className="w-8 text-center font-bold text-gray-700">{undergroundFloors}층</span>
+                              <button
+                                type="button"
+                                onClick={() => setUndergroundFloors(undergroundFloors + 1)}
+                                className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded hover:bg-gray-50 text-[11px] font-bold cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="p-2.5 bg-emerald-50/50 border border-emerald-100 rounded-lg space-y-1">
+                          <div className="flex justify-between items-center text-[10px]">
+                            <span className="text-gray-500 font-semibold">전체 주거 세대수 (APT+OT):</span>
+                            <span className="font-bold text-gray-700">{result.totalResidentialUnits} 세대(실)</span>
+                          </div>
+                          <div className="flex justify-between items-center text-[10px]">
+                            <span className="text-gray-500 font-semibold">1개층 수용 세대수 ({towerCount}동 x {unitsPerFloorLine}호):</span>
+                            <span className="font-bold text-gray-700">{result.unitsPerFloorTotal} 세대/층</span>
+                          </div>
+                          <div className="flex justify-between items-center text-[10px] pt-1 border-t border-emerald-100/50">
+                            <span className="text-emerald-800 font-bold">산정 결과 지상 층수:</span>
+                            <span className="font-extrabold text-emerald-700 text-xs">
+                              지상 {result.aboveGroundFloors} 층 (포디움 {podiumFloors}층 + 주거 {result.calculatedTypicalFloors}층)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 채광창 사선 및 건물 간격(인동거리) 규제 검토 */}
+                    <div className="pt-3 border-t border-gray-150/60 space-y-3">
+                      <h5 className="text-[10px] font-bold text-gray-700 flex items-center gap-1.5">
+                        📐 채광창 사선제한 및 건물 간격 (인동거리) 검토
+                      </h5>
+
+                      <div className="grid grid-cols-2 gap-3 text-[10px]">
+                        <div className="space-y-1">
+                          <label className="text-gray-500 block">동 간 이격 거리 (현재 배치)</label>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="range"
+                              min="10"
+                              max="120"
+                              step="2"
+                              value={buildingSeparationDistance}
+                              onChange={(e) => setBuildingSeparationDistance(Number(e.target.value))}
+                              className="w-full accent-[#5F7161]"
+                            />
+                            <span className="font-bold text-gray-700 w-8 text-right">{buildingSeparationDistance}m</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-gray-500 block">인접대지 경계선과의 거리</label>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="range"
+                              min="3"
+                              max="60"
+                              step="1"
+                              value={boundarySeparationDistance}
+                              onChange={(e) => setBoundarySeparationDistance(Number(e.target.value))}
+                              className="w-full accent-[#5F7161]"
+                            />
+                            <span className="font-bold text-gray-700 w-8 text-right">{boundarySeparationDistance}m</span>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <label className="block text-[10px] font-semibold text-gray-500">지하 층수</label>
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => setUndergroundFloors(Math.max(0, undergroundFloors - 1))}
-                            className="w-7 h-7 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer"
-                          >
-                            -
-                          </button>
-                          <input
-                            type="number"
-                            value={undergroundFloors}
-                            onChange={(e) => setUndergroundFloors(Math.max(0, parseInt(e.target.value) || 0))}
-                            className="w-12 text-center text-xs font-bold bg-white border border-gray-200 py-1 rounded-lg focus:outline-none"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setUndergroundFloors(undergroundFloors + 1)}
-                            className="w-7 h-7 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer"
-                          >
-                            +
-                          </button>
-                          <span className="text-gray-500 text-[11px]">층</span>
+                      <div className="grid grid-cols-2 gap-3 text-[9px] text-gray-500 bg-white p-2 border border-gray-100 rounded-lg">
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <span>인동 규제 계수:</span>
+                            <select
+                              value={buildingSeparationRatio}
+                              onChange={(e) => setBuildingSeparationRatio(Number(e.target.value))}
+                              className="font-bold bg-gray-50 border border-gray-200 rounded p-0.5 text-[9px] focus:outline-none"
+                            >
+                              <option value="0.5">0.5배 (최소)</option>
+                              <option value="0.8">0.8배 (일반 조례)</option>
+                              <option value="1.0">1.0배 (강화)</option>
+                            </select>
+                          </div>
+                          <div>지상 최고 높이: <span className="font-bold text-gray-700">{result.totalBuildingHeight.toFixed(1)}m</span></div>
                         </div>
+
+                        <div className="space-y-1">
+                          <div className="flex justify-between">
+                            <span>채광 사선 계수:</span>
+                            <select
+                              value={sunlightBoundaryRatio}
+                              onChange={(e) => setSunlightBoundaryRatio(Number(e.target.value))}
+                              className="font-bold bg-gray-50 border border-gray-200 rounded p-0.5 text-[9px] focus:outline-none"
+                            >
+                              <option value="0.5">0.5배 (정남/정북)</option>
+                              <option value="1.0">1.0배 (강화 조례)</option>
+                            </select>
+                          </div>
+                          <div>용도지역: <span className="font-bold text-[#8D7B68]">{currentLand?.zoning || '일반상업지역'}</span></div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 pt-1">
+                        {result.isCommercialZone ? (
+                          <div className="p-2.5 bg-emerald-50 text-emerald-800 border border-emerald-100 rounded-lg text-[10px] space-y-1">
+                            <p className="font-bold flex items-center gap-1">
+                              🟢 상업지역 예외 대상 (규제 면제)
+                            </p>
+                            <p className="text-[9px] text-emerald-700 leading-relaxed font-medium">
+                              건축법 제86조(일조 등의 확보를 위한 높이제한)에 따라 일반상업지역 및 중심상업지역 내 건축물은 인접대지 경계선 기준 채광 방향 사선제한 및 공동주택 동간 인동거리 규정 적용이 제외됩니다.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-1.5 text-[10px]">
+                            {/* 인동거리 검토결과 */}
+                            <div className={`p-2 border rounded-lg flex items-start gap-2 ${
+                              result.isSeparationSatisfied ? 'bg-emerald-50/60 border-emerald-100 text-emerald-800' : 'bg-red-50/60 border-red-100 text-red-800'
+                            }`}>
+                              <span className="text-xs">{result.isSeparationSatisfied ? '🟢' : '⚠️'}</span>
+                              <div className="space-y-0.5">
+                                <p className="font-bold flex justify-between items-center">
+                                  <span>동 간 이격거리 (인동거리)</span>
+                                  <span className={`px-1 rounded text-[8px] font-extrabold ${result.isSeparationSatisfied ? 'bg-emerald-200/50' : 'bg-red-200/50'}`}>
+                                    {result.isSeparationSatisfied ? '적합' : '부적합'}
+                                  </span>
+                                </p>
+                                <p className="text-[9px] leading-relaxed">
+                                  요구 거리: {result.requiredSeparationDistance}m 이상 (최고높이 {result.totalBuildingHeight.toFixed(1)}m x {buildingSeparationRatio}배) / 현재: {buildingSeparationDistance}m
+                                  {!result.isSeparationSatisfied && " ➔ 동 간격을 더 넓히거나 층수를 줄이십시오."}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* 채광창 사선 검토결과 */}
+                            <div className={`p-2 border rounded-lg flex items-start gap-2 ${
+                              result.isBoundarySatisfied ? 'bg-emerald-50/60 border-emerald-100 text-emerald-800' : 'bg-red-50/60 border-red-100 text-red-800'
+                            }`}>
+                              <span className="text-xs">{result.isBoundarySatisfied ? '🟢' : '⚠️'}</span>
+                              <div className="space-y-0.5">
+                                <p className="font-bold flex justify-between items-center">
+                                  <span>채광 사선제한 (대지 경계선)</span>
+                                  <span className={`px-1 rounded text-[8px] font-extrabold ${result.isBoundarySatisfied ? 'bg-emerald-200/50' : 'bg-red-200/50'}`}>
+                                    {result.isBoundarySatisfied ? '적합' : '부적합'}
+                                  </span>
+                                </p>
+                                <p className="text-[9px] leading-relaxed">
+                                  요구 거리: {result.requiredBoundaryDistance}m 이상 (최고높이 {result.totalBuildingHeight.toFixed(1)}m x {sunlightBoundaryRatio}배) / 현재: {boundarySeparationDistance}m
+                                  {!result.isBoundarySatisfied && " ➔ 경계선 이격을 늘리거나 층수를 완화하십시오."}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -2993,8 +3349,9 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                               min="0"
                               max="1000"
                               value={aptAuxArea}
+                              disabled={useCustomResidentFacilities}
                               onChange={(e) => setAptAuxArea(Math.max(0, Math.min(1000, Number(e.target.value) || 0)))}
-                              className="w-14 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-indigo-500 font-mono"
+                              className={`w-14 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-indigo-500 font-mono ${useCustomResidentFacilities ? 'opacity-70 bg-gray-50 text-gray-500' : ''}`}
                             />
                             <span className="font-bold text-gray-800">평</span>
                           </div>
@@ -3005,9 +3362,92 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           max="100"
                           step="1"
                           value={Math.min(aptAuxArea, 100)}
+                          disabled={useCustomResidentFacilities}
                           onChange={(e) => setAptAuxArea(Number(e.target.value))}
-                          className="w-full accent-[#5F7161]"
+                          className={`w-full accent-[#5F7161] ${useCustomResidentFacilities ? 'opacity-50 cursor-not-allowed' : ''}`}
                         />
+
+                        {/* 주민공동시설 세부 목록 수기 입력 */}
+                        <div className="mt-2 bg-slate-50/50 p-2.5 rounded-xl border border-gray-150 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-bold text-gray-700">
+                              <input
+                                type="checkbox"
+                                checked={useCustomResidentFacilities}
+                                onChange={(e) => setUseCustomResidentFacilities(e.target.checked)}
+                                className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
+                              />
+                              <span>주민공동시설 수기 세부 구성</span>
+                            </label>
+                            {useCustomResidentFacilities && (
+                              <button
+                                onClick={() => {
+                                  const newId = Date.now().toString();
+                                  setResidentFacilities(prev => [...prev, { id: newId, name: '새 주민공동시설', area: 3 }]);
+                                }}
+                                className="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-0.5 cursor-pointer bg-white px-2 py-0.5 rounded-md border border-gray-200"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                추가
+                              </button>
+                            )}
+                          </div>
+
+                          {useCustomResidentFacilities ? (
+                            <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+                              {residentFacilities.length === 0 ? (
+                                <p className="text-[10px] text-gray-400 italic text-center py-2">등록된 시설이 없습니다. 우측 상단의 추가 버튼을 눌러 등록해 주세요.</p>
+                              ) : (
+                                residentFacilities.map((f, idx) => (
+                                  <div key={f.id} className="flex items-center gap-1.5 bg-white p-1.5 rounded-lg border border-gray-150">
+                                    <span className="text-[10px] text-gray-400 font-mono w-4 text-center">{idx + 1}</span>
+                                    <input
+                                      type="text"
+                                      value={f.name}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        setResidentFacilities(prev => prev.map(item => item.id === f.id ? { ...item, name: val } : item));
+                                      }}
+                                      placeholder="시설명 (예: 독서실)"
+                                      className="flex-1 bg-transparent border-0 border-b border-transparent hover:border-gray-200 focus:border-indigo-500 px-1 py-0.5 text-xs text-gray-800 focus:outline-none"
+                                    />
+                                    <div className="flex items-center gap-1">
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max="500"
+                                        value={f.area}
+                                        onChange={(e) => {
+                                          const val = Math.max(0, Math.min(500, Number(e.target.value) || 0));
+                                          setResidentFacilities(prev => prev.map(item => item.id === f.id ? { ...item, area: val } : item));
+                                        }}
+                                        className="w-10 text-center font-semibold bg-gray-50 border border-gray-200 py-0.5 rounded text-[11px] font-mono focus:outline-none focus:border-indigo-500"
+                                      />
+                                      <span className="text-[10px] text-gray-500 font-bold">평</span>
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        setResidentFacilities(prev => prev.filter(item => item.id !== f.id));
+                                      }}
+                                      className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-red-50 transition cursor-pointer"
+                                      title="삭제"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ))
+                              )}
+                              <div className="flex justify-between items-center text-[10px] text-[#5F7161] font-semibold border-t border-gray-100 pt-1.5 px-1 mt-1">
+                                <span>합계 (자동 연동)</span>
+                                <span>{aptAuxArea}평 (약 {Math.round(aptAuxArea * 3.3)}㎡)</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-[10px] text-gray-400 leading-relaxed">
+                              위 슬라이더를 이용해 전체 면적만 조절하시거나, 체크박스를 선택해 경로당, 피트니스 등 개별 주민공동시설 목록과 각 면적을 상세하게 직접 입력할 수 있습니다.
+                            </p>
+                          )}
+                        </div>
                       </div>
 
                       {/* 오피스텔 */}
@@ -3344,7 +3784,112 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                     </div>
 
                     <div className="h-px bg-gray-200/50"></div>
+ 
+                    <div className="space-y-2">
+                      <span className="font-bold text-gray-700 block">법정 주차 산정 기준 (공동주택)</span>
+                      <div className="grid grid-cols-3 gap-2 text-[10px]">
+                        <div>
+                          <label className="text-gray-500 block mb-0.5">85㎡ 초과 (대/세대)</label>
+                          <input
+                            type="number"
+                            step="0.05"
+                            min="0.1"
+                            max="3.0"
+                            value={aptParkingOver85}
+                            onChange={(e) => setAptParkingOver85(Math.max(0.05, parseFloat(e.target.value) || 0))}
+                            className="w-full p-1 bg-white border border-gray-200 rounded text-center font-semibold text-[11px] focus:border-[#5F7161] focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-gray-500 block mb-0.5">60㎡~85㎡ (대/세대)</label>
+                          <input
+                            type="number"
+                            step="0.05"
+                            min="0.1"
+                            max="3.0"
+                            value={aptParking60To85}
+                            onChange={(e) => setAptParking60To85(Math.max(0.05, parseFloat(e.target.value) || 0))}
+                            className="w-full p-1 bg-white border border-gray-200 rounded text-center font-semibold text-[11px] focus:border-[#5F7161] focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-gray-500 block mb-0.5">60㎡ 미만 (대/세대)</label>
+                          <input
+                            type="number"
+                            step="0.05"
+                            min="0.1"
+                            max="3.0"
+                            value={aptParkingUnder60}
+                            onChange={(e) => setAptParkingUnder60(Math.max(0.05, parseFloat(e.target.value) || 0))}
+                            className="w-full p-1 bg-white border border-gray-200 rounded text-center font-semibold text-[11px] focus:border-[#5F7161] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
 
+                    <div className="space-y-2">
+                      <span className="font-bold text-gray-700 block">법정 주차 산정 기준 (오피스텔)</span>
+                      <div className="grid grid-cols-3 gap-2 text-[10px]">
+                        <div>
+                          <label className="text-gray-500 block mb-0.5">60㎡ 초과 (대/실)</label>
+                          <input
+                            type="number"
+                            step="0.05"
+                            min="0.1"
+                            max="3.0"
+                            value={otParkingOver60}
+                            onChange={(e) => setOtParkingOver60(Math.max(0.05, parseFloat(e.target.value) || 0))}
+                            className="w-full p-1 bg-white border border-gray-200 rounded text-center font-semibold text-[11px] focus:border-[#5F7161] focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-gray-500 block mb-0.5">30㎡~60㎡ (대/실)</label>
+                          <input
+                            type="number"
+                             step="0.05"
+                             min="0.1"
+                             max="3.0"
+                             value={otParking30To60}
+                             onChange={(e) => setOtParking30To60(Math.max(0.05, parseFloat(e.target.value) || 0))}
+                             className="w-full p-1 bg-white border border-gray-200 rounded text-center font-semibold text-[11px] focus:border-[#5F7161] focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-gray-500 block mb-0.5">30㎡ 미만 (대/실)</label>
+                          <input
+                            type="number"
+                            step="0.05"
+                            min="0.1"
+                            max="3.0"
+                            value={otParkingUnder30}
+                            onChange={(e) => setOtParkingUnder30(Math.max(0.05, parseFloat(e.target.value) || 0))}
+                            className="w-full p-1 bg-white border border-gray-200 rounded text-center font-semibold text-[11px] focus:border-[#5F7161] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="h-px bg-gray-200/50"></div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between font-semibold">
+                        <span>자동 산정 가산 비율</span>
+                        <span className="font-bold text-emerald-600">{plannedParkingRatio} %</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="100"
+                        max="200"
+                        step="5"
+                        value={plannedParkingRatio}
+                        onChange={(e) => setPlannedParkingRatio(Number(e.target.value))}
+                        className="w-full accent-emerald-600"
+                      />
+                      <p className="text-[10px] text-gray-400">자동 산정 시 법정 대수 기준 대비 가산 비율입니다. (예: 110% = 법정의 1.1배)</p>
+                    </div>
+
+                    <div className="h-px bg-gray-200/50"></div>
+ 
                     <div className="space-y-2">
                       <div className="flex justify-between font-semibold">
                         <span>계획 주차대수 지정</span>
@@ -3362,7 +3907,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                               : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                           }`}
                         >
-                          법정 기준 + 10% 자동
+                          {plannedParkingRatio === 100 ? '법정 기준 자동' : `법정 기준 + ${plannedParkingRatio - 100}% 자동`}
                         </button>
                         <input
                           type="number"
@@ -3375,7 +3920,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           className="text-center font-bold text-xs bg-white border border-gray-200 rounded-xl focus:border-[#5F7161] focus:outline-none focus:ring-1 focus:ring-[#5F7161]"
                         />
                       </div>
-                      <p className="text-[10px] text-gray-400">공동주택/오피스텔/상가 법규 분석에 의거해 자동 산정 후 10% 여유를 확보하거나 직접 지정 가능합니다.</p>
+                      <p className="text-[10px] text-gray-400">공동주택/오피스텔/상가 법규 분석에 의거해 자동 산정 후 {plannedParkingRatio - 100}% 여유를 확보하거나 직접 지정 가능합니다.</p>
                     </div>
                   </div>
                 </div>
@@ -3413,6 +3958,17 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                     </button>
                     <button
                       type="button"
+                      onClick={() => setActiveSummaryTab('layout')}
+                      className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                        activeSummaryTab === 'layout'
+                          ? 'bg-[#5F7161] text-white shadow-xs'
+                          : 'text-gray-500 hover:text-gray-800'
+                      }`}
+                    >
+                      📐 단지 배치도 & 동호수 기획
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setActiveSummaryTab('area')}
                       className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
                         activeSummaryTab === 'area'
@@ -3446,6 +4002,41 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                     </button>
                   </div>
                 </div>
+
+                {/* Tab Content 0: Interactive Layout Master Diagram */}
+                {activeSummaryTab === 'layout' && (
+                  <LayoutDiagram
+                    towerCount={towerCount}
+                    setTowerCount={setTowerCount}
+                    unitsPerFloorLine={unitsPerFloorLine}
+                    setUnitsPerFloorLine={setUnitsPerFloorLine}
+                    aboveGroundFloors={result.aboveGroundFloors}
+                    setAboveGroundFloors={setAboveGroundFloors}
+                    podiumFloors={podiumFloors}
+                    setPodiumFloors={setPodiumFloors}
+                    undergroundFloors={undergroundFloors}
+                    setUndergroundFloors={setUndergroundFloors}
+                    buildingSeparationDistance={buildingSeparationDistance}
+                    setBuildingSeparationDistance={setBuildingSeparationDistance}
+                    boundarySeparationDistance={boundarySeparationDistance}
+                    setBoundarySeparationDistance={setBoundarySeparationDistance}
+                    landArea={landArea}
+                    currentLand={currentLand}
+                    aptConfigs={aptConfigs}
+                    setAptConfigs={setAptConfigs}
+                    officetelConfigs={officetelConfigs}
+                    setOfficetelConfigs={setOfficetelConfigs}
+                    calculatedTypicalFloors={result.calculatedTypicalFloors}
+                    totalBuildingHeight={result.totalBuildingHeight}
+                    requiredSeparationDistance={result.requiredSeparationDistance}
+                    isSeparationSatisfied={result.isSeparationSatisfied}
+                    requiredBoundaryDistance={result.requiredBoundaryDistance}
+                    isBoundarySatisfied={result.isBoundarySatisfied}
+                    isCommercialZone={result.isCommercialZone}
+                    useLayoutSimulation={useLayoutSimulation}
+                    undergroundGFA={result.undergroundGFA}
+                  />
+                )}
 
                 {/* Tab Content 1: General Specs */}
                 {activeSummaryTab === 'general' && (
@@ -3558,7 +4149,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           <tr>
                             <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">건축 규모</td>
                             <td colSpan={3} className="py-2 px-3 font-semibold text-gray-800">
-                              지하 {undergroundFloors}층 ~ 지상 {aboveGroundFloors}층 <span className="text-[10px] text-gray-400 font-normal">(지하 깊이: {result.totalUndergroundDepth.toFixed(1)}m / 지상 최고높이: {result.totalBuildingHeight.toFixed(1)}m)</span>
+                              지하 {undergroundFloors}층 ~ 지상 {result.aboveGroundFloors}층 <span className="text-[10px] text-gray-400 font-normal">(지하 깊이: {result.totalUndergroundDepth.toFixed(1)}m / 지상 최고높이: {result.totalBuildingHeight.toFixed(1)}m)</span>
                             </td>
                           </tr>
                           <tr>
@@ -3793,13 +4384,13 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                                 {aptConfigs.reduce((s, c) => s + c.count, 0)} 세대
                               </td>
                               <td className="py-2 px-2.5 text-xs text-gray-500 border-r border-gray-100">
-                                전용 85㎡ 초과: 1.2대, 60~85㎡: 1.0대, 소형: 0.7대
+                                전용 85㎡ 초과: {aptParkingOver85}대, 60~85㎡: {aptParking60To85}대, 소형: {aptParkingUnder60}대
                               </td>
                               <td className="py-2 px-2.5 text-right font-mono text-amber-700 border-r border-gray-100">
                                 {result.aptLegalParking.toFixed(1)} 대
                               </td>
                               <td className="py-2 px-2.5 text-right font-mono text-emerald-700 border-r border-gray-100">
-                                {Math.ceil(result.aptLegalParking * 1.05)} 대
+                                {Math.ceil(result.aptLegalParking * (plannedParkingRatio / 100))} 대
                               </td>
                               <td className="py-2 px-2.5 text-center">
                                 <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">🟢 충족</span>
@@ -3814,13 +4405,13 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                                 {officetelConfigs.reduce((s, c) => s + c.count, 0)} 실
                               </td>
                               <td className="py-2 px-2.5 text-xs text-gray-500 border-r border-gray-100">
-                                전용 60㎡ 초과: 1.0대, 30~60㎡: 0.8대, 소형: 0.5대
+                                전용 60㎡ 초과: {otParkingOver60}대, 30~60㎡: {otParking30To60}대, 소형: {otParkingUnder30}대
                               </td>
                               <td className="py-2 px-2.5 text-right font-mono text-amber-700 border-r border-gray-100">
                                 {result.officetelLegalParking.toFixed(1)} 대
                               </td>
                               <td className="py-2 px-2.5 text-right font-mono text-emerald-700 border-r border-gray-100">
-                                {Math.ceil(result.officetelLegalParking * 1.05)} 대
+                                {Math.ceil(result.officetelLegalParking * (plannedParkingRatio / 100))} 대
                               </td>
                               <td className="py-2 px-2.5 text-center">
                                 <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">🟢 충족</span>
@@ -3910,7 +4501,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                                 {Math.ceil(customUsages.reduce((sum, item) => {
                                   const gfa = (item.areaPyung * 3.30578 / (item.netRatio / 100)) + (item.auxAreaPyung * 3.30578);
                                   return sum + (gfa / item.parkingCriteria);
-                                }, 0) * 1.1)} 대
+                                }, 0) * (plannedParkingRatio / 100))} 대
                               </td>
                               <td className="py-2 px-2.5 text-center">
                                 <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">🟢 충족</span>
@@ -3985,6 +4576,25 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           </ul>
                         </div>
                       </div>
+
+                      {/* 수기 세부 구성 주민공동시설 목록 명세 */}
+                      {useCustomResidentFacilities && residentFacilities.length > 0 && (
+                        <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-xs space-y-2 mt-2 text-[11px]">
+                          <span className="text-[#5F7161] font-bold block text-[11.5px]">📋 기획적용 주민공동시설 세부 목록 (수기 입력 정보)</span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 pt-1">
+                            {residentFacilities.map((f, i) => (
+                              <div key={f.id} className="flex justify-between items-center py-1 border-b border-gray-50">
+                                <span className="text-gray-600 font-medium">{i + 1}. {f.name}</span>
+                                <strong className="text-gray-800 font-mono">{f.area}평 ({Math.round(f.area * 3.3)}㎡)</strong>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex justify-between items-center text-[11px] font-bold text-emerald-800 pt-1.5 border-t border-gray-100 mt-2">
+                            <span>총합계 면적</span>
+                            <span>{aptAuxArea}평 ({(aptAuxArea * 3.30578).toFixed(1)}㎡)</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -4608,7 +5218,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           </div>
                         </div>
 
-                        {aboveGroundFloors > 1 && (
+                        {result.aboveGroundFloors > 1 && (
                           <div className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-100 space-y-2">
                             <div className="flex justify-between items-center">
                               <span className="font-bold text-gray-800 text-[12px]">🏢 지상 {result.actualTypicalStart}층 ~ 지상 {result.actualTypicalEnd}층 (기준 반복층)</span>
@@ -4709,7 +5319,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                         <div className="p-3 bg-amber-50/30 rounded-xl border border-amber-150 space-y-1">
                           <span className="font-bold text-amber-950 block">4. 초고층 및 준초고층 피난안전 기준</span>
                           <p className="text-slate-600 leading-relaxed text-[10px]">
-                            • 준초고층 이상 ({aboveGroundFloors >= 30 ? '🔴 해당' : '🟢 해당 없음'}): 30층 이상이거나 높이 120m 이상인 건축물은 최대 30개층마다 1개소 이상의 피난안전구역 설치 의무
+                            • 준초고층 이상 ({result.aboveGroundFloors >= 30 ? '🔴 해당' : '🟢 해당 없음'}): 30층 이상이거나 높이 120m 이상인 건축물은 최대 30개층마다 1개소 이상의 피난안전구역 설치 의무
                           </p>
                         </div>
                       </div>
