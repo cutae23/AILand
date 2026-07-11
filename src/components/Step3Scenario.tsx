@@ -129,7 +129,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
   // [USER ADDITIONS] Layout Simulation parameters
   const [useLayoutSimulation, setUseLayoutSimulation] = useState<boolean>(() => inputs?.useLayoutSimulation ?? true);
-  const [floorCalculationMode, setFloorCalculationMode] = useState<'auto' | 'manual'>(() => inputs?.floorCalculationMode ?? 'auto');
+  const [floorCalculationMode, setFloorCalculationMode] = useState<'auto' | 'manual'>(() => inputs?.floorCalculationMode ?? 'manual');
   const [towerCount, setTowerCount] = useState<number>(() => inputs?.towerCount ?? 2);
   const [unitsPerFloorLine, setUnitsPerFloorLine] = useState<number>(() => inputs?.unitsPerFloorLine ?? 4);
   const [podiumFloors, setPodiumFloors] = useState<number>(() => inputs?.podiumFloors ?? 2);
@@ -1208,7 +1208,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
     aptAuxArea, officetelAuxArea, hotelAuxArea, officeAuxArea, selectedScenarioId, customUsages,
     typicalFloorStart, typicalFloorEnd,
     aptParkingOver85, aptParking60To85, aptParkingUnder60, otParkingOver60, otParking30To60, otParkingUnder30, plannedParkingRatio,
-    useLayoutSimulation, towerCount, unitsPerFloorLine, podiumFloors, buildingSeparationDistance, boundarySeparationDistance, buildingSeparationRatio, sunlightBoundaryRatio,
+    useLayoutSimulation, floorCalculationMode, towerCount, unitsPerFloorLine, podiumFloors, buildingSeparationDistance, boundarySeparationDistance, buildingSeparationRatio, sunlightBoundaryRatio,
     useCustomResidentFacilities, residentFacilities
   ]);
 
@@ -1228,7 +1228,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           aptAuxArea, officetelAuxArea, hotelAuxArea, officeAuxArea, customUsages,
           typicalFloorStart, typicalFloorEnd,
           aptParkingOver85, aptParking60To85, aptParkingUnder60, otParkingOver60, otParking30To60, otParkingUnder30, plannedParkingRatio,
-          useLayoutSimulation, towerCount, unitsPerFloorLine, podiumFloors, buildingSeparationDistance, boundarySeparationDistance, buildingSeparationRatio, sunlightBoundaryRatio,
+          useLayoutSimulation, floorCalculationMode, towerCount, unitsPerFloorLine, podiumFloors, buildingSeparationDistance, boundarySeparationDistance, buildingSeparationRatio, sunlightBoundaryRatio,
           useCustomResidentFacilities, residentFacilities
         },
         result

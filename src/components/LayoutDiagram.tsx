@@ -907,7 +907,7 @@ export default function LayoutDiagram({
   const syncCountsToParent = useCallback((currentLineSizes: number[]) => {
     if (!setAptConfigs || !setOfficetelConfigs) return;
     
-    const floors = calculatedTypicalFloors || 10;
+    const floors = Math.max(1, aboveGroundFloors - podiumFloors);
     
     // Count occurrences of each size
     const occurrences: Record<number, number> = {};
@@ -991,14 +991,14 @@ export default function LayoutDiagram({
     if (otsDiffer) {
       setOfficetelConfigs(finalOts);
     }
-  }, [aptConfigs, officetelConfigs, towerCount, calculatedTypicalFloors, setAptConfigs, setOfficetelConfigs]);
+  }, [aptConfigs, officetelConfigs, towerCount, aboveGroundFloors, podiumFloors, setAptConfigs, setOfficetelConfigs]);
 
   // Synchronize with parent whenever relevant variables change
   useEffect(() => {
     if (autoSync) {
       syncCountsToParent(lineSizes);
     }
-  }, [lineSizes, towerCount, calculatedTypicalFloors, autoSync, syncCountsToParent]);
+  }, [lineSizes, towerCount, aboveGroundFloors, podiumFloors, autoSync, syncCountsToParent]);
 
   // Handle automatic size tracking whenever unitsPerFloorLine changes
   useEffect(() => {
@@ -1028,7 +1028,7 @@ export default function LayoutDiagram({
   }, [unitsPerFloorLine, lineSizes, getConfigForSize]);
 
   // Total residential units calculated in this tower
-  const towerTotalFloors = podiumFloors + calculatedTypicalFloors;
+  const towerTotalFloors = aboveGroundFloors;
 
   // Converted to pixels
   const blockWidth = useMemo(() => {
