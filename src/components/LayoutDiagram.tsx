@@ -1,6 +1,20 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Compass, Building2, Layers, Info, Check, Plus, Minus, LayoutGrid, HelpCircle, Sparkles, RefreshCw, Sliders, Move, HelpCircle as AlertTriangle } from 'lucide-react';
 
+// Ray casting point-in-polygon algorithm to check if a tower's corner is inside the lot boundaries
+function isPointInPolygon(point: { x: number; y: number }, polygon: { x: number; y: number }[]): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x, yi = polygon[i].y;
+    const xj = polygon[j].x, yj = polygon[j].y;
+    
+    const intersect = ((yi > point.y) !== (yj > point.y))
+        && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
 interface HousingConfig {
   id: string;
   name: string;
@@ -660,14 +674,14 @@ export default function LayoutDiagram({
 
   // Check if any building is physically overlapping with the land boundaries
   const isEncroachingBoundary = useMemo(() => {
-    const halfW = landInfo.widthM / 2;
-    const halfH = landInfo.heightM / 2;
     return towerPositions.some(pos => {
-      const left = pos.xM - towerWidthM / 2;
-      const right = pos.xM + towerWidthM / 2;
-      const top = pos.yM - towerDepthM / 2;
-      const bottom = pos.yM + towerDepthM / 2;
-      return left < -halfW || right > halfW || top < -halfH || bottom > halfH;
+      const corners = [
+        { x: pos.xM - towerWidthM / 2, y: pos.yM - towerDepthM / 2 },
+        { x: pos.xM + towerWidthM / 2, y: pos.yM - towerDepthM / 2 },
+        { x: pos.xM + towerWidthM / 2, y: pos.yM + towerDepthM / 2 },
+        { x: pos.xM - towerWidthM / 2, y: pos.yM + towerDepthM / 2 }
+      ];
+      return corners.some(corner => !isPointInPolygon(corner, landInfo.pointsM));
     });
   }, [towerPositions, towerWidthM, towerDepthM, landInfo]);
 
@@ -1034,12 +1048,13 @@ export default function LayoutDiagram({
                 const isSelected = selectedTowerIdx === idx;
                 
                 // Check if this specific tower is encroaching boundaries
-                const halfW = landInfo.widthM / 2;
-                const halfH = landInfo.heightM / 2;
-                const isTowerEncroaching = pos.xM - towerWidthM / 2 < -halfW ||
-                                           pos.xM + towerWidthM / 2 > halfW ||
-                                           pos.yM - towerDepthM / 2 < -halfH ||
-                                           pos.yM + towerDepthM / 2 > halfH;
+                const corners = [
+                  { x: pos.xM - towerWidthM / 2, y: pos.yM - towerDepthM / 2 },
+                  { x: pos.xM + towerWidthM / 2, y: pos.yM - towerDepthM / 2 },
+                  { x: pos.xM + towerWidthM / 2, y: pos.yM + towerDepthM / 2 },
+                  { x: pos.xM - towerWidthM / 2, y: pos.yM + towerDepthM / 2 }
+                ];
+                const isTowerEncroaching = corners.some(corner => !isPointInPolygon(corner, landInfo.pointsM));
 
                 return (
                   <g

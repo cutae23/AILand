@@ -128,7 +128,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   const [typicalFloorEnd, setTypicalFloorEnd] = useState<number>(() => inputs?.typicalFloorEnd ?? 7);
 
   // [USER ADDITIONS] Layout Simulation parameters
-  const [useLayoutSimulation, setUseLayoutSimulation] = useState<boolean>(() => inputs?.useLayoutSimulation ?? false);
+  const [useLayoutSimulation, setUseLayoutSimulation] = useState<boolean>(() => inputs?.useLayoutSimulation ?? true);
   const [towerCount, setTowerCount] = useState<number>(() => inputs?.towerCount ?? 2);
   const [unitsPerFloorLine, setUnitsPerFloorLine] = useState<number>(() => inputs?.unitsPerFloorLine ?? 4);
   const [podiumFloors, setPodiumFloors] = useState<number>(() => inputs?.podiumFloors ?? 2);
