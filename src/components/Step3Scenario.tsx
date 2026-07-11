@@ -129,6 +129,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
   // [USER ADDITIONS] Layout Simulation parameters
   const [useLayoutSimulation, setUseLayoutSimulation] = useState<boolean>(() => inputs?.useLayoutSimulation ?? true);
+  const [floorCalculationMode, setFloorCalculationMode] = useState<'auto' | 'manual'>(() => inputs?.floorCalculationMode ?? 'auto');
   const [towerCount, setTowerCount] = useState<number>(() => inputs?.towerCount ?? 2);
   const [unitsPerFloorLine, setUnitsPerFloorLine] = useState<number>(() => inputs?.unitsPerFloorLine ?? 4);
   const [podiumFloors, setPodiumFloors] = useState<number>(() => inputs?.podiumFloors ?? 2);
@@ -580,23 +581,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
     const totalResidentialUnits = totalAptUnits + totalOtUnits;
 
     const unitsPerFloorTotal = towerCount * unitsPerFloorLine;
-    const calculatedTypicalFloors = unitsPerFloorTotal > 0 ? Math.ceil(totalResidentialUnits / unitsPerFloorTotal) : 0;
-    const effectiveAboveGroundFloors = useLayoutSimulation 
-      ? (podiumFloors + calculatedTypicalFloors) 
-      : aboveGroundFloors;
 
-    // Bounded typical floor values
-    const actualTypicalStart = Math.min(Math.max(1, typicalFloorStart), effectiveAboveGroundFloors);
-    const actualTypicalEnd = Math.min(Math.max(actualTypicalStart, typicalFloorEnd), effectiveAboveGroundFloors);
-    const typicalFloorCount = Math.max(1, actualTypicalEnd - actualTypicalStart + 1);
-
-    // A. Net area & Above-ground Gross Floor Area (GFA)
-    const aptNetArea = aptConfigs.reduce((sum, item) => sum + (item.count * item.sizeM2), 0);
-    const aptAboveGFA = aptConfigs.reduce((sum, item) => sum + (item.count * item.sizeM2 * (1 + (wallCommonRatioApt + generalCommonRatioApt) / 100)), 0);
-
-    const officetelNetArea = officetelConfigs.reduce((sum, item) => sum + (item.count * item.sizeM2), 0);
-    const officetelAboveGFA = officetelConfigs.reduce((sum, item) => sum + (item.count * item.sizeM2 * (1 + (wallCommonRatioOt + generalCommonRatioOt) / 100)), 0);
-
+    // 1. Calculate Non-Residential GFAs
     const hotelNetAreaPyung = hotelRoomCount * hotelRoomSizePyung;
     const hotelNetAreaM2 = hotelNetAreaPyung * PYUNG_TO_M2;
     const hotelAboveGFA = hotelNetAreaM2 / (hotelNetRatio / 100);
@@ -616,8 +602,52 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
     const customAuxAreaTotalPyung = customUsages.reduce((sum, item) => sum + item.auxAreaPyung, 0);
     const auxiliaryAreaM2 = (auxiliaryArea + customAuxAreaTotalPyung) * PYUNG_TO_M2;
 
+    const nonResidentialAboveGroundGFA = hotelAboveGFA + retailAboveGFA + officeAboveGFA + customAboveGFATotal + auxiliaryAreaM2;
+
+    // 2. Calculate Allowable Residential GFA based on FAR
+    const maxGFA = landArea > 0 ? (landArea * (appliedFAR / 100)) : 0;
+    const allowableResidentialGFA = Math.max(0, maxGFA - nonResidentialAboveGroundGFA);
+
+    let calculatedTypicalFloors = 0;
+    if (useLayoutSimulation) {
+      if (floorCalculationMode === 'auto') {
+        const activeHousingTypes = [...aptConfigs, ...officetelConfigs].filter(cfg => 
+          cfg.id.includes('custom') || 
+          (cfg.id.includes('apt_') && cfg.id !== 'apt_custom') || 
+          (cfg.id.includes('officetel_') && cfg.id !== 'officetel_custom')
+        );
+        const averageHousingSize = activeHousingTypes.length > 0
+          ? activeHousingTypes.reduce((sum, item) => sum + item.sizeM2, 0) / activeHousingTypes.length
+          : 84;
+        const typicalFloorAreaGross = unitsPerFloorTotal * averageHousingSize * 1.25;
+        calculatedTypicalFloors = typicalFloorAreaGross > 0
+          ? Math.max(1, Math.floor(allowableResidentialGFA / typicalFloorAreaGross))
+          : 10;
+      } else {
+        calculatedTypicalFloors = Math.max(0, aboveGroundFloors - podiumFloors);
+      }
+    } else {
+      calculatedTypicalFloors = unitsPerFloorTotal > 0 ? Math.ceil(totalResidentialUnits / unitsPerFloorTotal) : 0;
+    }
+
+    const effectiveAboveGroundFloors = useLayoutSimulation 
+      ? (podiumFloors + calculatedTypicalFloors) 
+      : aboveGroundFloors;
+
+    // Bounded typical floor values
+    const actualTypicalStart = Math.min(Math.max(1, typicalFloorStart), effectiveAboveGroundFloors);
+    const actualTypicalEnd = Math.min(Math.max(actualTypicalStart, typicalFloorEnd), effectiveAboveGroundFloors);
+    const typicalFloorCount = Math.max(1, actualTypicalEnd - actualTypicalStart + 1);
+
+    // A. Net area & Above-ground Gross Floor Area (GFA)
+    const aptNetArea = aptConfigs.reduce((sum, item) => sum + (item.count * item.sizeM2), 0);
+    const aptAboveGFA = aptConfigs.reduce((sum, item) => sum + (item.count * item.sizeM2 * (1 + (wallCommonRatioApt + generalCommonRatioApt) / 100)), 0);
+
+    const officetelNetArea = officetelConfigs.reduce((sum, item) => sum + (item.count * item.sizeM2), 0);
+    const officetelAboveGFA = officetelConfigs.reduce((sum, item) => sum + (item.count * item.sizeM2 * (1 + (wallCommonRatioOt + generalCommonRatioOt) / 100)), 0);
+
     // Sum of ground-floor areas including auxiliary area
-    const aboveGroundGFA = parseFloat((aptAboveGFA + officetelAboveGFA + hotelAboveGFA + retailAboveGFA + officeAboveGFA + customAboveGFATotal + auxiliaryAreaM2).toFixed(2));
+    const aboveGroundGFA = parseFloat((aptAboveGFA + officetelAboveGFA + nonResidentialAboveGroundGFA).toFixed(2));
     
     // B. Legal Parking Spaces Auto-estimation based on Korean regulations
     // 공동주택: 85㎡ 초과: aptParkingOver85, 60㎡~85㎡: aptParking60To85, 60㎡ 미만: aptParkingUnder60
@@ -679,7 +709,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
       : 0;
 
     const effectiveUndergroundFloors = useLayoutSimulation 
-      ? calculatedUndergroundFloors 
+      ? (floorCalculationMode === 'auto' ? calculatedUndergroundFloors : undergroundFloors)
       : undergroundFloors;
 
     // [USER ADDITIONS] Floor-by-floor building height and underground depth calculation
@@ -3018,7 +3048,43 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                       </div>
                     ) : (
                       <div className="space-y-3.5 text-xs">
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        {/* 층수 산정 방식 선택 */}
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 p-2 bg-[#FAF9F5] border border-[#F2EFE9] rounded-lg">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-bold text-gray-700">📐 지상/지하 층수 산정 방식</span>
+                            <span className="text-[9px] text-gray-400 mt-0.5">
+                              {floorCalculationMode === 'auto'
+                                ? '대상지의 조례 허용 용적률에 맞추어 주동의 층수가 자동 계산됩니다.'
+                                : '원하는 지상/지하 층수를 직접 숫자로 조절하여 배치할 수 있습니다.'}
+                            </span>
+                          </div>
+                          <div className="flex bg-gray-200/60 p-0.5 rounded-lg border border-gray-200">
+                            <button
+                              type="button"
+                              onClick={() => setFloorCalculationMode('auto')}
+                              className={`px-2.5 py-1 text-[9.5px] font-extrabold rounded-md cursor-pointer transition-all ${
+                                floorCalculationMode === 'auto'
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'text-gray-500 hover:text-gray-800'
+                              }`}
+                            >
+                              용적률 자동 산정
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFloorCalculationMode('manual')}
+                              className={`px-2.5 py-1 text-[9.5px] font-extrabold rounded-md cursor-pointer transition-all ${
+                                floorCalculationMode === 'manual'
+                                  ? 'bg-[#5F7161] text-white shadow-xs'
+                                  : 'text-gray-500 hover:text-gray-800'
+                              }`}
+                            >
+                              사용자 직접 지정
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
                           <div className="space-y-1">
                             <label className="block text-[10px] font-semibold text-gray-500">동수 (몇 동)</label>
                             <div className="flex items-center gap-1">
@@ -3083,24 +3149,57 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           </div>
 
                           <div className="space-y-1">
+                            <label className="block text-[10px] font-semibold text-gray-500">지상 주거 층수</label>
+                            {floorCalculationMode === 'auto' ? (
+                              <div className="h-6 flex items-center gap-1 px-1 bg-emerald-50 border border-emerald-100 rounded text-emerald-800 text-[10px] font-extrabold justify-center w-full">
+                                <span>{result.calculatedTypicalFloors}층 (자동)</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setAboveGroundFloors(Math.max(podiumFloors + 1, aboveGroundFloors - 1))}
+                                  className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded hover:bg-gray-50 text-[11px] font-bold cursor-pointer"
+                                >
+                                  -
+                                </button>
+                                <span className="w-8 text-center font-bold text-gray-700">{result.calculatedTypicalFloors}층</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setAboveGroundFloors(aboveGroundFloors + 1)}
+                                  className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded hover:bg-gray-50 text-[11px] font-bold cursor-pointer"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="space-y-1">
                             <label className="block text-[10px] font-semibold text-gray-500">지하 층수 (주차/설비)</label>
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => setUndergroundFloors(Math.max(0, undergroundFloors - 1))}
-                                className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded hover:bg-gray-50 text-[11px] font-bold cursor-pointer"
-                              >
-                                -
-                              </button>
-                              <span className="w-8 text-center font-bold text-gray-700">{undergroundFloors}층</span>
-                              <button
-                                type="button"
-                                onClick={() => setUndergroundFloors(undergroundFloors + 1)}
-                                className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded hover:bg-gray-50 text-[11px] font-bold cursor-pointer"
-                              >
-                                +
-                              </button>
-                            </div>
+                            {floorCalculationMode === 'auto' ? (
+                              <div className="h-6 flex items-center gap-1 px-1 bg-amber-50 border border-amber-100 rounded text-amber-850 text-[10px] font-extrabold justify-center w-full">
+                                <span>{result.undergroundFloors}층 (자동)</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setUndergroundFloors(Math.max(0, undergroundFloors - 1))}
+                                  className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded hover:bg-gray-50 text-[11px] font-bold cursor-pointer"
+                                >
+                                  -
+                                </button>
+                                <span className="w-8 text-center font-bold text-gray-700">{undergroundFloors}층</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setUndergroundFloors(undergroundFloors + 1)}
+                                  className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded hover:bg-gray-50 text-[11px] font-bold cursor-pointer"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
 
