@@ -14,6 +14,120 @@ interface Step2RelaxationProps {
   savedResult: FARRelaxationResult | null;
 }
 
+export const getIncentiveLegality = (id: string, zoning: string | undefined, area: number) => {
+  if (!zoning) {
+    return {
+      allowed: true,
+      reason: '대지 정보가 연동되지 않아 가상 시뮬레이션이 활성화되었습니다. 실제 대지 연동 시 용도지역에 따른 법적 규제가 엄격히 적용됩니다.'
+    };
+  }
+
+  const isCommercial = zoning.includes('상업');
+  const isQuasiResidential = zoning.includes('준주거');
+  const isResidential7 = zoning.includes('7층이하') || zoning.includes('제2종') || zoning.includes('제1종');
+
+  switch (id) {
+    case 'donation': // 1. 기부채납
+      return {
+        allowed: true,
+        reason: '모든 용도지역에서 기부채납을 통한 용적률 및 건폐율 완화 혜택을 법적으로 적극 지원합니다.'
+      };
+    
+    case 'openSpace': // 2. 공개공지
+      if (isResidential7 && area < 400) {
+        return {
+          allowed: false,
+          reason: '대지면적 400㎡ 미만의 소규모 저층주거지역(7층이하)은 조례상 공개공지 의무 대상이 아니며 완화 가산 적용이 법적으로 제외됩니다.'
+        };
+      }
+      return {
+        allowed: true,
+        reason: '건축법 및 서울시 조례에 따라 공개공지 설치 비율에 부합하는 용적률/높이 완화 인센티브를 적용할 수 있습니다.'
+      };
+      
+    case 'eco': // 3. 친환경
+      return {
+        allowed: true,
+        reason: '녹색건축물 조성 지원법에 따라 모든 용도지역에서 친환경 및 제로에너지 인증에 따른 가산 혜택(최대 12%p)이 가능합니다.'
+      };
+
+    case 'rental': // 4. 임대주택
+      if (isResidential7) {
+        return {
+          allowed: false,
+          reason: '제2종일반주거지역(7층이하) 등 저층 규제구역은 역세권 고밀 임대주택 완화 조항(법정상한 용적률 상향)의 수혜 대상이 아닙니다.'
+        };
+      }
+      return {
+        allowed: true,
+        reason: '역세권 및 조례 완화 조항에 정합하여, 일정 비율의 공공임대 공급을 통한 법정상한 용적률 완화 가점을 받을 수 있습니다.'
+      };
+
+    case 'hotel': // 5. 관광숙박
+      if (!isCommercial && !isQuasiResidential) {
+        return {
+          allowed: false,
+          reason: '관광숙박시설 활성화 특별조례에 따라 일반 주거지역(7층제한 포함)은 주거환경 정온성 보호를 위해 인센티브 대상에서 제외됩니다.'
+        };
+      }
+      return {
+        allowed: true,
+        reason: '상업/준주거지역 내 관광숙박시설(관광호텔 등) 도입 특례 규정에 의거하여 특별 용적률 완화 혜택이 주어집니다.'
+      };
+
+    case 'specialArchitectural': // 6. 특별건축구역
+      if (area < 400) {
+        return {
+          allowed: false,
+          reason: '대지면적 400㎡ 미만의 소형 필지는 건축법상 창의적 도시미관 기여 기준에 부합하지 않아 특별건축구역 지정 대상에서 법적으로 제외됩니다.'
+        };
+      }
+      return {
+        allowed: true,
+        reason: '지정 규모 조건에 부합하며, 디자인 및 공공성 확보 시 높이/일조/사선 제한 유연화 및 용적률 완화를 병행 적용할 수 있습니다.'
+      };
+
+    case 'openGreen': // 7. 개방형 녹지
+      if (!isCommercial) {
+        return {
+          allowed: false,
+          reason: '개방형 녹지 인센티브는 서울시 "녹지생태도심 재창조 가이드라인"에 따라 중심 도심권의 상업지역에만 국한 적용되는 특별법적 규정입니다.'
+        };
+      }
+      return {
+        allowed: true,
+        reason: '상업지역 고밀복합개발 가이드라인에 따라 개방형 녹지비율 조성을 통한 획기적인 친녹색 도심 인센티브를 산정합니다.'
+      };
+
+    case 'creativeDesign': // 8. 창의혁신 디자인
+      if (isResidential7) {
+        return {
+          allowed: false,
+          reason: '서울시 "도시·건축 디자인 혁신 방안"에 따라 저층 노후주거지역(7층이하) 소규모 개발은 심의 대상 및 특별 인센티브 수혜에서 법적으로 제외됩니다.'
+        };
+      }
+      return {
+        allowed: true,
+        reason: '지자체 창의·혁신 공모 가이드라인을 통과할 경우, 독창적 디자인 및 예술적 가점을 부여받을 수 있습니다.'
+      };
+
+    case 'mixedUse': // 9. 주거·비주거 복합용도
+      if (!isCommercial && !isQuasiResidential) {
+        return {
+          allowed: false,
+          reason: '주거·비주거 비율 및 복합용도 개발 인센티브는 상업지역 및 준주거지역 내의 주상복합 건축물에 한해 조례로 규정된 특례입니다.'
+        };
+      }
+      return {
+        allowed: true,
+        reason: '상업/준주거구역 내 주상복합 용도 배분 조례에 정합하여, 비주거 비율 확보 시 고밀 완화 특례가 자동 가산 연산됩니다.'
+      };
+
+    default:
+      return { allowed: true, reason: '' };
+  }
+};
+
 export default function Step2Relaxation({ currentLand, onCalculationComplete, savedResult }: Step2RelaxationProps) {
   // Setup inputs depending on whether we have Step 1 land profile loaded
   const landArea = currentLand ? currentLand.areaSize : 500;
@@ -118,41 +232,83 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
       : 20
   );
 
+  // Evaluate legalities
+  const legalityDonation = getIncentiveLegality('donation', currentLand?.zoning, landArea);
+  const legalityOpenSpace = getIncentiveLegality('openSpace', currentLand?.zoning, landArea);
+  const legalityEco = getIncentiveLegality('eco', currentLand?.zoning, landArea);
+  const legalityRental = getIncentiveLegality('rental', currentLand?.zoning, landArea);
+  const legalityHotel = getIncentiveLegality('hotel', currentLand?.zoning, landArea);
+  const legalitySpecialArchitectural = getIncentiveLegality('specialArchitectural', currentLand?.zoning, landArea);
+  const legalityOpenGreen = getIncentiveLegality('openGreen', currentLand?.zoning, landArea);
+  const legalityCreativeDesign = getIncentiveLegality('creativeDesign', currentLand?.zoning, landArea);
+  const legalityMixedUse = getIncentiveLegality('mixedUse', currentLand?.zoning, landArea);
+
+  // Auto-reset disallowed options when land zoning changes
+  useEffect(() => {
+    if (!currentLand) return;
+    const zoning = currentLand.zoning;
+    const area = currentLand.areaSize;
+
+    if (!getIncentiveLegality('openSpace', zoning, area).allowed) {
+      setHasPublicOpenSpace(false);
+    }
+    if (!getIncentiveLegality('rental', zoning, area).allowed) {
+      setRentalHousingRatio(0);
+    }
+    if (!getIncentiveLegality('hotel', zoning, area).allowed) {
+      setHasHotelIncentive(false);
+    }
+    if (!getIncentiveLegality('specialArchitectural', zoning, area).allowed) {
+      setHasSpecialArchitecturalZone(false);
+    }
+    if (!getIncentiveLegality('openGreen', zoning, area).allowed) {
+      setHasOpenGreenSpace(false);
+    }
+    if (!getIncentiveLegality('creativeDesign', zoning, area).allowed) {
+      setHasCreativeDesign(false);
+    }
+    if (!getIncentiveLegality('mixedUse', zoning, area).allowed) {
+      setHasMixedUseIncentive(false);
+    }
+  }, [currentLand]);
+
   // Unified calculations
   const buildingEquivalentArea = hasDonatedBuilding ? (donatedBuildingArea * 0.3) : 0;
   const cashEquivalentArea = hasDonatedCash ? (donatedCashAmount * 10000 / landAppraisalValue) : 0;
   const totalEquivalentDonatedArea = (hasDonatedLand ? donatedArea : 0) + buildingEquivalentArea + cashEquivalentArea;
   const remainingArea = Math.max(1, landArea - (hasDonatedLand ? donatedArea : 0));
 
-  const donationLandBonus = remainingArea > 0 ? parseFloat((baselineFAR * 1.5 * ((hasDonatedLand ? donatedArea : 0) / remainingArea)).toFixed(2)) : 0;
-  const donationBuildingBonus = remainingArea > 0 ? parseFloat((baselineFAR * 1.5 * (buildingEquivalentArea / remainingArea)).toFixed(2)) : 0;
-  const donationCashBonus = remainingArea > 0 ? parseFloat((baselineFAR * 1.5 * (cashEquivalentArea / remainingArea)).toFixed(2)) : 0;
+  const donationLandBonus = legalityDonation.allowed && remainingArea > 0 ? parseFloat((baselineFAR * 1.5 * ((hasDonatedLand ? donatedArea : 0) / remainingArea)).toFixed(2)) : 0;
+  const donationBuildingBonus = legalityDonation.allowed && remainingArea > 0 ? parseFloat((baselineFAR * 1.5 * (buildingEquivalentArea / remainingArea)).toFixed(2)) : 0;
+  const donationCashBonus = legalityDonation.allowed && remainingArea > 0 ? parseFloat((baselineFAR * 1.5 * (cashEquivalentArea / remainingArea)).toFixed(2)) : 0;
   const donationBonus = parseFloat((donationLandBonus + donationBuildingBonus + donationCashBonus).toFixed(2));
 
-  const openSpaceBonus = hasPublicOpenSpace ? parseFloat((baselineFAR * 0.12 * (publicOpenSpaceRatio / 10)).toFixed(2)) : 0;
+  const openSpaceBonus = legalityOpenSpace.allowed && hasPublicOpenSpace ? parseFloat((baselineFAR * 0.12 * (publicOpenSpaceRatio / 10)).toFixed(2)) : 0;
   
   let ecoBonus = 0;
-  if (ecoFriendlyCert === 'green') ecoBonus = parseFloat((baselineFAR * 0.05).toFixed(2));
-  else if (ecoFriendlyCert === 'energy') ecoBonus = parseFloat((baselineFAR * 0.08).toFixed(2));
-  else if (ecoFriendlyCert === 'both') ecoBonus = parseFloat((baselineFAR * 0.12).toFixed(2));
+  if (legalityEco.allowed) {
+    if (ecoFriendlyCert === 'green') ecoBonus = parseFloat((baselineFAR * 0.05).toFixed(2));
+    else if (ecoFriendlyCert === 'energy') ecoBonus = parseFloat((baselineFAR * 0.08).toFixed(2));
+    else if (ecoFriendlyCert === 'both') ecoBonus = parseFloat((baselineFAR * 0.12).toFixed(2));
+  }
 
-  const rentalBonus = parseFloat((rentalHousingRatio * 1.5).toFixed(2));
+  const rentalBonus = legalityRental.allowed ? parseFloat((rentalHousingRatio * 1.5).toFixed(2)) : 0;
 
-  const hotelBonus = hasHotelIncentive 
+  const hotelBonus = legalityHotel.allowed && hasHotelIncentive 
     ? (hotelIncentiveLevel === 'standard' ? 15 : hotelIncentiveLevel === 'premium' ? 30 : 50) 
     : 0;
 
-  const specialArchitecturalZoneBonus = hasSpecialArchitecturalZone 
+  const specialArchitecturalZoneBonus = legalitySpecialArchitectural.allowed && hasSpecialArchitecturalZone 
     ? (specialArchitecturalZoneType === 'standard' ? 10 : specialArchitecturalZoneType === 'excellence' ? 15 : 25) 
     : 0;
 
-  const openGreenSpaceBonus = hasOpenGreenSpace ? parseFloat((openGreenSpaceRatio * 1.2).toFixed(2)) : 0;
+  const openGreenSpaceBonus = legalityOpenGreen.allowed && hasOpenGreenSpace ? parseFloat((openGreenSpaceRatio * 1.2).toFixed(2)) : 0;
 
-  const creativeDesignBonus = hasCreativeDesign 
+  const creativeDesignBonus = legalityCreativeDesign.allowed && hasCreativeDesign 
     ? (creativeDesignLevel === 'standard' ? 20 : 40) 
     : 0;
 
-  const mixedUseBonus = hasMixedUseIncentive ? Math.min(40, nonResidentialRatio) : 0;
+  const mixedUseBonus = legalityMixedUse.allowed && hasMixedUseIncentive ? Math.min(40, nonResidentialRatio) : 0;
 
   const currentTotalFAR = parseFloat((baselineFAR + donationBonus + openSpaceBonus + ecoBonus + rentalBonus + hotelBonus + specialArchitecturalZoneBonus + openGreenSpaceBonus + creativeDesignBonus + mixedUseBonus).toFixed(1));
 
@@ -308,12 +464,19 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
           <div className="lg:col-span-7 space-y-6">
             
             {/* Input 1: Comprehensive Public Contribution (기부채납) */}
-            <div className="p-4 rounded-xl border border-gray-100 bg-[#FCFAF7] space-y-4">
+            <div className={`p-4 rounded-xl border transition-all ${
+              !legalityDonation.allowed ? 'bg-gray-100/50 border-gray-200 opacity-70 select-none' : 'bg-[#FCFAF7] border-gray-100'
+            } space-y-4`}>
               <div className="flex justify-between items-center border-b border-[#EDDBC7]/60 pb-2">
-                <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
-                  <Coins className="w-4 h-4 text-[#5F7161]" />
-                  1. 기부채납(공공 기여) 종합 계획
-                </span>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
+                    <Coins className="w-4 h-4 text-[#5F7161]" />
+                    1. 기부채납(공공 기여) 종합 계획
+                  </span>
+                  <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold self-start inline-block">
+                    ✓ 법정 상시 적용 가능
+                  </span>
+                </div>
                 <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
                   총 완화 가점 +{donationBonus.toFixed(1)}%p
                 </span>
@@ -390,7 +553,7 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
                     className="pl-5 space-y-3"
                   >
                     <p className="text-[10px] text-gray-400 leading-normal">
-                      어린이집, 도서관 등을 건축하여 지자체에 기부하는 경우로, 표준건축비와 대지감정평가 비율에 맞춰 부지 면적으로 환산 적용됩니다 (약 1㎡ ➔ 0.3㎡ 대지 환산).
+                      어린이집, 도서관 등을 건축하여 지자체에 기부하는 경우로, 표준건축비 and 대지감정평가 비율에 맞춰 부지 면적으로 환산 적용됩니다 (약 1㎡ ➔ 0.3㎡ 대지 환산).
                     </p>
                     <div className="space-y-1">
                       <div className="flex justify-between text-[10px] text-gray-500">
@@ -521,24 +684,38 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
             </div>
 
             {/* Input 2: Public Open Space (공개공지) */}
-            <div className="p-4 rounded-xl border border-gray-100 bg-[#FCFAF7] space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
-                  <Trees className="w-4 h-4 text-[#5F7161]" />
-                  2. 공개공지(Public Open Space) 확보 계획
-                </span>
+            <div className={`p-4 rounded-xl border transition-all ${
+              !legalityOpenSpace.allowed ? 'bg-gray-100/50 border-gray-200 opacity-70' : 'bg-[#FCFAF7] border-gray-100'
+            } space-y-3`}>
+              <div className="flex justify-between items-start">
+                <div className="flex flex-col gap-1 max-w-[85%]">
+                  <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
+                    <Trees className="w-4 h-4 text-[#5F7161]" />
+                    2. 공개공지(Public Open Space) 확보 계획
+                  </span>
+                  {!legalityOpenSpace.allowed ? (
+                    <div className="mt-1 p-2 bg-amber-50 border border-amber-200/60 rounded-lg text-[10px] text-amber-800 font-medium leading-relaxed">
+                      ⚠️ {legalityOpenSpace.reason}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold self-start mt-1 inline-block">
+                      ✓ 법적 가능: {legalityOpenSpace.reason}
+                    </span>
+                  )}
+                </div>
                 <input
                   type="checkbox"
+                  disabled={!legalityOpenSpace.allowed}
                   checked={hasPublicOpenSpace}
                   onChange={(e) => setHasPublicOpenSpace(e.target.checked)}
-                  className="w-4 h-4 rounded text-[#5F7161] focus:ring-[#5F7161]"
+                  className="w-4 h-4 rounded text-[#5F7161] focus:ring-[#5F7161] disabled:opacity-40"
                 />
               </div>
               <p className="text-[11px] text-[#8D7B68]">
                 도심 주민들이 자유롭게 거닐며 쉴 수 있도록 단지 앞 정원, 조경 벤치를 조성하여 개방하는 비율입니다.
               </p>
 
-              {hasPublicOpenSpace && (
+              {hasPublicOpenSpace && legalityOpenSpace.allowed && (
                 <motion.div 
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -566,11 +743,18 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
             </div>
 
             {/* Input 3: Green Arch & Energy efficient certifications (친환경 및 안전) */}
-            <div className="p-4 rounded-xl border border-gray-100 bg-[#FCFAF7] space-y-3">
-              <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
-                <Award className="w-4 h-4 text-[#5F7161]" />
-                3. 친환경 건축 인증 및 제로에너지 등급 여부
-              </span>
+            <div className={`p-4 rounded-xl border transition-all ${
+              !legalityEco.allowed ? 'bg-gray-100/50 border-gray-200 opacity-70 select-none' : 'bg-[#FCFAF7] border-gray-100'
+            } space-y-3`}>
+              <div className="flex flex-col gap-1 border-b border-[#EDDBC7]/60 pb-2">
+                <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
+                  <Award className="w-4 h-4 text-[#5F7161]" />
+                  3. 친환경 건축 인증 및 제로에너지 등급 여부
+                </span>
+                <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold self-start inline-block">
+                  ✓ 법적 가능: {legalityEco.reason}
+                </span>
+              </div>
               <p className="text-[11px] text-[#8D7B68]">
                 ESG 녹색 기여도에 맞춰 지자체가 최대 12%의 용적률을 가산해 줍니다.
               </p>
@@ -584,12 +768,13 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
                   <button
                     key={item.value}
                     type="button"
+                    disabled={!legalityEco.allowed}
                     onClick={() => setEcoFriendlyCert(item.value as any)}
                     className={`py-2 px-3 text-[11px] rounded-lg border text-left font-medium transition ${
                       ecoFriendlyCert === item.value
                         ? 'border-[#5F7161] bg-[#5F7161]/5 text-[#5F7161] font-semibold'
                         : 'border-gray-200 hover:bg-gray-50 text-gray-600'
-                    }`}
+                    } disabled:opacity-40`}
                   >
                     {item.label}
                   </button>
@@ -598,51 +783,84 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
             </div>
 
             {/* Input 4: Public Rental Housing (공동주택 상생 임대주택) */}
-            <div className="p-4 rounded-xl border border-gray-100 bg-[#FCFAF7] space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
-                  <Home className="w-4 h-4 text-[#5F7161]" />
-                  4. 공공기여 장기전세/공공임대 임대비율 추가
-                </span>
-                <span className="text-xs font-semibold text-indigo-700">{rentalHousingRatio}% 연계</span>
+            <div className={`p-4 rounded-xl border transition-all ${
+              !legalityRental.allowed ? 'bg-gray-100/50 border-gray-200 opacity-70' : 'bg-[#FCFAF7] border-gray-100'
+            } space-y-3`}>
+              <div className="flex justify-between items-start">
+                <div className="flex flex-col gap-1 max-w-[85%]">
+                  <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
+                    <Home className="w-4 h-4 text-[#5F7161]" />
+                    4. 공공기여 장기전세/공공임대 임대비율 추가
+                  </span>
+                  {!legalityRental.allowed ? (
+                    <div className="mt-1 p-2 bg-amber-50 border border-amber-200/60 rounded-lg text-[10px] text-amber-800 font-medium leading-relaxed">
+                      ⚠️ {legalityRental.reason}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold self-start mt-1 inline-block">
+                      ✓ 법적 가능: {legalityRental.reason}
+                    </span>
+                  )}
+                </div>
+                {legalityRental.allowed && (
+                  <span className="text-xs font-semibold text-indigo-700">{rentalHousingRatio}% 연계</span>
+                )}
               </div>
               <p className="text-[11px] text-[#8D7B68]">
                 연면적 중 일정 지분을 지자체 공임 주택용으로 기부 및 위탁 운영 약정 시, 법정상한선(조례의 최대 1.5배)까지 파격 상향 완화됩니다.
               </p>
-              <input
-                type="range"
-                min="0"
-                max="25"
-                step="1"
-                value={rentalHousingRatio}
-                onChange={(e) => setRentalHousingRatio(Number(e.target.value))}
-                className="w-full accent-[#5F7161]"
-              />
-              <div className="flex justify-between text-[10px] text-gray-400">
-                <span>0% (일반 분양 올인)</span>
-                <span>25% (공동상생 역세권 복합형 임대)</span>
-              </div>
+              {legalityRental.allowed && (
+                <>
+                  <input
+                    type="range"
+                    min="0"
+                    max="25"
+                    step="1"
+                    value={rentalHousingRatio}
+                    onChange={(e) => setRentalHousingRatio(Number(e.target.value))}
+                    className="w-full accent-[#5F7161]"
+                  />
+                  <div className="flex justify-between text-[10px] text-gray-400">
+                    <span>0% (일반 분양 올인)</span>
+                    <span>25% (공동상생 역세권 복합형 임대)</span>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Input 5: Tourism Accommodation Facility (관광숙박시설 완화 인센티브) */}
-            <div className="p-4 rounded-xl border border-gray-100 bg-[#FCFAF7] space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
-                  <Hotel className="w-4 h-4 text-[#5F7161]" />
-                  5. 관광숙박시설(관광호텔 등) 완화 인센티브 추가
-                </span>
+            <div className={`p-4 rounded-xl border transition-all ${
+              !legalityHotel.allowed ? 'bg-gray-100/50 border-gray-200 opacity-70' : 'bg-[#FCFAF7] border-gray-100'
+            } space-y-3`}>
+              <div className="flex justify-between items-start">
+                <div className="flex flex-col gap-1 max-w-[85%]">
+                  <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
+                    <Hotel className="w-4 h-4 text-[#5F7161]" />
+                    5. 관광숙박시설(관광호텔 등) 완화 인센티브 추가
+                  </span>
+                  {!legalityHotel.allowed ? (
+                    <div className="mt-1 p-2 bg-amber-50 border border-amber-200/60 rounded-lg text-[10px] text-amber-800 font-medium leading-relaxed">
+                      ⚠️ {legalityHotel.reason}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold self-start mt-1 inline-block">
+                      ✓ 법적 가능: {legalityHotel.reason}
+                    </span>
+                  )}
+                </div>
                 <input
                   type="checkbox"
+                  disabled={!legalityHotel.allowed}
                   checked={hasHotelIncentive}
                   onChange={(e) => setHasHotelIncentive(e.target.checked)}
-                  className="w-4 h-4 rounded text-[#5F7161] focus:ring-[#5F7161]"
+                  className="w-4 h-4 rounded text-[#5F7161] focus:ring-[#5F7161] disabled:opacity-40"
                 />
               </div>
               <p className="text-[11px] text-[#8D7B68]">
                 관광진흥 조례 및 지자체 건축 특별 조항에 의거, 관광숙박 목적의 시설 설계를 기획할 때 부여되는 고밀 특별 완화 수혜 혜택입니다.
               </p>
 
-              {hasHotelIncentive && (
+              {hasHotelIncentive && legalityHotel.allowed && (
                 <motion.div 
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -674,24 +892,38 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
             </div>
 
             {/* Input 6: Special Architectural Zone (특별건축구역) */}
-            <div className="p-4 rounded-xl border border-gray-100 bg-[#FCFAF7] space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
-                  <Building2 className="w-4 h-4 text-[#5F7161]" />
-                  6. 특별건축구역 지정 인센티브
-                </span>
+            <div className={`p-4 rounded-xl border transition-all ${
+              !legalitySpecialArchitectural.allowed ? 'bg-gray-100/50 border-gray-200 opacity-70' : 'bg-[#FCFAF7] border-gray-100'
+            } space-y-3`}>
+              <div className="flex justify-between items-start">
+                <div className="flex flex-col gap-1 max-w-[85%]">
+                  <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
+                    <Building2 className="w-4 h-4 text-[#5F7161]" />
+                    6. 특별건축구역 지정 인센티브
+                  </span>
+                  {!legalitySpecialArchitectural.allowed ? (
+                    <div className="mt-1 p-2 bg-amber-50 border border-amber-200/60 rounded-lg text-[10px] text-amber-800 font-medium leading-relaxed">
+                      ⚠️ {legalitySpecialArchitectural.reason}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold self-start mt-1 inline-block">
+                      ✓ 법적 가능: {legalitySpecialArchitectural.reason}
+                    </span>
+                  )}
+                </div>
                 <input
                   type="checkbox"
+                  disabled={!legalitySpecialArchitectural.allowed}
                   checked={hasSpecialArchitecturalZone}
                   onChange={(e) => setHasSpecialArchitecturalZone(e.target.checked)}
-                  className="w-4 h-4 rounded text-[#5F7161] focus:ring-[#5F7161]"
+                  className="w-4 h-4 rounded text-[#5F7161] focus:ring-[#5F7161] disabled:opacity-40"
                 />
               </div>
               <p className="text-[11px] text-[#8D7B68]">
                 디자인 자유도와 공공성 확보를 위해 특별건축구역으로 지정받을 경우, 일조 사선제한 및 높이 규제가 유연화되며 완화 특례 혜택이 부여됩니다.
               </p>
 
-              {hasSpecialArchitecturalZone && (
+              {hasSpecialArchitecturalZone && legalitySpecialArchitectural.allowed && (
                 <motion.div 
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -723,24 +955,38 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
             </div>
 
             {/* Input 7: Open Green Space (개방형 녹지) */}
-            <div className="p-4 rounded-xl border border-gray-100 bg-[#FCFAF7] space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
-                  <Leaf className="w-4 h-4 text-[#5F7161]" />
-                  7. 개방형 녹지(Open Green Space) 도입 인센티브
-                </span>
+            <div className={`p-4 rounded-xl border transition-all ${
+              !legalityOpenGreen.allowed ? 'bg-gray-100/50 border-gray-200 opacity-70' : 'bg-[#FCFAF7] border-gray-100'
+            } space-y-3`}>
+              <div className="flex justify-between items-start">
+                <div className="flex flex-col gap-1 max-w-[85%]">
+                  <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
+                    <Leaf className="w-4 h-4 text-[#5F7161]" />
+                    7. 개방형 녹지(Open Green Space) 도입 인센티브
+                  </span>
+                  {!legalityOpenGreen.allowed ? (
+                    <div className="mt-1 p-2 bg-amber-50 border border-amber-200/60 rounded-lg text-[10px] text-amber-800 font-medium leading-relaxed">
+                      ⚠️ {legalityOpenGreen.reason}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold self-start mt-1 inline-block">
+                      ✓ 법적 가능: {legalityOpenGreen.reason}
+                    </span>
+                  )}
+                </div>
                 <input
                   type="checkbox"
+                  disabled={!legalityOpenGreen.allowed}
                   checked={hasOpenGreenSpace}
                   onChange={(e) => setHasOpenGreenSpace(e.target.checked)}
-                  className="w-4 h-4 rounded text-[#5F7161] focus:ring-[#5F7161]"
+                  className="w-4 h-4 rounded text-[#5F7161] focus:ring-[#5F7161] disabled:opacity-40"
                 />
               </div>
               <p className="text-[11px] text-[#8D7B68]">
                 녹지생태도심 재창조 가이드라인에 부합하여, 지상부에 시민들을 위한 개방형 숲 및 테마 공원을 조성할 때 기여도 비례 추가 완화 혜택을 받습니다.
               </p>
 
-              {hasOpenGreenSpace && (
+              {hasOpenGreenSpace && legalityOpenGreen.allowed && (
                 <motion.div 
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -768,24 +1014,38 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
             </div>
 
             {/* Input 8: Creative & Innovative Design (도시·건축 창의혁신 디자인) */}
-            <div className="p-4 rounded-xl border border-gray-100 bg-[#FCFAF7] space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-[#5F7161]" />
-                  8. 창의·혁신 디자인 설계 인센티브
-                </span>
+            <div className={`p-4 rounded-xl border transition-all ${
+              !legalityCreativeDesign.allowed ? 'bg-gray-100/50 border-gray-200 opacity-70' : 'bg-[#FCFAF7] border-gray-100'
+            } space-y-3`}>
+              <div className="flex justify-between items-start">
+                <div className="flex flex-col gap-1 max-w-[85%]">
+                  <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-[#5F7161]" />
+                    8. 창의·혁신 디자인 설계 인센티브
+                  </span>
+                  {!legalityCreativeDesign.allowed ? (
+                    <div className="mt-1 p-2 bg-amber-50 border border-amber-200/60 rounded-lg text-[10px] text-amber-800 font-medium leading-relaxed">
+                      ⚠️ {legalityCreativeDesign.reason}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold self-start mt-1 inline-block">
+                      ✓ 법적 가능: {legalityCreativeDesign.reason}
+                    </span>
+                  )}
+                </div>
                 <input
                   type="checkbox"
+                  disabled={!legalityCreativeDesign.allowed}
                   checked={hasCreativeDesign}
                   onChange={(e) => setHasCreativeDesign(e.target.checked)}
-                  className="w-4 h-4 rounded text-[#5F7161] focus:ring-[#5F7161]"
+                  className="w-4 h-4 rounded text-[#5F7161] focus:ring-[#5F7161] disabled:opacity-40"
                 />
               </div>
               <p className="text-[11px] text-[#8D7B68]">
                 서울시 "도시·건축 디자인 혁신 방안"에 정합하여 독창적이고 예술적인 입면 및 혁신 외관 공모에 선정 시 부여받는 강력한 인센티브입니다.
               </p>
 
-              {hasCreativeDesign && (
+              {hasCreativeDesign && legalityCreativeDesign.allowed && (
                 <motion.div 
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -816,24 +1076,38 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
             </div>
 
             {/* Input 9: Residential/Non-Residential Ratio (주거, 비주거 비율 및 복합 인센티브) */}
-            <div className="p-4 rounded-xl border border-gray-100 bg-[#FCFAF7] space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
-                  <Sliders className="w-4 h-4 text-[#5F7161]" />
-                  9. 주거·비주거 비율 및 복합용도 인센티브
-                </span>
+            <div className={`p-4 rounded-xl border transition-all ${
+              !legalityMixedUse.allowed ? 'bg-gray-100/50 border-gray-200 opacity-70' : 'bg-[#FCFAF7] border-gray-100'
+            } space-y-3`}>
+              <div className="flex justify-between items-start">
+                <div className="flex flex-col gap-1 max-w-[85%]">
+                  <span className="text-xs font-bold text-[#3E362E] flex items-center gap-1.5">
+                    <Sliders className="w-4 h-4 text-[#5F7161]" />
+                    9. 주거·비주거 비율 및 복합용도 인센티브
+                  </span>
+                  {!legalityMixedUse.allowed ? (
+                    <div className="mt-1 p-2 bg-amber-50 border border-amber-200/60 rounded-lg text-[10px] text-amber-800 font-medium leading-relaxed">
+                      ⚠️ {legalityMixedUse.reason}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold self-start mt-1 inline-block">
+                      ✓ 법적 가능: {legalityMixedUse.reason}
+                    </span>
+                  )}
+                </div>
                 <input
                   type="checkbox"
+                  disabled={!legalityMixedUse.allowed}
                   checked={hasMixedUseIncentive}
                   onChange={(e) => setHasMixedUseIncentive(e.target.checked)}
-                  className="w-4 h-4 rounded text-[#5F7161] focus:ring-[#5F7161]"
+                  className="w-4 h-4 rounded text-[#5F7161] focus:ring-[#5F7161] disabled:opacity-40"
                 />
               </div>
               <p className="text-[11px] text-[#8D7B68]">
                 상업·준주거지역 내 주거복합 건축물에서 상업·업무·문화 목적의 비주거 의무비율을 상향하여 복합 활성화에 기여할 시 주어지는 보너스 가산 혜택입니다.
               </p>
 
-              {hasMixedUseIncentive && (
+              {hasMixedUseIncentive && legalityMixedUse.allowed && (
                 <motion.div 
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
