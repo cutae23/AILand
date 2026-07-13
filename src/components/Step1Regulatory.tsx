@@ -406,9 +406,9 @@ export default function Step1Regulatory({
         </p>
 
         {!analysisResult ? (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="flex flex-col gap-6">
             {/* Left Input Fields */}
-            <div className="lg:col-span-12 xl:col-span-7 space-y-5">
+            <div className="w-full space-y-5">
               
               {/* Gemini API Key Registration & Settings block */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 shadow-xs">
@@ -631,8 +631,8 @@ export default function Step1Regulatory({
               </button>
             </div>
 
-            {/* Right Information Help Panel */}
-            <div className="lg:col-span-5 bg-slate-50/40 p-5 rounded-xl border border-slate-100 flex flex-col justify-between gap-5">
+            {/* Right Information Help Panel (Full Width for mobile & sequential flow) */}
+            <div className="w-full bg-slate-50/40 p-5 rounded-xl border border-slate-100 flex flex-col justify-between gap-5">
               <div className="space-y-4">
                 {/* 1. Predefined Sample Lands */}
                 <div>

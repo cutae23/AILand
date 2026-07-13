@@ -459,9 +459,9 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
           의무 임대주택 공급 약정 비율을 조절해가며 최종 완화 적용 용적률을 시뮬레이션 합니다.
         </p>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Controls - Left */}
-          <div className="lg:col-span-7 space-y-6">
+        <div className="flex flex-col gap-8">
+          {/* Controls - Left (Full Width for mobile & sequential flow) */}
+          <div className="w-full space-y-6">
             
             {/* Input 1: Comprehensive Public Contribution (기부채납) */}
             <div className={`p-4 rounded-xl border transition-all ${
@@ -1236,8 +1236,8 @@ export default function Step2Relaxation({ currentLand, onCalculationComplete, sa
 
           </div>
 
-          {/* Results Gauge - Right Side */}
-          <div className="lg:col-span-5 bg-[#F2F0ED] p-5 rounded-2xl border border-[#E5E2DD] flex flex-col justify-between">
+          {/* Results Gauge - Right Side (Full Width for mobile & sequential flow) */}
+          <div className="w-full bg-[#F2F0ED] p-5 rounded-2xl border border-[#E5E2DD] flex flex-col justify-between">
             <div>
               <h3 className="text-xs font-bold text-[#8D7B68] uppercase tracking-widest mb-6">완화 후 건축 가용성</h3>
               

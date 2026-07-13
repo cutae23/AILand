@@ -1450,9 +1450,9 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* LEFT: INPUTS (5 Columns) */}
-          <div className="lg:col-span-5 space-y-6">
+        <div className="flex flex-col gap-8">
+          {/* LEFT: INPUTS (Full Width for mobile & sequential flow) */}
+          <div className="w-full space-y-6">
             {activeStep === 4 && (
               <div className="space-y-6">
                 {/* 1. Step 3 설계 기획 개요 (분석 기준안) */}
@@ -4223,8 +4223,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
             </div>
           </div>
 
-          {/* RIGHT: RESULTS (7 Columns) */}
-          <div className="lg:col-span-7 space-y-6">
+          {/* RIGHT: RESULTS (Full Width for mobile & sequential flow) */}
+          <div className="w-full space-y-6">
             {activeStep === 3 && (
               <div className="p-5 bg-white rounded-2xl border border-gray-150 shadow-sm space-y-5 animate-fadeIn">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
