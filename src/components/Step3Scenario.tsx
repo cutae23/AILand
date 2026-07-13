@@ -2053,6 +2053,159 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                     </div>
                   </div>
                 </div>
+
+                {/* [ADDITION] 공동주택 및 오피스텔 부대시설 기획 */}
+                <div className="p-4 bg-[#FCFAF7] border border-[#EDDBC7]/60 rounded-2xl space-y-4 shadow-xs">
+                  <h4 className="text-xs font-bold text-[#2C251F] uppercase tracking-wider border-b border-gray-150 pb-2 flex justify-between items-center">
+                    <span className="flex items-center gap-1.5">
+                      <Home className="w-4 h-4 text-[#5F7161]" />
+                      🏡 주거시설 부대복리시설 기획 (면적)
+                    </span>
+                    <span className="text-[10px] text-[#5F7161] font-bold font-mono">주거 부대시설 합계: {aptAuxArea + officetelAuxArea} 평</span>
+                  </h4>
+
+                  <div className="space-y-4 text-xs">
+                    {/* 공동주택 */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center font-medium">
+                        <span className="text-gray-600 font-semibold">공동주택 부대시설 (피트니스, 시니어클럽 등)</span>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min="0"
+                            max="1000"
+                            value={aptAuxArea}
+                            disabled={useCustomResidentFacilities}
+                            onChange={(e) => setAptAuxArea(Math.max(0, Math.min(1000, Number(e.target.value) || 0)))}
+                            className={`w-14 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-[#5F7161] font-mono ${useCustomResidentFacilities ? 'opacity-70 bg-gray-50 text-gray-500' : ''}`}
+                          />
+                          <span className="font-bold text-gray-800">평</span>
+                        </div>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={Math.min(aptAuxArea, 100)}
+                        disabled={useCustomResidentFacilities}
+                        onChange={(e) => setAptAuxArea(Number(e.target.value))}
+                        className={`w-full accent-[#5F7161] ${useCustomResidentFacilities ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      />
+
+                      {/* 주민공동시설 세부 목록 수기 입력 */}
+                      <div className="mt-2 bg-slate-50 p-2.5 rounded-xl border border-gray-150 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-bold text-gray-700">
+                            <input
+                              type="checkbox"
+                              checked={useCustomResidentFacilities}
+                              onChange={(e) => setUseCustomResidentFacilities(e.target.checked)}
+                              className="rounded text-[#5F7161] focus:ring-[#5F7161] w-3.5 h-3.5"
+                            />
+                            <span>주민공동시설 수기 세부 구성</span>
+                          </label>
+                          {useCustomResidentFacilities && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newId = Date.now().toString();
+                                setResidentFacilities(prev => [...prev, { id: newId, name: '새 주민공동시설', area: 3 }]);
+                              }}
+                              className="text-[10px] text-[#5F7161] hover:text-emerald-800 font-bold flex items-center gap-0.5 cursor-pointer bg-white px-2 py-0.5 rounded-md border border-gray-200"
+                            >
+                              <Plus className="w-3 h-3" />
+                              추가
+                            </button>
+                          )}
+                        </div>
+
+                        {useCustomResidentFacilities ? (
+                          <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+                            {residentFacilities.length === 0 ? (
+                              <p className="text-[10px] text-gray-400 italic text-center py-2">등록된 시설이 없습니다. 우측 상단의 추가 버튼을 눌러 등록해 주세요.</p>
+                            ) : (
+                              residentFacilities.map((f, idx) => (
+                                <div key={f.id} className="flex items-center gap-1.5 bg-white p-1.5 rounded-lg border border-gray-150">
+                                  <span className="text-[10px] text-gray-400 font-mono w-4 text-center">{idx + 1}</span>
+                                  <input
+                                    type="text"
+                                    value={f.name}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setResidentFacilities(prev => prev.map(item => item.id === f.id ? { ...item, name: val } : item));
+                                    }}
+                                    placeholder="시설명 (예: 독서실)"
+                                    className="flex-1 bg-transparent border-0 border-b border-transparent hover:border-gray-200 focus:border-[#5F7161] px-1 py-0.5 text-xs text-gray-800 focus:outline-none font-bold"
+                                  />
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="500"
+                                      value={f.area}
+                                      onChange={(e) => {
+                                        const val = Math.max(0, Math.min(500, Number(e.target.value) || 0));
+                                        setResidentFacilities(prev => prev.map(item => item.id === f.id ? { ...item, area: val } : item));
+                                      }}
+                                      className="w-10 text-center font-semibold bg-gray-50 border border-gray-200 py-0.5 rounded text-[11px] font-mono focus:outline-none focus:border-[#5F7161]"
+                                    />
+                                    <span className="text-[10px] text-gray-500 font-bold">평</span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setResidentFacilities(prev => prev.filter(item => item.id !== f.id));
+                                    }}
+                                    className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-red-50 transition cursor-pointer"
+                                    title="삭제"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ))
+                            )}
+                            <div className="flex justify-between items-center text-[10px] text-[#5F7161] font-semibold border-t border-gray-100 pt-1.5 px-1 mt-1">
+                              <span>합계 (자동 연동)</span>
+                              <span className="font-mono">{aptAuxArea}평 (약 {Math.round(aptAuxArea * 3.3)}㎡)</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-gray-400 leading-relaxed">
+                            주민공동시설 수기 세부 구성 체크박스를 선택하면, 피트니스, 경로당, 어린이집 등 개별 주민공동시설을 명시적으로 설계에 등록하고 각 면적을 상세 조절할 수 있습니다.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 오피스텔 */}
+                    <div className="space-y-1.5 border-t border-gray-100 pt-3">
+                      <div className="flex justify-between items-center font-medium">
+                        <span className="text-gray-600 font-semibold">오피스텔 부대시설 (라운지, 공유세탁실 등)</span>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min="0"
+                            max="1000"
+                            value={officetelAuxArea}
+                            onChange={(e) => setOfficetelAuxArea(Math.max(0, Math.min(1000, Number(e.target.value) || 0)))}
+                            className="w-14 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-[#5F7161] font-mono"
+                          />
+                          <span className="font-bold text-gray-800">평</span>
+                        </div>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="50"
+                        step="1"
+                        value={Math.min(officetelAuxArea, 50)}
+                        onChange={(e) => setOfficetelAuxArea(Number(e.target.value))}
+                        className="w-full accent-[#5F7161]"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -2226,6 +2379,48 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                     )}
                   </div>
                 )}
+
+                {/* [ADDITION] 호텔 부대복리시설 기획 */}
+                <div className="p-4 bg-[#FCFAF7] border border-[#EDDBC7]/60 rounded-2xl space-y-4 shadow-xs">
+                  <h4 className="text-xs font-bold text-[#2C251F] uppercase tracking-wider border-b border-gray-150 pb-2 flex justify-between items-center">
+                    <span className="flex items-center gap-1.5">
+                      <Building2 className="w-4 h-4 text-emerald-600" />
+                      🏨 호텔 부대복리시설 기획 (면적)
+                    </span>
+                    <span className="text-[10px] text-emerald-700 font-bold font-mono">{hotelAuxArea} 평 (약 {Math.round(hotelAuxArea * 3.3)}㎡)</span>
+                  </h4>
+
+                  <div className="space-y-3 text-xs">
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center font-medium">
+                        <span className="text-gray-600 font-semibold">호텔 부대복리시설 (레스토랑, 로비, 비즈니스룸 등)</span>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min="0"
+                            max="1000"
+                            value={hotelAuxArea}
+                            onChange={(e) => setHotelAuxArea(Math.max(0, Math.min(1000, Number(e.target.value) || 0)))}
+                            className="w-14 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-emerald-600 font-mono"
+                          />
+                          <span className="font-bold text-gray-800">평</span>
+                        </div>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="200"
+                        step="5"
+                        value={Math.min(hotelAuxArea, 200)}
+                        onChange={(e) => setHotelAuxArea(Number(e.target.value))}
+                        className="w-full accent-emerald-600"
+                      />
+                      <p className="text-[10px] text-gray-400 mt-1">
+                        조식 식당, 세미나 회의실, 로비 라운지, 사우나 등 호텔의 서비스 공용 부대시설 연면적을 조정합니다. 이 면적은 호텔의 지상 연면적에 포함되어 수지분석에 영향을 줍니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
