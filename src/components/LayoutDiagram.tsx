@@ -713,9 +713,6 @@ export default function LayoutDiagram({
     if (preset.towerCount !== undefined) {
       setTowerCount(preset.towerCount);
     }
-    if (preset.aboveGroundFloors !== undefined) {
-      setAboveGroundFloors(preset.aboveGroundFloors);
-    }
     if (preset.podiumFloors !== undefined) {
       setPodiumFloors(preset.podiumFloors);
     }
@@ -724,11 +721,50 @@ export default function LayoutDiagram({
       setLineSizes(preset.lineSetup);
     }
     
-    if (setAptConfigs && preset.aptConfigs) {
-      setAptConfigs(preset.aptConfigs);
+    // Calculate current total units in parent to see if we should scale counts
+    const currentTotalApt = (aptConfigs || []).reduce((sum, item) => sum + item.count, 0);
+    const currentTotalOt = (officetelConfigs || []).reduce((sum, item) => sum + item.count, 0);
+    const prevTotalUnits = currentTotalApt + currentTotalOt;
+
+    let finalAptConfigs = preset.aptConfigs ? [...preset.aptConfigs] : [];
+    let finalOfficetelConfigs = preset.officetelConfigs ? [...preset.officetelConfigs] : [];
+    let calculatedFloors = preset.aboveGroundFloors || 8;
+
+    if (prevTotalUnits > 10) {
+      const presetTotalApt = (preset.aptConfigs || []).reduce((sum, item) => sum + item.count, 0);
+      const presetTotalOt = (preset.officetelConfigs || []).reduce((sum, item) => sum + item.count, 0);
+      const presetTotal = presetTotalApt + presetTotalOt;
+
+      if (presetTotal > 0) {
+        finalAptConfigs = (preset.aptConfigs || []).map(cfg => {
+          const ratio = cfg.count / presetTotal;
+          const scaledCount = Math.round(prevTotalUnits * ratio);
+          return { ...cfg, count: scaledCount };
+        });
+
+        finalOfficetelConfigs = (preset.officetelConfigs || []).map(cfg => {
+          const ratio = cfg.count / presetTotal;
+          const scaledCount = Math.round(prevTotalUnits * ratio);
+          return { ...cfg, count: scaledCount };
+        });
+
+        const finalTowerCount = preset.towerCount !== undefined ? preset.towerCount : towerCount;
+        const finalLineCount = preset.unitsPerFloorLine;
+        const perFloor = finalTowerCount * finalLineCount;
+        if (perFloor > 0) {
+          const typicalFloors = Math.ceil(prevTotalUnits / perFloor);
+          calculatedFloors = typicalFloors + (preset.podiumFloors || 2);
+        }
+      }
     }
-    if (setOfficetelConfigs && preset.officetelConfigs) {
-      setOfficetelConfigs(preset.officetelConfigs);
+
+    setAboveGroundFloors(calculatedFloors);
+    
+    if (setAptConfigs) {
+      setAptConfigs(finalAptConfigs);
+    }
+    if (setOfficetelConfigs) {
+      setOfficetelConfigs(finalOfficetelConfigs);
     }
   };
 

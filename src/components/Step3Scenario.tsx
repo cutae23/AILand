@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { LandRegulatoryAnalysis, FARRelaxationResult, ScenarioResult, AllocatedUnitResult } from '../types';
 import { CircleDollarSign, Coins, TrendingUp, Building2, Layers, Compass, HelpCircle, ArrowRight, Table, Sparkles, Loader2, RefreshCw, AlertTriangle, Home, Briefcase, Info, Plus, Trash2, Calculator, Activity, Puzzle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
@@ -105,7 +105,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   const auxiliaryArea = aptAuxArea + officetelAuxArea + hotelAuxArea + officeAuxArea;
 
   // [USER ADDITIONS] New States: Above ground & Underground floors & individual Floor Heights
-  const [aboveGroundFloors, setAboveGroundFloors] = useState<number>(() => inputs?.aboveGroundFloors ?? 7);
+  const [aboveGroundFloors, rawSetAboveGroundFloors] = useState<number>(() => inputs?.aboveGroundFloors ?? 7);
   const [undergroundFloors, setUndergroundFloors] = useState<number>(() => inputs?.undergroundFloors ?? 2);
   const [defaultFloorHeight, setDefaultFloorHeight] = useState<number>(() => inputs?.defaultFloorHeight ?? 3.3); // 3.3m
   const [customFloorHeights, setCustomFloorHeights] = useState<Record<string, number>>(() => inputs?.customFloorHeights ?? {
@@ -198,6 +198,37 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
     { id: 'officetel_tworoom', name: '오피스텔 투룸 (전용 59㎡ / 실 18평)', sizeM2: 59, pyung: 18, salesPricePerPyung: 3000, count: 0 },
     { id: 'officetel_threeroom', name: '오피스텔 쓰리룸 (전용 84㎡ / 실 25평)', sizeM2: 84, pyung: 25, salesPricePerPyung: 3400, count: 0 }
   ]);
+
+  const [targetResidentialUnits, setTargetResidentialUnits] = useState<number>(() => {
+    if (inputs?.targetResidentialUnits !== undefined) {
+      return inputs.targetResidentialUnits;
+    }
+    const initialApt = (inputs?.aptConfigs ?? [
+      { id: 'apt_small', count: 12 },
+      { id: 'apt_medium', count: 8 },
+      { id: 'apt_large', count: 4 }
+    ]).reduce((sum: number, item: any) => sum + (item.count || 0), 0);
+    const initialOt = (inputs?.officetelConfigs ?? []).reduce((sum: number, item: any) => sum + (item.count || 0), 0);
+    const total = initialApt + initialOt;
+    return total > 0 ? total : 1300;
+  });
+
+  const setAboveGroundFloors = useCallback((val: number | ((prev: number) => number)) => {
+    if (typeof val === 'number') {
+      rawSetAboveGroundFloors(val);
+      const perFloor = towerCount * unitsPerFloorLine;
+      const newCapacity = perFloor * Math.max(0, val - podiumFloors);
+      setTargetResidentialUnits(newCapacity);
+    } else {
+      rawSetAboveGroundFloors(prev => {
+        const nextVal = val(prev);
+        const perFloor = towerCount * unitsPerFloorLine;
+        const newCapacity = perFloor * Math.max(0, nextVal - podiumFloors);
+        setTargetResidentialUnits(newCapacity);
+        return nextVal;
+      });
+    }
+  }, [towerCount, unitsPerFloorLine, podiumFloors]);
 
   // Hotel state variables
   const [hotelRoomCount, setHotelRoomCount] = useState<number>(() => inputs?.hotelRoomCount ?? 0);
@@ -410,6 +441,20 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
     }
   }, [currentRelaxation, savedScenario]);
 
+  // Automatically calculate aboveGroundFloors to accommodate the target scale (targetResidentialUnits)
+  useEffect(() => {
+    if (useLayoutSimulation && floorCalculationMode === 'manual') {
+      const perFloor = towerCount * unitsPerFloorLine;
+      if (perFloor > 0 && targetResidentialUnits > 0) {
+        const typicalFloorsNeeded = Math.ceil(targetResidentialUnits / perFloor);
+        const newAboveGroundFloors = typicalFloorsNeeded + podiumFloors;
+        if (aboveGroundFloors !== newAboveGroundFloors) {
+          setAboveGroundFloors(newAboveGroundFloors);
+        }
+      }
+    }
+  }, [useLayoutSimulation, floorCalculationMode, towerCount, unitsPerFloorLine, podiumFloors, targetResidentialUnits, aboveGroundFloors]);
+
   // AI Market Price Fetching
   const fetchMarketPrices = async (address: string, zoning: string) => {
     setIsAnalyzing(true);
@@ -519,57 +564,163 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   };
 
   const handleUpdateAptField = (id: string, field: keyof HousingConfig, value: any) => {
-    setAptConfigs(prev => prev.map(item => {
-      if (item.id === id) {
-        const updated = { ...item, [field]: value };
-        if (field === 'sizeM2') {
-          updated.pyung = parseFloat((Number(value) * 0.3025).toFixed(1));
-        } else if (field === 'pyung') {
-          updated.sizeM2 = parseFloat((Number(value) / 0.3025).toFixed(1));
+    setAptConfigs(prev => {
+      const next = prev.map(item => {
+        if (item.id === id) {
+          const updated = { ...item, [field]: value };
+          if (field === 'sizeM2') {
+            updated.pyung = parseFloat((Number(value) * 0.3025).toFixed(1));
+          } else if (field === 'pyung') {
+            updated.sizeM2 = parseFloat((Number(value) / 0.3025).toFixed(1));
+          }
+          return updated;
         }
-        return updated;
+        return item;
+      });
+
+      if (field === 'count' && useLayoutSimulation) {
+        const totalApt = next.reduce((sum, item) => sum + item.count, 0);
+        const totalOt = officetelConfigs.reduce((sum, item) => sum + item.count, 0);
+        const totalResidential = totalApt + totalOt;
+        setTargetResidentialUnits(totalResidential);
+        const perFloor = towerCount * unitsPerFloorLine;
+        if (perFloor > 0 && totalResidential > 0) {
+          const typicalFloorsNeeded = Math.ceil(totalResidential / perFloor);
+          const newAboveGroundFloors = typicalFloorsNeeded + podiumFloors;
+          setTimeout(() => {
+            setAboveGroundFloors(newAboveGroundFloors);
+          }, 0);
+        }
       }
-      return item;
-    }));
+
+      return next;
+    });
   };
 
   const handleUpdateOfficetelField = (id: string, field: keyof HousingConfig, value: any) => {
-    setOfficetelConfigs(prev => prev.map(item => {
-      if (item.id === id) {
-        const updated = { ...item, [field]: value };
-        if (field === 'sizeM2') {
-          updated.pyung = parseFloat((Number(value) * 0.3025).toFixed(1));
-        } else if (field === 'pyung') {
-          updated.sizeM2 = parseFloat((Number(value) / 0.3025).toFixed(1));
+    setOfficetelConfigs(prev => {
+      const next = prev.map(item => {
+        if (item.id === id) {
+          const updated = { ...item, [field]: value };
+          if (field === 'sizeM2') {
+            updated.pyung = parseFloat((Number(value) * 0.3025).toFixed(1));
+          } else if (field === 'pyung') {
+            updated.sizeM2 = parseFloat((Number(value) / 0.3025).toFixed(1));
+          }
+          return updated;
         }
-        return updated;
+        return item;
+      });
+
+      if (field === 'count' && useLayoutSimulation) {
+        const totalApt = aptConfigs.reduce((sum, item) => sum + item.count, 0);
+        const totalOt = next.reduce((sum, item) => sum + item.count, 0);
+        const totalResidential = totalApt + totalOt;
+        setTargetResidentialUnits(totalResidential);
+        const perFloor = towerCount * unitsPerFloorLine;
+        if (perFloor > 0 && totalResidential > 0) {
+          const typicalFloorsNeeded = Math.ceil(totalResidential / perFloor);
+          const newAboveGroundFloors = typicalFloorsNeeded + podiumFloors;
+          setTimeout(() => {
+            setAboveGroundFloors(newAboveGroundFloors);
+          }, 0);
+        }
       }
-      return item;
-    }));
+
+      return next;
+    });
   };
 
   const handleDeleteApt = (id: string) => {
-    setAptConfigs(prev => prev.filter(item => item.id !== id));
+    setAptConfigs(prev => {
+      const next = prev.filter(item => item.id !== id);
+      if (useLayoutSimulation) {
+        const totalApt = next.reduce((sum, item) => sum + item.count, 0);
+        const totalOt = officetelConfigs.reduce((sum, item) => sum + item.count, 0);
+        const totalResidential = totalApt + totalOt;
+        setTargetResidentialUnits(totalResidential);
+        const perFloor = towerCount * unitsPerFloorLine;
+        if (perFloor > 0 && totalResidential > 0) {
+          const typicalFloorsNeeded = Math.ceil(totalResidential / perFloor);
+          const newAboveGroundFloors = typicalFloorsNeeded + podiumFloors;
+          setTimeout(() => {
+            setAboveGroundFloors(newAboveGroundFloors);
+          }, 0);
+        }
+      }
+      return next;
+    });
   };
 
   const handleDeleteOfficetel = (id: string) => {
-    setOfficetelConfigs(prev => prev.filter(item => item.id !== id));
+    setOfficetelConfigs(prev => {
+      const next = prev.filter(item => item.id !== id);
+      if (useLayoutSimulation) {
+        const totalApt = aptConfigs.reduce((sum, item) => sum + item.count, 0);
+        const totalOt = next.reduce((sum, item) => sum + item.count, 0);
+        const totalResidential = totalApt + totalOt;
+        setTargetResidentialUnits(totalResidential);
+        const perFloor = towerCount * unitsPerFloorLine;
+        if (perFloor > 0 && totalResidential > 0) {
+          const typicalFloorsNeeded = Math.ceil(totalResidential / perFloor);
+          const newAboveGroundFloors = typicalFloorsNeeded + podiumFloors;
+          setTimeout(() => {
+            setAboveGroundFloors(newAboveGroundFloors);
+          }, 0);
+        }
+      }
+      return next;
+    });
   };
 
   const handleAddAptConfig = () => {
     const newId = `apt_custom_${Date.now()}`;
-    setAptConfigs(prev => [
-      ...prev,
-      { id: newId, name: '새 공동주택 평형', sizeM2: 84, pyung: 25, salesPricePerPyung: 4500, count: 5 }
-    ]);
+    setAptConfigs(prev => {
+      const next = [
+        ...prev,
+        { id: newId, name: '새 공동주택 평형', sizeM2: 84, pyung: 25, salesPricePerPyung: 4500, count: 5 }
+      ];
+      if (useLayoutSimulation) {
+        const totalApt = next.reduce((sum, item) => sum + item.count, 0);
+        const totalOt = officetelConfigs.reduce((sum, item) => sum + item.count, 0);
+        const totalResidential = totalApt + totalOt;
+        setTargetResidentialUnits(totalResidential);
+        const perFloor = towerCount * unitsPerFloorLine;
+        if (perFloor > 0 && totalResidential > 0) {
+          const typicalFloorsNeeded = Math.ceil(totalResidential / perFloor);
+          const newAboveGroundFloors = typicalFloorsNeeded + podiumFloors;
+          setTimeout(() => {
+            setAboveGroundFloors(newAboveGroundFloors);
+          }, 0);
+        }
+      }
+      return next;
+    });
   };
 
   const handleAddOfficetelConfig = () => {
     const newId = `officetel_custom_${Date.now()}`;
-    setOfficetelConfigs(prev => [
-      ...prev,
-      { id: newId, name: '새 오피스텔 타입', sizeM2: 59, pyung: 18, salesPricePerPyung: 3000, count: 5 }
-    ]);
+    setOfficetelConfigs(prev => {
+      const next = [
+        ...prev,
+        { id: newId, name: '새 오피스텔 타입', sizeM2: 59, pyung: 18, salesPricePerPyung: 3000, count: 5 }
+      ];
+      if (useLayoutSimulation) {
+        const totalApt = aptConfigs.reduce((sum, item) => sum + item.count, 0);
+        const totalOt = next.reduce((sum, item) => sum + item.count, 0);
+        const totalResidential = totalApt + totalOt;
+        setTargetResidentialUnits(totalResidential);
+        const perFloor = towerCount * unitsPerFloorLine;
+        if (perFloor > 0 && totalResidential > 0) {
+          const typicalFloorsNeeded = Math.ceil(totalResidential / perFloor);
+          const newAboveGroundFloors = typicalFloorsNeeded + podiumFloors;
+          setTimeout(() => {
+            setAboveGroundFloors(newAboveGroundFloors);
+          }, 0);
+        }
+      }
+      return next;
+    });
   };
 
   // 3. Dynamic Calculation logic
