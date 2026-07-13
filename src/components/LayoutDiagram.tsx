@@ -65,15 +65,17 @@ export const TOWER_PRESETS = [
     desc: '분양률 1위 조합. 59㎡와 84㎡를 전면에 배치하여 초기 자금 회수 및 환금성을 극대화합니다.',
     unitsPerFloorLine: 4,
     lineSetup: [59, 84, 84, 59],
+    towerCount: 2,
+    aboveGroundFloors: 8,
+    podiumFloors: 2,
     tag: '분양성 최우수',
     tagColor: 'bg-emerald-50 text-emerald-700 border-emerald-150',
     target: '3040세대 주 실수요층 및 신혼부부',
     speed: '매우 빠름 (조기 완판)',
     margin: '안정적 수익률',
     aptConfigs: [
-      { id: 'apt_small', name: '공동주택 소형 (전용 59㎡ / 실 18평)', sizeM2: 59, pyung: 18, salesPricePerPyung: 4200, count: 12 },
-      { id: 'apt_medium', name: '공동주택 중형 (전용 84㎡ / 실 25평)', sizeM2: 84, pyung: 25, salesPricePerPyung: 4500, count: 8 },
-      { id: 'apt_large', name: '공동주택 대형 (전용 114㎡ / 실 34평)', sizeM2: 114, pyung: 34, salesPricePerPyung: 5000, count: 4 }
+      { id: 'apt_small', name: '공동주택 소형 (전용 59㎡ / 실 18평)', sizeM2: 59, pyung: 18, salesPricePerPyung: 4200, count: 24 },
+      { id: 'apt_medium', name: '공동주택 중형 (전용 84㎡ / 실 25평)', sizeM2: 84, pyung: 25, salesPricePerPyung: 4500, count: 24 }
     ],
     officetelConfigs: [
       { id: 'officetel_studio', name: '오피스텔 원룸 (전용 30㎡ / 실 9평)', sizeM2: 30, pyung: 9, salesPricePerPyung: 2600, count: 0 },
@@ -87,6 +89,9 @@ export const TOWER_PRESETS = [
     desc: '강남 재건축 및 명품 단지 특화. 양면 개방형 거실 및 4Bay 조망 중심의 고품격 분양 전략.',
     unitsPerFloorLine: 3,
     lineSetup: [84, 114, 155],
+    towerCount: 1,
+    aboveGroundFloors: 12,
+    podiumFloors: 2,
     tag: '수익성 극대화',
     tagColor: 'bg-purple-50 text-purple-700 border-purple-150',
     target: '고소득 자산가 및 대형 대체 수요',
@@ -94,8 +99,9 @@ export const TOWER_PRESETS = [
     margin: '평당 최고가 달성',
     aptConfigs: [
       { id: 'apt_small', name: '공동주택 소형 (전용 59㎡ / 실 18평)', sizeM2: 59, pyung: 18, salesPricePerPyung: 4200, count: 0 },
-      { id: 'apt_medium', name: '공동주택 중형 (전용 84㎡ / 실 25평)', sizeM2: 84, pyung: 25, salesPricePerPyung: 4600, count: 12 },
-      { id: 'apt_large', name: '공동주택 대형 (전용 114㎡ / 실 34평)', sizeM2: 114, pyung: 34, salesPricePerPyung: 5200, count: 6 }
+      { id: 'apt_medium', name: '공동주택 중형 (전용 84㎡ / 실 25평)', sizeM2: 84, pyung: 25, salesPricePerPyung: 4600, count: 10 },
+      { id: 'apt_large', name: '공동주택 대형 (전용 114㎡ / 실 34평)', sizeM2: 114, pyung: 34, salesPricePerPyung: 5200, count: 10 },
+      { id: 'apt_luxury', name: '공동주택 하이엔드 (전용 155㎡ / 실 47평)', sizeM2: 155, pyung: 47, salesPricePerPyung: 5500, count: 10 }
     ],
     officetelConfigs: [
       { id: 'officetel_studio', name: '오피스텔 원룸 (전용 30㎡ / 실 9평)', sizeM2: 30, pyung: 9, salesPricePerPyung: 2600, count: 0 },
@@ -109,19 +115,22 @@ export const TOWER_PRESETS = [
     desc: '초소형/소형 중심 구성. 역세권 청년주택이나 도심 고밀도 지역 공실률 제로 분양 최적 상품.',
     unitsPerFloorLine: 5,
     lineSetup: [30, 39, 49, 59, 59],
+    towerCount: 1,
+    aboveGroundFloors: 10,
+    podiumFloors: 2,
     tag: '임대수익 특화',
     tagColor: 'bg-amber-50 text-amber-700 border-amber-150',
     target: '1-2인 가구 및 소형 주택 투자수요',
     speed: '매우 빠름 (초고속 임대 분양)',
     margin: '높은 연수익률 보장',
     aptConfigs: [
-      { id: 'apt_small', name: '공동주택 소형 (전용 59㎡ / 실 18평)', sizeM2: 59, pyung: 18, salesPricePerPyung: 4200, count: 12 },
-      { id: 'apt_medium', name: '공동주택 중형 (전용 84㎡ / 실 25평)', sizeM2: 84, pyung: 25, salesPricePerPyung: 4500, count: 0 },
-      { id: 'apt_large', name: '공동주택 대형 (전용 114㎡ / 실 34평)', sizeM2: 114, pyung: 34, salesPricePerPyung: 5000, count: 0 }
+      { id: 'apt_custom_39', name: '공동주택 초소형 (전용 39㎡ / 실 12평)', sizeM2: 39, pyung: 12, salesPricePerPyung: 4000, count: 8 },
+      { id: 'apt_custom_49', name: '공동주택 강소형 (전용 49㎡ / 실 15평)', sizeM2: 49, pyung: 15, salesPricePerPyung: 4100, count: 8 },
+      { id: 'apt_small', name: '공동주택 소형 (전용 59㎡ / 실 18평)', sizeM2: 59, pyung: 18, salesPricePerPyung: 4200, count: 16 }
     ],
     officetelConfigs: [
-      { id: 'officetel_studio', name: '오피스텔 원룸 (전용 30㎡ / 실 9평)', sizeM2: 30, pyung: 9, salesPricePerPyung: 2700, count: 18 },
-      { id: 'officetel_tworoom', name: '오피스텔 투룸 (전용 59㎡ / 실 18평)', sizeM2: 59, pyung: 18, salesPricePerPyung: 3100, count: 10 },
+      { id: 'officetel_studio', name: '오피스텔 원룸 (전용 30㎡ / 실 9평)', sizeM2: 30, pyung: 9, salesPricePerPyung: 2700, count: 8 },
+      { id: 'officetel_tworoom', name: '오피스텔 투룸 (전용 59㎡ / 실 18평)', sizeM2: 59, pyung: 18, salesPricePerPyung: 3100, count: 0 },
       { id: 'officetel_threeroom', name: '오피스텔 쓰리룸 (전용 84㎡ / 실 25평)', sizeM2: 84, pyung: 25, salesPricePerPyung: 3400, count: 0 }
     ]
   },
@@ -131,19 +140,22 @@ export const TOWER_PRESETS = [
     desc: '규제 완화 혜택 및 오피스텔 주거 수요 흡수. 아파트 59/84와 고효율 투룸 오피스텔 결합 상품.',
     unitsPerFloorLine: 4,
     lineSetup: [59, 84, 59, 30],
+    towerCount: 2,
+    aboveGroundFloors: 12,
+    podiumFloors: 2,
     tag: '청약회피 틈새',
     tagColor: 'bg-sky-50 text-sky-700 border-sky-150',
     target: '청약가점 낮은 젊은 맞벌이 부부',
     speed: '매우 빠름 (분양 장벽 최소)',
     margin: '고밀도 상업지 최적',
     aptConfigs: [
-      { id: 'apt_small', name: '공동주택 소형 (전용 59㎡ / 실 18평)', sizeM2: 59, pyung: 18, salesPricePerPyung: 4200, count: 8 },
-      { id: 'apt_medium', name: '공동주택 중형 (전용 84㎡ / 실 25평)', sizeM2: 84, pyung: 25, salesPricePerPyung: 4500, count: 8 },
+      { id: 'apt_small', name: '공동주택 소형 (전용 59㎡ / 실 18평)', sizeM2: 59, pyung: 18, salesPricePerPyung: 4200, count: 40 },
+      { id: 'apt_medium', name: '공동주택 중형 (전용 84㎡ / 실 25평)', sizeM2: 84, pyung: 25, salesPricePerPyung: 4500, count: 20 },
       { id: 'apt_large', name: '공동주택 대형 (전용 114㎡ / 실 34평)', sizeM2: 114, pyung: 34, salesPricePerPyung: 5000, count: 0 }
     ],
     officetelConfigs: [
-      { id: 'officetel_studio', name: '오피스텔 원룸 (전용 30㎡ / 실 9평)', sizeM2: 30, pyung: 9, salesPricePerPyung: 2600, count: 12 },
-      { id: 'officetel_tworoom', name: '오피스텔 투룸 (전용 59㎡ / 실 18평)', sizeM2: 59, pyung: 18, salesPricePerPyung: 3000, count: 12 },
+      { id: 'officetel_studio', name: '오피스텔 원룸 (전용 30㎡ / 실 9평)', sizeM2: 30, pyung: 9, salesPricePerPyung: 2600, count: 20 },
+      { id: 'officetel_tworoom', name: '오피스텔 투룸 (전용 59㎡ / 실 18평)', sizeM2: 59, pyung: 18, salesPricePerPyung: 3000, count: 0 },
       { id: 'officetel_threeroom', name: '오피스텔 쓰리룸 (전용 84㎡ / 실 25평)', sizeM2: 84, pyung: 25, salesPricePerPyung: 3400, count: 0 }
     ]
   }
@@ -697,6 +709,16 @@ export default function LayoutDiagram({
     
     setActivePresetId(presetId);
     setUnitsPerFloorLine(preset.unitsPerFloorLine);
+    
+    if (preset.towerCount !== undefined) {
+      setTowerCount(preset.towerCount);
+    }
+    if (preset.aboveGroundFloors !== undefined) {
+      setAboveGroundFloors(preset.aboveGroundFloors);
+    }
+    if (preset.podiumFloors !== undefined) {
+      setPodiumFloors(preset.podiumFloors);
+    }
     
     if (preset.lineSetup) {
       setLineSizes(preset.lineSetup);
