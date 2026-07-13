@@ -4447,6 +4447,33 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                             </td>
                           </tr>
                           <tr>
+                            <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">기획 세대수 / 객실수</td>
+                            <td colSpan={3} className="py-2 px-3 text-left">
+                              <div className="flex flex-wrap gap-2">
+                                {aptConfigs.reduce((s, c) => s + c.count, 0) > 0 && (
+                                  <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-lg font-bold text-[10px] border border-emerald-100">
+                                    🏠 공동주택: {aptConfigs.reduce((s, c) => s + c.count, 0)} 세대
+                                  </span>
+                                )}
+                                {officetelConfigs.reduce((s, c) => s + c.count, 0) > 0 && (
+                                  <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-800 px-2.5 py-1 rounded-lg font-bold text-[10px] border border-blue-100">
+                                    🏢 오피스텔: {officetelConfigs.reduce((s, c) => s + c.count, 0)} 실
+                                  </span>
+                                )}
+                                {hotelRoomCount > 0 && (
+                                  <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-800 px-2.5 py-1 rounded-lg font-bold text-[10px] border border-purple-100">
+                                    🏨 호텔: {hotelRoomCount} 객실
+                                  </span>
+                                )}
+                                {aptConfigs.reduce((s, c) => s + c.count, 0) === 0 &&
+                                 officetelConfigs.reduce((s, c) => s + c.count, 0) === 0 &&
+                                 hotelRoomCount === 0 && (
+                                  <span className="text-gray-400 font-medium">-</span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                          <tr>
                             <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">공개공지 비율</td>
                             <td className="py-2 px-3 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
                               계획: {currentRelaxation?.breakdown.openSpace ? '10%' : '0%'}
@@ -4494,7 +4521,12 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           {/* 1. 공동주택 */}
                           {result.aptAboveGFA > 0 && (
                             <tr>
-                              <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">🏠 공동주택 (아파트)</td>
+                              <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">
+                                <div>🏠 공동주택 (아파트)</div>
+                                <div className="text-[9px] text-emerald-700 font-bold mt-0.5 bg-emerald-50/60 px-1 py-0.5 rounded border border-emerald-100/50 inline-block">
+                                  총 {aptConfigs.reduce((s, c) => s + c.count, 0)} 세대
+                                </div>
+                              </td>
                               <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
                                 {result.aptNetArea.toLocaleString()} ㎡<br />
                                 <span className="text-[9px] text-gray-400">({Math.round(result.aptNetArea * 0.3025)}평)</span>
