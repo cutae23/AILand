@@ -275,6 +275,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
   // Step 4 Scenario and Commercial tabs
   const [selectedScenarioId, setSelectedScenarioId] = useState<string>('base');
+  const [showCalcDetails, setShowCalcDetails] = useState<boolean>(true);
   const [activeCommercialTab, setActiveCommercialTab] = useState<'demographics' | 'competitors' | 'tenants' | 'risks'>('demographics');
   const [activeSummaryTab, setActiveSummaryTab] = useState<'general' | 'area' | 'parking' | 'amenity' | 'layout'>('general');
 
@@ -5505,6 +5506,291 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           <span className="font-semibold text-gray-600">위험 한계 안전률: 약 {100 - result.financials.breakEvenRatio}% 가용가능</span>
                         </div>
                       </div>
+                    </div>
+
+                    {/* [USER ADDITIONS] Detailed feasibility calculation formulas & grounds */}
+                    <div className="bg-[#FAF9F5] rounded-2xl border border-[#EDDBC7]/50 p-5 shadow-sm space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-2.5 bg-[#5F7161]/10 rounded-xl text-[#5F7161]">
+                            <Calculator className="w-5 h-5 animate-pulse" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-[#2C251F] uppercase tracking-wider">📊 사업성 수지분석 세부 산출식 및 실시간 근거</h4>
+                            <p className="text-[10px] text-[#8D7B68] mt-0.5">기획 설계안의 모든 재무 지표가 계산된 수학적 공식과 실시간 대입 값입니다.</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowCalcDetails(!showCalcDetails)}
+                          className="px-3 py-1.5 text-[10px] font-bold rounded-lg bg-[#5F7161]/5 hover:bg-[#5F7161]/10 text-[#5F7161] border border-[#5F7161]/20 transition-all flex items-center justify-center gap-1 shadow-sm"
+                        >
+                          {showCalcDetails ? '상세 공식 접기' : '상세 공식 펼치기'}
+                        </button>
+                      </div>
+
+                      {showCalcDetails && (
+                        <div className="space-y-4 pt-4 border-t border-[#EDDBC7]/40 text-xs text-gray-750 animate-fadeIn">
+                          {/* 1. 투자 원가 부문 */}
+                          <div className="space-y-2.5 bg-white p-4 rounded-xl border border-[#EDDBC7]/30">
+                            <h5 className="font-extrabold text-gray-950 flex items-center gap-1.5 text-[11px]">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                              1. 총 투자 비용 (Outflows / 원가) 산출 공식 및 실시간 연산
+                            </h5>
+                            <div className="space-y-2.5 pl-3 text-[11px] text-gray-650 leading-relaxed">
+                              <div>
+                                <span className="font-semibold text-gray-900 block">① 토지 수매비 (Land Cost)</span>
+                                <div className="font-mono bg-[#FAF9F5]/40 px-2.5 py-1.5 rounded border border-gray-150 mt-1 flex flex-wrap items-center justify-between text-[10.5px]">
+                                  <span>공식: 대지 매입가 총액 × 시나리오 가중치</span>
+                                  <span className="text-gray-950 font-bold">
+                                    {landPurchasePrice.toLocaleString()}억 × {selectedScenarioId === 'conservative' ? '1.10' : '1.00'} = {result.financials.landCost.toLocaleString()} 억원
+                                  </span>
+                                </div>
+                                <span className="text-[10px] text-gray-400 mt-0.5 block leading-relaxed">
+                                  * 대지 매입 총액은 사용자가 기획한 실매입 총액 {landPurchasePrice}억원 기준이며, 보수안 시나리오 선택 시 10%의 예비 할증(1.10배)이 적용됩니다.
+                                </span>
+                              </div>
+
+                              <div className="mt-3">
+                                <span className="font-semibold text-gray-900 block">② 설계 및 건축 토목 공사비 (Construction Cost)</span>
+                                <div className="font-mono bg-[#FAF9F5]/40 px-2.5 py-1.5 rounded border border-gray-150 mt-1 flex flex-wrap items-center justify-between text-[10.5px]">
+                                  <span>공식: 총건축 연면적(평) × [평당 공사비(만원) × 시나리오 가중치] × 10,000 / 1억</span>
+                                  <span className="text-gray-950 font-bold">
+                                    {Math.round(result.totalGFAByPyung).toLocaleString()}평 × ({constructionCostPerPyung}만원 × {
+                                      selectedScenarioId === 'conservative' ? '1.15' : selectedScenarioId === 'optimistic' ? '0.95' : selectedScenarioId === 'inflation' ? '1.35' : '1.00'
+                                    }) = {result.financials.constructionCost.toLocaleString()} 억원
+                                  </span>
+                                </div>
+                                <span className="text-[10px] text-gray-400 mt-0.5 block leading-relaxed">
+                                  * 연면적(지상 {Math.round(result.aboveGroundGFAByPyung).toLocaleString()}평 + 지하 {Math.round(result.undergroundGFA / 3.30578).toLocaleString()}평 = {Math.round(result.totalGFAByPyung).toLocaleString()}평)에 평당 단가 {constructionCostPerPyung}만원을 곱해 원화로 계산 후 억원 단위로 환산합니다. 시나리오별 가중치(보수안 1.15배, 낙관안 0.95배, 공사폭등안 1.35배)가 동적 적용됩니다.
+                                </span>
+                              </div>
+
+                              <div className="mt-3">
+                                <span className="font-semibold text-gray-900 block">③ 금융 및 제세공과 부대비용 (Other Costs)</span>
+                                <div className="font-mono bg-[#FAF9F5]/40 px-2.5 py-1.5 rounded border border-gray-150 mt-1 flex flex-wrap items-center justify-between text-[10.5px]">
+                                  <span>공식: (토지비 + 건축비) × 기타 사업비 비율(%)</span>
+                                  <span className="text-gray-950 font-bold">
+                                    ({result.financials.landCost.toLocaleString()}억 + {result.financials.constructionCost.toLocaleString()}억) × {otherCostsRatio}% = {result.financials.otherCosts.toLocaleString()} 억원
+                                  </span>
+                                </div>
+                                <span className="text-[10px] text-gray-400 mt-0.5 block leading-relaxed">
+                                  * 설계비, 감리비, 금융 이자, 마케팅/분양 대행수수료, 각종 세금 등 인허가와 사업 진행에 수반되는 간접비를 사용자가 설정한 비율({otherCostsRatio}%)에 따라 자동 안분합니다.
+                                </span>
+                              </div>
+
+                              <div className="mt-3 pt-3 border-t border-gray-100">
+                                <span className="font-semibold text-gray-950 block">④ 투입 총사업비 합계 (Total Project Cost)</span>
+                                <div className="font-mono bg-gray-50 px-2.5 py-2 rounded border border-gray-200 mt-1 flex flex-wrap items-center justify-between text-[11px]">
+                                  <span className="text-gray-600">공식: 토지 수매비 + 공동 건축 공비 + 금융 및 사업공과금</span>
+                                  <span className="text-rose-600 font-extrabold">
+                                    {result.financials.landCost.toLocaleString()}억 + {result.financials.constructionCost.toLocaleString()}억 + {result.financials.otherCosts.toLocaleString()}억 = {result.financials.totalProjectCost.toLocaleString()} 억원
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 2. 매출/수익 부문 */}
+                          <div className="space-y-2.5 bg-white p-4 rounded-xl border border-[#EDDBC7]/30">
+                            <h5 className="font-extrabold text-gray-950 flex items-center gap-1.5 text-[11px]">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              2. 예상 총 매출가치 (Inflows / 수입) 산출 및 출구전략 반영 방식
+                            </h5>
+                            <div className="space-y-2.5 pl-3 text-[11px] text-gray-650 leading-relaxed">
+                              <div>
+                                <span className="font-semibold text-gray-900 block">① 공급 세부 상품별 분양 매출 산식 내역</span>
+                                <div className="overflow-x-auto my-1.5 border border-gray-150 rounded-lg">
+                                  <table className="w-full text-[10px] bg-white border-collapse text-left">
+                                    <thead>
+                                      <tr className="bg-[#FAF9F5] border-b border-gray-150 text-gray-600 font-bold">
+                                        <th className="p-2 border-r border-gray-100">상품명</th>
+                                        <th className="p-2 text-right border-r border-gray-100">공급 수량</th>
+                                        <th className="p-2 text-right border-r border-gray-100">전용평형</th>
+                                        <th className="p-2 text-right border-r border-gray-100">평당 단가(가중치 적용)</th>
+                                        <th className="p-2 text-right text-[#5F7161]">산출 매출액</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                      {result.allocatedUnits.map((u: any) => {
+                                        return (
+                                          <tr key={u.id} className="text-gray-700">
+                                            <td className="p-2 font-medium text-gray-900 border-r border-gray-100">{u.name}</td>
+                                            <td className="p-2 text-right font-mono border-r border-gray-100">{u.count}세대/실</td>
+                                            <td className="p-2 text-right font-mono border-r border-gray-100">{u.pyung}평</td>
+                                            <td className="p-2 text-right font-mono text-gray-500 border-r border-gray-100">
+                                              {Math.round((u.totalSalesPrice * 10000) / (u.count * u.pyung || 1)).toLocaleString()}만원
+                                            </td>
+                                            <td className="p-2 text-right font-mono font-bold text-slate-900">
+                                              {u.totalSalesPrice.toLocaleString()} 억원
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                      {result.allocatedUnits.length === 0 && (
+                                        <tr>
+                                          <td colSpan={5} className="p-3 text-center text-gray-400 italic">설정된 공급 계획이 없습니다.</td>
+                                        </tr>
+                                      )}
+                                      <tr className="bg-slate-50 font-bold text-[10.5px]">
+                                        <td colSpan={4} className="p-2 text-gray-900 border-r border-gray-100 font-bold">순수 분양 매출액 합계 (Total Sales Outright):</td>
+                                        <td className="p-2 text-right font-mono text-emerald-800 font-extrabold">{result.financials.totalSalesRevenue.toLocaleString()} 억원</td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                                <span className="text-[10px] text-gray-400 block leading-relaxed">
+                                  * 선택된 시나리오에 따라 공급 단가에 동적 가중치(보수안 0.90배, 낙관안 1.12배, 분양침체안 0.80배)가 적용되어 실시간으로 반영됩니다.
+                                </span>
+                              </div>
+
+                              <div className="mt-3">
+                                <span className="font-semibold text-gray-900 block">② 출구 전략(Exit Strategy)에 따른 장기 수지 산정 공식</span>
+                                <div className="space-y-1.5 mt-1">
+                                  <div className="bg-[#FAF9F5] p-2.5 rounded-lg border border-[#EDDBC7]/40 flex items-center justify-between">
+                                    <span className="font-bold text-[#2C251F]">적용 중인 출구 전략: </span>
+                                    <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-md bg-[#5F7161] text-white">
+                                      {exitStrategy === 'sales' ? '전체 조기 일괄 분양형' : exitStrategy === 'lease-exit' ? '5년 임대 후 일괄 매각형' : '장기 임대 운영형 (15년)'}
+                                    </span>
+                                  </div>
+
+                                  <div className="bg-gray-50/50 p-3 rounded-lg border border-gray-200 font-mono space-y-1.5 text-[10.5px]">
+                                    {exitStrategy === 'sales' && (
+                                      <>
+                                        <div className="flex justify-between font-bold text-gray-900 border-b border-gray-200 pb-1.5">
+                                          <span>[일괄 분양형 산식]</span>
+                                          <span>총 수익가치 = 순수 분양 매출액</span>
+                                        </div>
+                                        <div className="flex justify-between text-gray-600 mt-1">
+                                          <span>• 분양형 매출 총합:</span>
+                                          <span>{result.financials.totalSalesRevenue.toLocaleString()} 억원</span>
+                                        </div>
+                                        <div className="flex justify-between text-emerald-700 font-bold border-t border-gray-200 pt-1.5 mt-1">
+                                          <span>• 최종 산출 수지 총액:</span>
+                                          <span>{result.financials.totalRevenues.toLocaleString()} 억원</span>
+                                        </div>
+                                      </>
+                                    )}
+                                    {exitStrategy === 'lease-exit' && (
+                                      <>
+                                        <div className="flex justify-between font-bold text-gray-900 border-b border-gray-200 pb-1.5">
+                                          <span>[5년 임대후 매각 산식]</span>
+                                          <span>분양형 매출 + 보증금 회수 + (연간임대료 × 5) + 5년차 매각가치(Exit Value)</span>
+                                        </div>
+                                        <div className="flex justify-between text-gray-600 mt-1">
+                                          <span>• 분양형 상품 매출액 (Apt/Ot 등 분양 전환):</span>
+                                          <span>{result.financials.totalSalesRevenue.toLocaleString()} 억원</span>
+                                        </div>
+                                        <div className="flex justify-between text-gray-600">
+                                          <span>• 임대형 상품 보증금 수납액 (Lease Deposits):</span>
+                                          <span>{result.financials.totalLeaseDeposits.toLocaleString()} 억원</span>
+                                        </div>
+                                        <div className="flex justify-between text-gray-600">
+                                          <span>• 5개년 누적 월세 수익액 (Annual Rent × 5):</span>
+                                          <span>{(result.financials.totalAnnualRent * 5).toFixed(2)} 억원 (연간 {result.financials.totalAnnualRent.toLocaleString()}억)</span>
+                                        </div>
+                                        <div className="flex justify-between text-gray-600">
+                                          <span>• 5년차 임대지분 일괄 매각가치 (Exit Value):</span>
+                                          <span>{(result.financials.totalAnnualRent * 18).toFixed(2)} 억원 (연 임대료 환원율 5.5% 기준 18배 가치 평가)</span>
+                                        </div>
+                                        <div className="flex justify-between text-emerald-800 font-bold border-t border-gray-200 pt-1.5 mt-1">
+                                          <span>• 최종 합산 수지 총 가치:</span>
+                                          <span>{result.financials.totalRevenues.toLocaleString()} 억원</span>
+                                        </div>
+                                      </>
+                                    )}
+                                    {exitStrategy === 'lease-permanent' && (
+                                      <>
+                                        <div className="flex justify-between font-bold text-gray-900 border-b border-gray-200 pb-1.5">
+                                          <span>[15년 영구 임대 운영 산식]</span>
+                                          <span>분양형 매출 + 보증금 회수 + (연간임대료 × 15개년)</span>
+                                        </div>
+                                        <div className="flex justify-between text-gray-600 mt-1">
+                                          <span>• 분양형 상품 매출액 (Apt/Ot 분양):</span>
+                                          <span>{result.financials.totalSalesRevenue.toLocaleString()} 억원</span>
+                                        </div>
+                                        <div className="flex justify-between text-gray-600">
+                                          <span>• 임대형 상품 보증금 수납액 (Lease Deposits):</span>
+                                          <span>{result.financials.totalLeaseDeposits.toLocaleString()} 억원</span>
+                                        </div>
+                                        <div className="flex justify-between text-gray-600">
+                                          <span>• 15개년 장기 누적 임대수익액 (Annual Rent × 15):</span>
+                                          <span>{(result.financials.totalAnnualRent * 15).toFixed(2)} 억원 (연간 {result.financials.totalAnnualRent.toLocaleString()}억)</span>
+                                        </div>
+                                        <div className="flex justify-between text-emerald-800 font-bold border-t border-gray-200 pt-1.5 mt-1">
+                                          <span>• 최종 합산 수지 총 가치:</span>
+                                          <span>{result.financials.totalRevenues.toLocaleString()} 억원</span>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 3. 성과 지표 부문 */}
+                          <div className="space-y-2.5 bg-white p-4 rounded-xl border border-[#EDDBC7]/30">
+                            <h5 className="font-extrabold text-gray-950 flex items-center gap-1.5 text-[11px]">
+                              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                              3. 최종 사업성 지표 (Feasibility Core Metrics) 산출 근거
+                            </h5>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pl-3 text-[11px] text-gray-650 leading-relaxed">
+                              <div className="bg-slate-50/50 p-3 rounded-lg border border-gray-150 space-y-1.5">
+                                <span className="font-bold text-gray-900 block">① 예상 개발 영업이익 (Operating Profit)</span>
+                                <div className="font-mono text-gray-500 bg-white p-1 text-[9.5px] rounded border border-gray-100">
+                                  공식: 총 매출가치 - 투입 총사업비
+                                </div>
+                                <div className="font-mono text-[11px] text-gray-900 font-bold pt-1">
+                                  산정: {result.financials.totalRevenues.toLocaleString()}억 - {result.financials.totalProjectCost.toLocaleString()}억 = <span className="text-[#5F7161] font-black">{result.financials.operatingProfit.toLocaleString()} 억원</span>
+                                </div>
+                                <p className="text-[9px] text-gray-400 mt-1 leading-relaxed">
+                                  * 기획을 통해 획득하는 모든 Inflow 총가치에서 토지비, 공사비, 간접비의 총합을 제외하여 순수 개발 수익을 구합니다.
+                                </p>
+                              </div>
+
+                              <div className="bg-slate-50/50 p-3 rounded-lg border border-gray-150 space-y-1.5">
+                                <span className="font-bold text-gray-900 block">② 투자 수익률 (ROI, Return on Investment)</span>
+                                <div className="font-mono text-gray-500 bg-white p-1 text-[9.5px] rounded border border-gray-100">
+                                  공식: (예상 영업이익 / 투입 총사업비) × 100
+                                </div>
+                                <div className="font-mono text-[11px] text-gray-900 font-bold pt-1">
+                                  산정: ({result.financials.operatingProfit.toLocaleString()}억 / {result.financials.totalProjectCost.toLocaleString()}억) × 100 = <span className="text-indigo-600 font-black">{result.financials.roi}%</span>
+                                </div>
+                                <p className="text-[9px] text-gray-400 mt-1 leading-relaxed">
+                                  * 투입된 자기자본 및 PF 조달 금액(총원가) 대비 최종 획득 수지 수익률로, 사업의 자본 효율성을 입증하는 척도입니다.
+                                </p>
+                              </div>
+
+                              <div className="bg-slate-50/50 p-3 rounded-lg border border-gray-150 space-y-1.5">
+                                <span className="font-bold text-gray-900 block">③ 손익분기 분양률 (BEP Ratio, Break-Even)</span>
+                                <div className="font-mono text-gray-500 bg-white p-1 text-[9.5px] rounded border border-gray-100">
+                                  공식: (투입 총사업비 / 예상 총 매출가치) × 100
+                                </div>
+                                <div className="font-mono text-[11px] text-gray-900 font-bold pt-1">
+                                  산정: ({result.financials.totalProjectCost.toLocaleString()}억 / {result.financials.totalRevenues.toLocaleString()}억) × 100 = <span className="text-emerald-700 font-black">{result.financials.breakEvenRatio}%</span>
+                                </div>
+                                <p className="text-[9px] text-gray-400 mt-1 leading-relaxed">
+                                  * 전체 기획 매출액 중 '개발 원가'가 차지하는 비율입니다. 즉, 전체 상품 중 최소 {result.financials.breakEvenRatio}% 이상 분양/임대 계약을 마쳐야 적자를 면하고 이익 구간에 진입함을 나타냅니다.
+                                </p>
+                              </div>
+
+                              <div className="bg-slate-50/50 p-3 rounded-lg border border-gray-150 space-y-1.5">
+                                <span className="font-bold text-gray-900 block">④ 내부 수익률 (IRR, Internal Rate of Return)</span>
+                                <div className="font-mono text-gray-500 bg-white p-1 text-[9.5px] rounded border border-gray-100 flex items-center justify-between">
+                                  <span>공식: NPV(순현재가치) = ∑ [CF_t / (1 + IRR)^t] = 0</span>
+                                </div>
+                                <div className="font-mono text-[11px] text-gray-900 font-bold pt-1">
+                                  산정: 20개년 동적 시뮬레이션 = <span className="text-purple-600 font-black">{result.irr}%</span>
+                                </div>
+                                <p className="text-[9px] text-gray-400 mt-1 leading-relaxed">
+                                  * 0년차 대지 계약금 지출(-), 1~2년차 공사비 지출(-), 1~3년차 분양 대금(선계약금/중도금/잔금)과 임대보증금 및 연차별 월세 수입을 20년 현금흐름 연장선상에서 산정한 실질적 시간 가치 반영 이자율입니다.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* RE-ARCHITECTED BENTO GRID FOR VALUE DIAGNOSIS RADAR CHART & BEP TIMELINE CHART */}

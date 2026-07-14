@@ -1144,6 +1144,121 @@ export default function Step4Report({
                 </div>
               </div>
 
+              {/* [USER ADDITIONS] Project Feasibility Methodology Explanation block inside Report */}
+              <div className="space-y-4 pt-5 border-t border-gray-200 page-break">
+                <h4 className="text-xs font-bold text-gray-750 uppercase tracking-widest flex items-center gap-1.5 border-b border-gray-200 pb-2">
+                  <span className="w-2 h-2 rounded bg-[#5F7161]"></span>
+                  📊 수지분석 세부 산출 공식 및 재무적 근거 (Feasibility Analysis Grounding)
+                </h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-[11px] text-[#2C251F] leading-relaxed">
+                  {/* Cost component */}
+                  <div className="space-y-2.5 bg-slate-50/50 p-4 rounded-xl border border-gray-150">
+                    <span className="font-bold text-gray-900 block border-b border-gray-200 pb-1">1. 투자비(원가) 산출식</span>
+                    <ul className="space-y-2.5">
+                      <li>
+                        <strong className="text-gray-850">• 토지비 (Land Cost):</strong>
+                        <div className="font-mono text-gray-950 bg-white p-1.5 rounded border border-gray-150 mt-0.5 font-bold flex justify-between">
+                          <span>대입 공식: 매입대금 × 시나리오계수</span>
+                          <span>{sResult.financials.landCost} 억원</span>
+                        </div>
+                        <span className="text-[10px] text-gray-400 block mt-0.5">대지 매입 기획대금 {sInputs.landPurchasePrice}억에 시나리오 변동계수 반영</span>
+                      </li>
+                      <li>
+                        <strong className="text-gray-850">• 공사비 (Construction Cost):</strong>
+                        <div className="font-mono text-gray-950 bg-white p-1.5 rounded border border-gray-150 mt-0.5 font-bold flex justify-between">
+                          <span>대입 공식: 연면적평 × 평당공사비</span>
+                          <span>{sResult.financials.constructionCost} 억원</span>
+                        </div>
+                        <span className="text-[10px] text-gray-400 block mt-0.5">총 {Math.round(sResult.totalGFAByPyung).toLocaleString()}평 × 평당 {sInputs.constructionCostPerPyung}만원 × 시나리오 가중치</span>
+                      </li>
+                      <li>
+                        <strong className="text-gray-850">• 제세공과 및 부대비 (Other Costs):</strong>
+                        <div className="font-mono text-gray-950 bg-white p-1.5 rounded border border-gray-150 mt-0.5 font-bold flex justify-between">
+                          <span>대입 공식: (토지비+공사비) × {sInputs.otherCostsRatio}%</span>
+                          <span>{sResult.financials.otherCosts} 억원</span>
+                        </div>
+                        <span className="text-[10px] text-gray-400 block mt-0.5">(토지비 + 공사비) × 기타부대비율 {sInputs.otherCostsRatio}%</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Revenue component */}
+                  <div className="space-y-2.5 bg-slate-50/50 p-4 rounded-xl border border-gray-150">
+                    <span className="font-bold text-gray-900 block border-b border-gray-200 pb-1">2. 매출수입 산출식</span>
+                    <ul className="space-y-2.5">
+                      <li>
+                        <strong className="text-gray-850">• 분양 매출 (Sales Revenue):</strong>
+                        <div className="font-mono text-gray-950 bg-white p-1.5 rounded border border-gray-150 mt-0.5 font-bold flex justify-between">
+                          <span>대입 공식: 세대수 × 공급평수 × 공급가</span>
+                          <span>{sResult.financials.totalSalesRevenue} 억원</span>
+                        </div>
+                        <span className="text-[10px] text-gray-400 block mt-0.5">공급 세대평형 × 평당 공급가액 총액 합산값</span>
+                      </li>
+                      <li>
+                        <strong className="text-gray-850">• 임대 보증금 수납 (Deposits):</strong>
+                        <div className="font-mono text-gray-950 bg-white p-1.5 rounded border border-gray-150 mt-0.5 font-bold flex justify-between">
+                          <span>대입 공식: 임대구획 보증금 합산</span>
+                          <span>{sResult.financials.totalLeaseDeposits} 억원</span>
+                        </div>
+                        <span className="text-[10px] text-gray-400 block mt-0.5">임대 세대/구획당 기획 보증금 합산금액</span>
+                      </li>
+                      <li>
+                        <strong className="text-gray-850">• 누적 임대료 수입 (Rent):</strong>
+                        <div className="font-mono text-gray-950 bg-white p-1.5 rounded border border-gray-150 mt-0.5 font-bold flex justify-between">
+                          <span>대입 공식: 연임대료 × 가동년수</span>
+                          <span>{sInputs.exitStrategy === 'sales' ? '0.00' : sInputs.exitStrategy === 'lease-exit' ? (sResult.financials.totalAnnualRent * 5).toFixed(2) : (sResult.financials.totalAnnualRent * 15).toFixed(2)} 억원</span>
+                        </div>
+                        <span className="text-[10px] text-gray-400 block mt-0.5 font-medium text-emerald-800">
+                          {sInputs.exitStrategy === 'sales' ? '일괄 분양 (임대 수입 없음)' : sInputs.exitStrategy === 'lease-exit' ? `5개년 누적 월세 (연 ${sResult.financials.totalAnnualRent.toLocaleString()}억 × 5년)` : `15개년 누적 월세 (연 ${sResult.financials.totalAnnualRent.toLocaleString()}억 × 15년)`}
+                        </span>
+                      </li>
+                      {sInputs.exitStrategy === 'lease-exit' && (
+                        <li>
+                          <strong className="text-gray-850">• 5년차 일괄매각가치 (Exit Value):</strong>
+                          <div className="font-mono text-[#5F7161] bg-white p-1.5 rounded border border-gray-150 mt-0.5 font-bold flex justify-between">
+                            <span>대입 공식: 연임대료 × 18배</span>
+                            <span>{(sResult.financials.totalAnnualRent * 18).toFixed(2)} 억원</span>
+                          </div>
+                          <span className="text-[10px] text-gray-400 block mt-0.5">연간 임대수입의 18배 가치 평가 (환원율 Cap Rate 5.5% 적용)</span>
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+
+                  {/* Profit component */}
+                  <div className="space-y-2.5 bg-slate-50/50 p-4 rounded-xl border border-gray-150">
+                    <span className="font-bold text-gray-900 block border-b border-gray-200 pb-1">3. 재무 성과 지표 산출식</span>
+                    <ul className="space-y-2.5">
+                      <li>
+                        <strong className="text-gray-850">• 예상 영업이익 (Operating Profit):</strong>
+                        <div className="font-mono text-[#5F7161] bg-white p-1.5 rounded border border-gray-150 mt-0.5 font-extrabold flex justify-between">
+                          <span>수식: 총 매출가치 - 총 투자원가</span>
+                          <span>{sResult.financials.operatingProfit} 억원</span>
+                        </div>
+                        <span className="text-[10px] text-gray-400 block mt-0.5">총 매출가치 {sResult.financials.totalRevenues}억 - 총투자원가 {sResult.financials.totalProjectCost}억</span>
+                      </li>
+                      <li>
+                        <strong className="text-gray-850">• 투자 수익률 (ROI):</strong>
+                        <div className="font-mono text-indigo-700 bg-white p-1.5 rounded border border-gray-150 mt-0.5 font-extrabold flex justify-between">
+                          <span>수식: (영업이익 / 총사업비) × 100</span>
+                          <span>{sResult.financials.roi}%</span>
+                        </div>
+                        <span className="text-[10px] text-gray-400 block mt-0.5">(영업이익 / 총투자원가) × 100</span>
+                      </li>
+                      <li>
+                        <strong className="text-gray-850">• 손익분기 분양률 (BEP Ratio):</strong>
+                        <div className="font-mono text-purple-700 bg-white p-1.5 rounded border border-gray-150 mt-0.5 font-extrabold flex justify-between">
+                          <span>수식: (총사업비 / 총매출가치) × 100</span>
+                          <span>{sResult.financials.breakEvenRatio}%</span>
+                        </div>
+                        <span className="text-[10px] text-gray-400 block mt-0.5">(총투자원가 / 총매출가치) × 100</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
             </div>
           ) : (
             <p className="text-xs italic text-gray-400">공동주택 세배 배분 시뮬레이션 결과가 존재하지 않습니다. 먼저 Step 3에서 세대 배분 수를 입력하십시오.</p>
