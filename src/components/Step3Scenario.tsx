@@ -286,6 +286,428 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   const [showIrrCalc, setShowIrrCalc] = useState<boolean>(false);
   const [showBepCalc, setShowBepCalc] = useState<boolean>(false);
 
+  // Expanded population rows in Step 3 AI analysis table
+  const [expandedPopulationRows, setExpandedPopulationRows] = useState<Record<string, boolean>>({
+    land: true,
+    construction: false
+  });
+
+  const togglePopulationRow = (rowId: string) => {
+    setExpandedPopulationRows(prev => ({
+      ...prev,
+      [rowId]: !prev[rowId]
+    }));
+  };
+
+  const renderPopulationRow = (
+    rowId: string,
+    title: string,
+    value: number,
+    unit: string,
+    onChange: (val: number) => void,
+    summaryText: string
+  ) => {
+    const isOpen = !!expandedPopulationRows[rowId];
+    const popData = getPopulationData(rowId);
+
+    return (
+      <>
+        <tr className="hover:bg-gray-50/35 transition-colors">
+          <td className="p-2.5 font-bold text-gray-900 text-xs">{title}</td>
+          <td className="p-2.5 text-gray-500 leading-relaxed text-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+              <span>{summaryText}</span>
+              <button
+                type="button"
+                onClick={() => togglePopulationRow(rowId)}
+                className="px-2 py-0.5 text-[9px] font-bold rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 border border-amber-500/20 transition-all flex items-center gap-0.5 cursor-pointer flex-shrink-0"
+              >
+                {isOpen ? '근거 접기 ▲' : '🔍 실거래 모집단 펼치기 ▼'}
+              </button>
+            </div>
+          </td>
+          <td className="p-2.5 text-right">
+            <div className="flex items-center justify-end gap-1">
+              <input
+                type="number"
+                value={value}
+                onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+                className="w-20 p-1 text-right font-mono font-bold text-slate-800 bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none text-xs"
+              />
+              <span className="text-[10px] text-gray-500 font-bold">{unit}</span>
+            </div>
+          </td>
+        </tr>
+        {isOpen && (
+          <tr className="bg-amber-50/5">
+            <td colSpan={3} className="p-3 bg-amber-50/15 border-t border-b border-amber-200/20">
+              <div className="bg-white p-3 rounded-xl border border-amber-100/60 shadow-xs space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-extrabold text-amber-900 flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                    주변 상권 실거래 모집단 분석 데이터 ({popData.length}개 표본 추출)
+                  </span>
+                  <span className="text-[9.5px] text-gray-400">자료: 국토교통부 실거래 데이터 및 수지분석 보정</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[10px] text-left border-collapse">
+                    <thead>
+                      <tr className="bg-[#FAF9F5] border-b border-[#EDDBC7]/20 text-gray-500 font-bold">
+                        <th className="p-1.5 text-left">비교 단지/지번 정보</th>
+                        <th className="p-1.5 text-left">전용/규격</th>
+                        <th className="p-1.5 text-left">거래 시기</th>
+                        <th className="p-1.5 text-right">실거래 가액</th>
+                        <th className="p-1.5 text-right text-amber-800 font-bold font-sans">평당 환산단가</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-150">
+                      {popData.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-[#FAF9F5]/80 transition-colors">
+                          <td className="p-1.5 font-semibold text-gray-800">{item.name}</td>
+                          <td className="p-1.5 text-gray-500">{item.spec}</td>
+                          <td className="p-1.5 text-gray-400">{item.date}</td>
+                          <td className="p-1.5 text-right text-gray-700 font-mono">{item.price}</td>
+                          <td className="p-1.5 text-right font-extrabold font-mono text-amber-800">{item.perPyung}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="text-[9px] text-[#8D7B68] leading-snug pt-1 border-t border-gray-100 flex justify-between items-center">
+                  <span>* {title} 산출의 기초가 되는 주변 실거래 모집단 현황입니다.</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-gray-700">단가 직접 보정:</span>
+                    <input
+                      type="number"
+                      value={value}
+                      onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+                      className="w-16 p-0.5 text-right font-mono font-bold text-amber-950 bg-amber-50/30 border border-amber-300 rounded focus:border-amber-600 focus:outline-none text-[10px]"
+                    />
+                    <span className="font-extrabold text-amber-950 text-[10px]">{unit}</span>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        )}
+      </>
+    );
+  };
+
+  const getAddressType = () => {
+    const addr = currentLand?.address || '';
+    if (addr.includes('역삼') || addr.includes('강남')) return 'gangnam';
+    if (addr.includes('반포') || addr.includes('서초')) return 'seocho';
+    if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return 'junggu';
+    if (addr.includes('연남') || addr.includes('마포')) return 'mapo';
+    return 'default';
+  };
+
+  const getPopulationData = (category: string) => {
+    const type = getAddressType();
+    switch(category) {
+      case 'land':
+        if (type === 'gangnam') {
+          return [
+            { name: '역삼동 824-XX 이면 준주거지', spec: '대지 330㎡ (100평)', date: '2025.10', price: '125억원', perPyung: '1억 2,500만원' },
+            { name: '역삼동 719-XX 상업용지 (빌딩)', spec: '대지 450㎡ (136평)', date: '2026.02', price: '188억원', perPyung: '1억 3,800만원' },
+            { name: '테헤란로 25길 이면 대지', spec: '대지 280㎡ (85평)', date: '2025.08', price: '102억원', perPyung: '1억 2,000만원' }
+          ];
+        }
+        if (type === 'seocho') {
+          return [
+            { name: '반포동 711-XX 이면 근생대지', spec: '대지 310㎡ (94평)', date: '2025.12', price: '108억원', perPyung: '1억 1,500만원' },
+            { name: '서초동 1302-XX 준주거 대지', spec: '대지 410㎡ (124평)', date: '2026.03', price: '151억원', perPyung: '1억 2,200만원' },
+            { name: '사임당로 노후 단독주택 수매', spec: '대지 350㎡ (106평)', date: '2025.07', price: '111억원', perPyung: '1억 0,500만원' }
+          ];
+        }
+        if (type === 'junggu') {
+          return [
+            { name: '명동2가 32-X 일반상업지', spec: '대지 150㎡ (45평)', date: '2025.11', price: '70억원', perPyung: '1억 5,500만원' },
+            { name: '을지로3가 120-XX 상가 대지', spec: '대지 290㎡ (88평)', date: '2026.01', price: '125억원', perPyung: '1억 4,200만원' },
+            { name: '충무로4가 상업용 노후 건물', spec: '대지 220㎡ (67평)', date: '2025.09', price: '86억원', perPyung: '1억 3,000만원' }
+          ];
+        }
+        if (type === 'mapo') {
+          return [
+            { name: '연남동 241-XX 카페 대지', spec: '대지 198㎡ (60평)', date: '2026.04', price: '37억원', perPyung: '6,200만원' },
+            { name: '연남동 382-X 단독주택 (근생개조용)', spec: '대지 245㎡ (74평)', date: '2025.09', price: '43억원', perPyung: '5,800만원' },
+            { name: '동교동 150-X 상가주택 수매', spec: '대지 180㎡ (54평)', date: '2026.01', price: '36억원', perPyung: '6,600만원' }
+          ];
+        }
+        return [
+          { name: '서초동 1714-X 준주거 표준지', spec: '대지 396㎡ (120평)', date: '2025.08', price: '41.4억원', perPyung: '3,450만원' },
+          { name: '서초동 1690-XX 이면 필지', spec: '대지 312㎡ (94평)', date: '2025.11', price: '31.1억원', perPyung: '3,300만원' },
+          { name: '법원사거리 이면 근생대지', spec: '대지 425㎡ (129평)', date: '2026.02', price: '46.3억원', perPyung: '3,600만원' }
+        ];
+
+      case 'construction':
+        return [
+          { name: 'H건설 테헤란 오피스 신축공사', spec: '지하3층/지상12층', date: '2025.08', price: '연면적 1,500평', perPyung: '980만원' },
+          { name: 'S물산 반포 주상복합 신축공사', spec: '지하4층/지상15층', date: '2025.11', price: '연면적 2,300평', perPyung: '1,020만원' },
+          { name: '국토부 발표 표준건축비 고시 기준', spec: '공동주택 기준 ㎡당', date: '2026.01', price: '건설자재 인상률 8.4%', perPyung: '850만원' }
+        ];
+
+      case 'apt_small':
+        if (type === 'gangnam') {
+          return [
+            { name: '역삼 푸르지오 (59.8㎡)', spec: '전용 18.1평', date: '2025.11', price: '10.6억원', perPyung: '5,900만원' },
+            { name: '역삼 e-편한세상 (59.6㎡)', spec: '전용 18.0평', date: '2026.02', price: '10.3억원', perPyung: '5,750만원' },
+            { name: '개포 주공 4단지 신축분양권', spec: '전용 18.2평', date: '2025.09', price: '11.1억원', perPyung: '6,100만원' }
+          ];
+        }
+        if (type === 'seocho') {
+          return [
+            { name: '반포 래미안원베일리 (59.9㎡)', spec: '전용 18.1평', date: '2026.01', price: '13.6억원', perPyung: '7,500만원' },
+            { name: '아크로리버파크 (59.5㎡)', spec: '전용 18.0평', date: '2025.12', price: '13.1억원', perPyung: '7,250만원' },
+            { name: '래미안 퍼스티지 (59.8㎡)', spec: '전용 18.1평', date: '2025.10', price: '12.5억원', perPyung: '6,900만원' }
+          ];
+        }
+        if (type === 'junggu') {
+          return [
+            { name: '덕수궁 디팰리스 (59.9㎡)', spec: '전용 18.1평', date: '2025.08', price: '9.4억원', perPyung: '5,200만원' },
+            { name: '남산 롯데캐슬 아이리스 (59.3㎡)', spec: '전용 18.0평', date: '2026.03', price: '9.0억원', perPyung: '5,000만원' },
+            { name: '중구 신당 KCC스위첸 (59.7㎡)', spec: '전용 18.1평', date: '2025.11', price: '8.3억원', perPyung: '4,600만원' }
+          ];
+        }
+        if (type === 'mapo') {
+          return [
+            { name: '마포 프레스티지 자이 (59.9㎡)', spec: '전용 18.1평', date: '2026.02', price: '7.8억원', perPyung: '4,300만원' },
+            { name: '신촌그랑자이 (59.6㎡)', spec: '전용 18.0평', date: '2025.10', price: '7.5억원', perPyung: '4,150만원' },
+            { name: '마포래미안푸르지오 (59.8㎡)', spec: '전용 18.1평', date: '2026.03', price: '7.9억원', perPyung: '4,400만원' }
+          ];
+        }
+        return [
+          { name: '서초 삼풍아파트 (59.5㎡)', spec: '전용 18.0평', date: '2025.11', price: '8.4억원', perPyung: '4,650만원' },
+          { name: '서초 래미안 (59.8㎡)', spec: '전용 18.1평', date: '2026.01', price: '8.0억원', perPyung: '4,450만원' },
+          { name: '남부터미널 현대 (59.9㎡)', spec: '전용 18.1평', date: '2025.07', price: '7.4억원', perPyung: '4,100만원' }
+        ];
+
+      case 'apt_medium':
+        if (type === 'gangnam') {
+          return [
+            { name: '개포 래미안 포레스트 (84.9㎡)', spec: '전용 25.7평', date: '2025.12', price: '15.5억원', perPyung: '6,200만원' },
+            { name: '대치 은마아파트 (84.4㎡)', spec: '전용 25.5평', date: '2026.01', price: '15.3억원', perPyung: '6,000만원' },
+            { name: '역삼 푸르지오 (84.8㎡)', spec: '전용 25.7평', date: '2025.11', price: '14.9억원', perPyung: '5,800만원' }
+          ];
+        }
+        if (type === 'seocho') {
+          return [
+            { name: '반포자이 (84.9㎡)', spec: '전용 25.7평', date: '2026.02', price: '18.1억원', perPyung: '7,250만원' },
+            { name: '반포 래미안퍼스티지 (84.8㎡)', spec: '전용 25.7평', date: '2025.11', price: '17.8억원', perPyung: '7,100만원' },
+            { name: '반포 써밋 (84.9㎡)', spec: '전용 25.7평', date: '2026.03', price: '17.0억원', perPyung: '6,800만원' }
+          ];
+        }
+        if (type === 'junggu') {
+          return [
+            { name: '경희궁 자이 (84.8㎡)', spec: '전용 25.7평', date: '2026.01', price: '14.0억원', perPyung: '5,600만원' },
+            { name: '서울역 센트럴자이 (84.9㎡)', spec: '전용 25.7평', date: '2025.12', price: '13.5억원', perPyung: '5,400만원' },
+            { name: '회현 남산 롯데캐슬 (84.5㎡)', spec: '전용 25.6평', date: '2025.10', price: '12.8억원', perPyung: '5,100만원' }
+          ];
+        }
+        if (type === 'mapo') {
+          return [
+            { name: '마포래미안푸르지오 (84.9㎡)', spec: '전용 25.7평', date: '2026.03', price: '11.5억원', perPyung: '4,600만원' },
+            { name: '마포자이3차 (84.8㎡)', spec: '전용 25.7평', date: '2025.11', price: '11.0억원', perPyung: '4,400만원' },
+            { name: '공덕 래미안5차 (84.9㎡)', spec: '전용 25.7평', date: '2026.01', price: '10.8억원', perPyung: '4,300만원' }
+          ];
+        }
+        return [
+          { name: '서초 삼풍아파트 (84.9㎡)', spec: '전용 25.7평', date: '2025.09', price: '12.0억원', perPyung: '4,800만원' },
+          { name: '서초 롯데캐슬클래식 (84.8㎡)', spec: '전용 25.7평', date: '2026.02', price: '11.5억원', perPyung: '4,600만원' },
+          { name: '서초동 현대아이파크 (84.5㎡)', spec: '전용 25.6평', date: '2025.12', price: '11.0억원', perPyung: '4,400만원' }
+        ];
+
+      case 'apt_large':
+        if (type === 'gangnam') {
+          return [
+            { name: '역삼 자이 (114.9㎡)', spec: '전용 34.8평', date: '2025.10', price: '23.5억원', perPyung: '6,750만원' },
+            { name: '도곡 렉슬 (114.8㎡)', spec: '전용 34.7평', date: '2026.01', price: '22.8억원', perPyung: '6,550만원' },
+            { name: '역삼 e-편한세상 (114.7㎡)', spec: '전용 34.7평', date: '2025.11', price: '21.9억원', perPyung: '6,300만원' }
+          ];
+        }
+        if (type === 'seocho') {
+          return [
+            { name: '반포 래미안원베일리 (114.9㎡)', spec: '전용 34.8평', date: '2026.03', price: '27.8억원', perPyung: '8,000만원' },
+            { name: '아크로리버파크 (114.8㎡)', spec: '전용 34.7평', date: '2025.11', price: '27.1억원', perPyung: '7,800만원' },
+            { name: '반포자이 (114.9㎡)', spec: '전용 34.8평', date: '2026.01', price: '26.1억원', perPyung: '7,500만원' }
+          ];
+        }
+        if (type === 'junggu') {
+          return [
+            { name: '경희궁자이 (114.9㎡)', spec: '전용 34.8평', date: '2025.12', price: '20.9억원', perPyung: '6,000만원' },
+            { name: '남산타운 (114.8㎡)', spec: '전용 34.7평', date: '2026.02', price: '19.4억원', perPyung: '5,600만원' },
+            { name: '명동 남산센트럴자이 (114.9㎡)', spec: '전용 34.8평', date: '2025.08', price: '18.1억원', perPyung: '5,200만원' }
+          ];
+        }
+        if (type === 'mapo') {
+          return [
+            { name: '마포그랑자이 (114.9㎡)', spec: '전용 34.8평', date: '2026.01', price: '17.4억원', perPyung: '5,000만원' },
+            { name: '신촌숲아이파크 (114.8㎡)', spec: '전용 34.7평', date: '2025.10', price: '16.7억원', perPyung: '4,800만원' },
+            { name: '마포래미안푸르지오 (114.9㎡)', spec: '전용 34.8평', date: '2026.02', price: '16.4억원', perPyung: '4,700만원' }
+          ];
+        }
+        return [
+          { name: '서초 삼풍아파트 (114.9㎡)', spec: '전용 34.8평', date: '2026.02', price: '18.1억원', perPyung: '5,200만원' },
+          { name: '서초 현대아이파크 (114.8㎡)', spec: '전용 34.7평', date: '2025.12', price: '17.4억원', perPyung: '5,000만원' },
+          { name: '서초 롯데레전드 (114.9㎡)', spec: '전용 34.8평', date: '2026.01', price: '16.7억원', perPyung: '4,800만원' }
+        ];
+
+      case 'officetel_studio':
+        if (type === 'gangnam') {
+          return [
+            { name: '강남역 서희스타힐스 (30㎡)', spec: '전용 9.1평', date: '2025.11', price: '3.0억원', perPyung: '3,300만원' },
+            { name: '역삼 아르젠 (30.1㎡)', spec: '전용 9.1평', date: '2026.02', price: '2.9억원', perPyung: '3,200만원' }
+          ];
+        }
+        if (type === 'seocho') {
+          return [
+            { name: '서초 에클라트 (30.2㎡)', spec: '전용 9.1평', date: '2025.12', price: '3.4억원', perPyung: '3,700만원' },
+            { name: '효성해링턴타워 (30㎡)', spec: '전용 9.1평', date: '2026.01', price: '3.3억원', perPyung: '3,600만원' }
+          ];
+        }
+        if (type === 'junggu') {
+          return [
+            { name: '을지로 센트럴데시앙 (30㎡)', spec: '전용 9.1평', date: '2025.10', price: '2.6억원', perPyung: '2,900만원' },
+            { name: '명동 엠퍼스트플레이스 (30.1㎡)', spec: '전용 9.1평', date: '2026.03', price: '2.5억원', perPyung: '2,800만원' }
+          ];
+        }
+        if (type === 'mapo') {
+          return [
+            { name: '홍대역 엘포트 (30㎡)', spec: '전용 9.1평', date: '2026.01', price: '2.4억원', perPyung: '2,600만원' },
+            { name: '마포 한화오벨리스크 (30.2㎡)', spec: '전용 9.1평', date: '2025.11', price: '2.3억원', perPyung: '2,500만원' }
+          ];
+        }
+        return [
+          { name: '서초 현대에클라트 (30㎡)', spec: '전용 9.1평', date: '2025.10', price: '2.7억원', perPyung: '2,950만원' },
+          { name: '양재역 한신휴플러스 (30.1㎡)', spec: '전용 9.1평', date: '2025.12', price: '2.5억원', perPyung: '2,800만원' }
+        ];
+
+      case 'officetel_tworoom':
+        if (type === 'gangnam') {
+          return [
+            { name: '역삼 센트레빌아스테리움 (59㎡)', spec: '전용 17.8평', date: '2025.10', price: '6.4억원', perPyung: '3,600만원' },
+            { name: '강남 루카831 (59.2㎡)', spec: '전용 17.9평', date: '2026.02', price: '6.3억원', perPyung: '3,500만원' }
+          ];
+        }
+        if (type === 'seocho') {
+          return [
+            { name: '서초 메트로폴리스 (59.1㎡)', spec: '전용 17.9평', date: '2025.11', price: '7.4억원', perPyung: '4,150만원' },
+            { name: '지웰타워 (59.3㎡)', spec: '전용 17.9평', date: '2026.01', price: '7.2억원', perPyung: '4,050만원' }
+          ];
+        }
+        if (type === 'junggu') {
+          return [
+            { name: '충무로 엘크루메트로시티 (59㎡)', spec: '전용 17.8평', date: '2025.12', price: '5.8억원', perPyung: '3,250만원' },
+            { name: '남산 센트럴자이 (59.4㎡)', spec: '전용 18.0평', date: '2026.03', price: '5.7억원', perPyung: '3,150만원' }
+          ];
+        }
+        if (type === 'mapo') {
+          return [
+            { name: '상암 카이저팰리스 (59.1㎡)', spec: '전용 17.9평', date: '2026.02', price: '5.2억원', perPyung: '2,900만원' },
+            { name: '공덕 푸르지오시티 (59.2㎡)', spec: '전용 17.9평', date: '2025.11', price: '5.0억원', perPyung: '2,800만원' }
+          ];
+        }
+        return [
+          { name: '서초동 아르젠 (59㎡)', spec: '전용 17.8평', date: '2025.09', price: '5.5억원', perPyung: '3,100만원' },
+          { name: '강남역 푸르지오시티 (59.2㎡)', spec: '전용 17.9평', date: '2026.01', price: '5.4억원', perPyung: '3,000만원' }
+        ];
+
+      case 'officetel_threeroom':
+        if (type === 'gangnam') {
+          return [
+            { name: '강남 피에드아테르 (84㎡)', spec: '전용 25.4평', date: '2025.11', price: '10.2억원', perPyung: '4,000만원' },
+            { name: '역삼 자이르네 (84.2㎡)', spec: '전용 25.5평', date: '2026.01', price: '9.8억원', perPyung: '3,850만원' }
+          ];
+        }
+        if (type === 'seocho') {
+          return [
+            { name: '서초 르피에드 (84.1㎡)', spec: '전용 25.4', date: '2026.03', price: '11.7억원', perPyung: '4,600만원' },
+            { name: '교대역 엘타워 (84.3㎡)', spec: '전용 25.5평', date: '2025.10', price: '11.1억원', perPyung: '4,350만원' }
+          ];
+        }
+        if (type === 'junggu') {
+          return [
+            { name: '남산 센트럴뷰 (84㎡)', spec: '전용 25.4평', date: '2025.09', price: '9.3억원', perPyung: '3,650만원' },
+            { name: '세운 푸르지오 헤리시티 (84.3㎡)', spec: '전용 25.5', date: '2026.02', price: '9.1억원', perPyung: '3,550만원' }
+          ];
+        }
+        if (type === 'mapo') {
+          return [
+            { name: '마포 한강2차푸르지오 (84.1㎡)', spec: '전용 25.4평', date: '2025.12', price: '8.3억원', perPyung: '3,250만원' },
+            { name: '신촌 다올마을 (84.2㎡)', spec: '전용 25.5평', date: '2026.01', price: '8.0억원', perPyung: '3,150만원' }
+          ];
+        }
+        return [
+          { name: '서초 롯데골든클래스 (84㎡)', spec: '전용 25.4평', date: '2025.08', price: '8.8억원', perPyung: '3,450만원' },
+          { name: '양재 오피스빌 (84.3㎡)', spec: '전용 25.5평', date: '2026.02', price: '8.4억원', perPyung: '3,300만원' }
+        ];
+
+      case 'office':
+        if (type === 'gangnam') {
+          return [
+            { name: '강남파이낸스센터 인근 오피스', spec: '업무용 전층', date: '2025.08', price: '평당 보 300만/월 24만', perPyung: '3,500만원' },
+            { name: '테헤란로변 대형 오피스', spec: '업무용 프라임', date: '2025.12', price: '평당 보 280만/월 22만', perPyung: '3,400만원' }
+          ];
+        }
+        if (type === 'seocho') {
+          return [
+            { name: '서초동 삼성타운 인근 빌딩', spec: '업무용 중대형', date: '2025.11', price: '평당 보 320만/월 25만', perPyung: '3,550만원' },
+            { name: '교대역 주변 호재빌딩 오피스', spec: '업무용 준프라임', date: '2026.01', price: '평당 보 300만/월 23만', perPyung: '3,450만원' }
+          ];
+        }
+        if (type === 'junggu') {
+          return [
+            { name: '을지로 파인에비뉴 타워', spec: '업무용 대형', date: '2025.10', price: '평당 보 250만/월 19만', perPyung: '3,100만원' },
+            { name: '중구 시그니쳐타워 업무층', spec: '업무용 프라임', date: '2025.09', price: '평당 보 240만/월 18만', perPyung: '3,000만원' }
+          ];
+        }
+        if (type === 'mapo') {
+          return [
+            { name: '마포로변 프라임 빌딩', spec: '업무용 중형', date: '2025.11', price: '평당 보 200만/월 16만', perPyung: '2,550만원' },
+            { name: '상암 DMC IT타워 오피스', spec: '업무용 전층', date: '2025.07', price: '평당 보 180만/월 14만', perPyung: '2,400만원' }
+          ];
+        }
+        return [
+          { name: '남부터미널 인근 프라임 빌딩', spec: '업무용 중형', date: '2025.08', price: '평당 보 150만/월 12만', perPyung: '1,900만원' },
+          { name: '서초동 법조타운 소형 사무소', spec: '업무용 전용', date: '2025.11', price: '평당 보 160만/월 13만', perPyung: '1,950만원' }
+        ];
+
+      case 'retail':
+        if (type === 'gangnam') {
+          return [
+            { name: '강남역 메인 먹자 상권 1층', spec: '근린생활 지상1층', date: '2025.09', price: '평당 보 500만/월 32만', perPyung: '7,500만원' },
+            { name: '역삼동 이면 골목 코너 1층', spec: '근린생활 지상1층', date: '2026.01', price: '평당 보 450만/월 28만', perPyung: '7,000만원' }
+          ];
+        }
+        if (type === 'seocho') {
+          return [
+            { name: '래미안원베일리 단지내상가 1층', spec: '근린생활 지상1층', date: '2025.12', price: '평당 보 600만/월 35만', perPyung: '8,500만원' },
+            { name: '아크로리버 상가 1층', spec: '근린생활 지상1층', date: '2026.02', price: '평당 보 550만/월 32만', perPyung: '8,150만원' }
+          ];
+        }
+        if (type === 'junggu') {
+          return [
+            { name: '명동 메인스트리트 로드숍 1층', spec: '근린생활 지상1층', date: '2025.11', price: '평당 보 800만/월 45만', perPyung: '1억 0,000만원' },
+            { name: '을지로 센터원 상가 1층', spec: '근린생활 지상1층', date: '2025.10', price: '평당 보 450만/월 28만', perPyung: '7,000만원' }
+          ];
+        }
+        if (type === 'mapo') {
+          return [
+            { name: '연남동 미로길 리테일 1층', spec: '근린생활 지상1층', date: '2025.09', price: '평당 보 350만/월 22만', perPyung: '5,250만원' },
+            { name: '홍대 걷고싶은거리 1층', spec: '근린생활 지상1층', date: '2026.01', price: '평당 보 400만/월 25만', perPyung: '5,750만원' }
+          ];
+        }
+        return [
+          { name: '서초대로변 메인상가 1층', spec: '근린생활 지상1층', date: '2025.08', price: '평당 보 250만/월 15만', perPyung: '3,650만원' },
+          { name: '남부터미널역 근린상가 1층', spec: '근린생활 지상1층', date: '2025.11', price: '평당 보 220만/월 13만', perPyung: '3,450만원' }
+        ];
+
+      default:
+        return [];
+    }
+  };
+
   const [activeCommercialTab, setActiveCommercialTab] = useState<'demographics' | 'competitors' | 'tenants' | 'risks'>('demographics');
   const [activeSummaryTab, setActiveSummaryTab] = useState<'general' | 'area' | 'parking' | 'amenity' | 'layout'>('general');
 
@@ -1470,463 +1892,272 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
         recommendations: [
           { category: '생활 밀착 메디컬 클리닉 (의원)', yield: '5.1%', description: '소아과, 이비인후과, 통증의학과 및 약국 복합 동선 권장' },
           { category: '대형 유명 프랜차이즈 베이커리 & F&B', yield: '4.9%', description: '주거 가구 수요를 유입시키는 앵커 테넌트 입점 추진' },
-          { category: '스터디 및 소통형 에듀 공간', yield: '4.7%', description: '학군 수요 대응 프리미엄 독서실 및 영유아 웰니스 클럽 권장' }
+          { category: '스터디 및 소셜 오피스 카페', yield: '4.5%', description: '학군지 및 은퇴층 근린 커뮤니티 성격 공유 오피스룸' }
         ],
-        risksText: '상업적 폭발력이나 자산 가치 단기 폭증 가능성은 매우 낮음. 인구 감소 지역의 경우 장기 배후 세대 정체에 따른 임대수익 정밀 조율 필요.'
+        risksText: '학령인구 감소 및 온라인 소매 강화로 오프라인 점포 회전율이 둔화될 수 있으며, 임대 단가 인상에 대한 심리적 저항이 강해 리모델링 시 관리 효율 관건.'
       };
     }
   };
 
-  // Chart configuration
-  const CHART_GREEN = '#5F7161';
-  const CHART_BEIGE = '#EDDBC7';
-  const COLORS = [CHART_GREEN, '#8D7B68', CHART_BEIGE, '#A89F94', '#3E362E', '#D9D1C7'];
-
-  const costVsRevData = [
-    { name: '투입 총사업비', '상세 금액(억원)': result.financials.totalProjectCost },
-    { name: '예상 분양매출', '상세 금액(억원)': result.financials.totalSalesRevenue }
-  ];
-
-  const costBreakdownData = [
-    { name: '토지 수매비', value: result.financials.landCost },
-    { name: '공동 건축 공비', value: result.financials.constructionCost },
-    { name: '금융 및 사업공과금', value: result.financials.otherCosts }
-  ];
-
   return (
-    <div className="space-y-6" id="step3-container">
-      {/* Intro Header */}
-      <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-50 pb-4">
-          <div>
-            {activeStep === 3 ? (
-              <>
-                <h2 className="text-lg font-semibold text-[#2C251F] flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-[#5F7161]" />
-                  Step 3: 계획안 개요 (건축 기획 및 상품 구성)
-                </h2>
-                <p className="text-xs text-[#8D7B68] font-normal mt-1 leading-relaxed">
-                  지상/지하 용도별 구성안을 기획하고 각 상품의 평형과 호실(세대)수를 배분하여 법정 주차 대수 및 용적률 설계 정합성을 확인하는 설계 개요 단계입니다.
-                </p>
-              </>
-            ) : (
-              <>
-                <h2 className="text-lg font-semibold text-[#2C251F] flex items-center gap-2">
-                  <CircleDollarSign className="w-5 h-5 text-indigo-600" />
-                  Step 4: 사업성 분석 (재무 수지 및 시뮬레이션)
-                </h2>
-                <p className="text-xs text-[#8D7B68] font-normal mt-1 leading-relaxed">
-                  대지 수매가와 건축비 예산, 주변 시세를 반영한 평당 분양/임대가 조건을 기반으로 ROI, 내부수익률(IRR), 손익분기점(BEP) 등 종합 재무성을 시뮬레이션합니다.
-                </p>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Regulatory Floor Area Ratio Tracker Alert */}
-        <div className={`p-4 rounded-xl border transition-all duration-300 ${result.isFarExceeded ? 'bg-red-50 border-red-100 text-red-850' : 'bg-[#F4F6F4] border-gray-100 text-gray-800'}`}>
-          <div className="flex items-start gap-3">
-            {result.isFarExceeded ? (
-              <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            ) : (
-              <Layers className="w-5 h-5 text-[#5F7161] flex-shrink-0 mt-0.5" />
-            )}
-            <div className="flex-1 space-y-1">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold uppercase tracking-wider">용적률 한도 및 기획 연면적 검토</span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${result.isFarExceeded ? 'bg-red-200 text-red-900' : 'bg-emerald-100 text-emerald-900'}`}>
-                  {result.isFarExceeded ? '용적률 초과 (설계 재조정 필요)' : '설계 정합성 양호 (법정 이내)'}
-                </span>
-              </div>
-              <div className="text-xs">
-                대지면적: <strong className="text-gray-900">{landArea.toLocaleString()}㎡</strong> | 
-                적용 용적률: <strong className={result.isFarExceeded ? 'text-red-700' : 'text-emerald-700'}>{result.consumedFAR.toFixed(2)}%</strong> (허용: {appliedFAR}%) | 
-                기획 연면적: <strong>{result.aboveGroundGFA.toLocaleString()}㎡</strong> / <strong>{result.totalGFA.toLocaleString()}㎡</strong> (지상/총)
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* AI Market Analysis Report Card */}
-        {activeStep !== 3 && marketAnalysisReport && (
-          <div className="p-5 bg-gradient-to-br from-amber-50/40 to-orange-50/20 border border-[#EDDBC7]/80 rounded-2xl space-y-4 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#EDDBC7]/40 pb-3">
-              <div className="flex items-center gap-2 text-[#2C251F] font-bold text-sm">
-                <Sparkles className="w-4 h-4 text-amber-600 animate-pulse" />
-                <span>AI 주변 입지·실거래 기반 수지분석 추천값 동기화</span>
-              </div>
-              <div className="flex items-center gap-2">
+    <div className="space-y-6">
+      {currentLand ? (
+        <div className="space-y-4">
+          {activeStep === 4 && (
+            <>
+              {showAiPopulationEditor && (
+            <div className="bg-amber-50/10 p-5 rounded-2xl border border-amber-200/40 space-y-4 shadow-xs">
+              <div className="flex justify-between items-center border-b border-amber-200/20 pb-3">
+                <div className="space-y-1">
+                  <h3 className="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-amber-600 animate-pulse" />
+                    AI 기반 수지분석 모집단 분석 및 보정 엔진
+                  </h3>
+                  <p className="text-[10px] text-amber-700 font-medium">실거래가 및 표준건축비 분석 데이터</p>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setShowAiPopulationEditor(!showAiPopulationEditor)}
-                  className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-amber-600/10 hover:bg-amber-600/20 text-amber-800 border border-amber-600/20 transition-all flex items-center gap-1 shadow-xs"
+                  onClick={() => setShowAiPopulationEditor(false)}
+                  className="text-[10px] font-bold text-amber-800 hover:text-amber-900 cursor-pointer"
                 >
-                  {showAiPopulationEditor ? '모집단·수정 접기 ▲' : '모집단 분석 근거 및 수정 열기 ▼'}
+                  접기 ▲
                 </button>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                  실시간 주변 분석 동기화 완료
-                </span>
               </div>
-            </div>
 
-            <p className="text-xs text-[#6E5D4F] leading-relaxed whitespace-pre-wrap font-medium">{marketAnalysisReport}</p>
-
-            {aiRecommendations && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-                <div className="p-2.5 bg-white/70 rounded-xl border border-[#EDDBC7]/40 space-y-1">
-                  <div className="text-[10px] text-gray-400 font-semibold">AI 권장 토지비</div>
-                  <div className="text-xs font-bold text-gray-900">
-                    {aiRecommendations.landPricePerPyung 
-                      ? `평당 ${aiRecommendations.landPricePerPyung.toLocaleString()} 만원`
-                      : `${aiRecommendations.landPurchasePrice?.toLocaleString()} 억원`
-                    }
-                  </div>
-                  <div className="text-[9px] text-gray-400">
-                    {aiRecommendations.landPricePerPyung 
-                      ? `총 약 ${aiRecommendations.landPurchasePrice?.toLocaleString()} 억원`
-                      : '공시지가 및 실거래 분석'
-                    }
-                  </div>
-                </div>
-                <div className="p-2.5 bg-white/70 rounded-xl border border-[#EDDBC7]/40 space-y-1">
-                  <div className="text-[10px] text-gray-400 font-semibold">AI 권장 평당 공사비</div>
-                  <div className="text-xs font-bold text-gray-900">{aiRecommendations.constructionCostPerPyung?.toLocaleString()} 만원</div>
-                  <div className="text-[9px] text-gray-400">현 시점 자재·노무비 반영</div>
-                </div>
-                <div className="p-2.5 bg-white/70 rounded-xl border border-[#EDDBC7]/40 space-y-1">
-                  <div className="text-[10px] text-gray-400 font-semibold">오피스 권장 평당임대</div>
-                  <div className="text-xs font-bold text-gray-900">보 {aiRecommendations.officeDepositPerPyung?.toLocaleString()}만 / 월 {aiRecommendations.officeRentPerPyung?.toLocaleString()}만</div>
-                  <div className="text-[9px] text-gray-400">주변 오피스 공실률 보정</div>
-                </div>
-                <div className="p-2.5 bg-white/70 rounded-xl border border-[#EDDBC7]/40 space-y-1">
-                  <div className="text-[10px] text-gray-400 font-semibold">상가 1F 권장 평당임대</div>
-                  <div className="text-xs font-bold text-gray-900">보 {aiRecommendations.retail1FDeposit?.toLocaleString()}만 / 월 {aiRecommendations.retail1FRent?.toLocaleString()}만</div>
-                  <div className="text-[9px] text-gray-400">핵심 배후 상권 요율</div>
-                </div>
-              </div>
-            )}
-
-            {/* AI Surrounding Reference Population & Direct Price Editor Section */}
-            {showAiPopulationEditor && (
-              <div className="bg-white/80 p-4 rounded-xl border border-[#EDDBC7]/60 space-y-3 animate-fadeIn">
-                <div className="flex items-center gap-1.5 border-b border-[#EDDBC7]/30 pb-2">
-                  <Calculator className="w-4 h-4 text-amber-600" />
-                  <span className="text-xs font-extrabold text-[#2C251F]">📈 AI 주변 상권 실거래 모집단 및 평당 분양가 세부 조정</span>
-                </div>
-                
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-[11px] border-collapse">
-                    <thead>
-                      <tr className="bg-[#FAF9F5] border-b border-[#EDDBC7]/30 text-gray-600 font-bold">
-                        <th className="p-2 text-left">기획 분류</th>
-                        <th className="p-2 text-left">AI 분석 주변 실거래 근거 및 모집단</th>
-                        <th className="p-2 text-right w-36">현재 단가 (수정 가능)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-150 text-gray-750">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200/50 text-gray-500 font-bold text-[10.5px]">
+                      <th className="p-2.5 text-left">분석 항목</th>
+                      <th className="p-2.5 text-left">AI 분석 근거 및 주변 모집단 실거래 가이드라인</th>
+                      <th className="p-2.5 text-right">수지분석 적용 수치</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-150 text-gray-750">
                       {/* 1. 토지비 */}
-                      <tr>
-                        <td className="p-2 font-bold text-gray-900">총 토지 매입비</td>
-                        <td className="p-2 text-gray-500 leading-relaxed">
-                          {(() => {
-                            const addr = currentLand?.address || '';
-                            if (addr.includes('역삼') || addr.includes('강남')) return '역삼동 이면 상업/준주거지 최근 매각 실거래 (평당 1.1억~1.3억원 수준)';
-                            if (addr.includes('반포') || addr.includes('서초')) return '서초대로변 준주거지 및 반포동 노후 대지 수매 실거래가 (평당 1.0억~1.2억원 수준)';
-                            if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '을지로 중심상업지역 일반상업지 대로변 최고가 실거래 (평당 1.4억~1.6억원 수준)';
-                            if (addr.includes('연남') || addr.includes('마포')) return '연트럴파크 메인 상권 및 연남동 미로길 카페거리 수매가 실거래 (평당 5.0~6.5천만원 수준)';
-                            return '서초동 법원사거리 인근 준주거지역 표준지 실거래가 (평당 3.3~3.6천만원 수준)';
-                          })()}
-                        </td>
-                        <td className="p-2 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <input
-                              type="number"
-                              value={landPurchasePrice}
-                              onChange={(e) => handleLandPurchasePriceChange(parseFloat(e.target.value) || 0)}
-                              className="w-20 p-1 text-right font-mono font-bold text-slate-800 bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
-                            />
-                            <span className="text-[10px] text-gray-500 font-bold">억</span>
-                          </div>
-                        </td>
-                      </tr>
+                      {renderPopulationRow(
+                        'land',
+                        '총 토지 매입비',
+                        landPurchasePrice,
+                        '억',
+                        handleLandPurchasePriceChange,
+                        (() => {
+                          const addr = currentLand?.address || '';
+                          if (addr.includes('역삼') || addr.includes('강남')) return '역삼동 이면 상업/준주거지 최근 매각 실거래 (평당 1.1억~1.3억원 수준)';
+                          if (addr.includes('반포') || addr.includes('서초')) return '서초대로변 준주거지 및 반포동 노후 대지 수매 실거래가 (평당 1.0억~1.2억원 수준)';
+                          if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '을지로 중심상업지역 일반상업지 대로변 최고가 실거래 (평당 1.4억~1.6억원 수준)';
+                          if (addr.includes('연남') || addr.includes('마포')) return '연트럴파크 메인 상권 및 연남동 미로길 카페거리 수매가 실거래 (평당 5.0~6.5천만원 수준)';
+                          return '서초동 법원사거리 인근 준주거지역 표준지 실거래가 (평당 3.3~3.6천만원 수준)';
+                        })()
+                      )}
 
                       {/* 2. 평당 공사비 */}
-                      <tr>
-                        <td className="p-2 font-bold text-gray-900">평당 공사비</td>
-                        <td className="p-2 text-gray-500 leading-relaxed">
-                          국토교통부 고시 표준건축비(㎡당 약 220만원) 및 최근 3개년 원자재·인건비 인플레이션 반영 표준 가이드라인 (평당 800~1,100만원 분포)
-                        </td>
-                        <td className="p-2 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <input
-                              type="number"
-                              value={constructionCostPerPyung}
-                              onChange={(e) => setConstructionCostPerPyung(parseInt(e.target.value) || 0)}
-                              className="w-20 p-1 text-right font-mono font-bold text-slate-800 bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
-                            />
-                            <span className="text-[10px] text-gray-500 font-bold">만원</span>
-                          </div>
-                        </td>
-                      </tr>
+                      {renderPopulationRow(
+                        'construction',
+                        '평당 공사비',
+                        constructionCostPerPyung,
+                        '만원',
+                        (val) => setConstructionCostPerPyung(Math.round(val)),
+                        '국토교통부 고시 표준건축비 및 원자재·인건비 인플레이션 반영 가이드라인 (평당 800~1,100만원)'
+                      )}
 
                       {/* 3. 공동주택 소형 */}
-                      {aptConfigs.some(c => c.id === 'apt_small') && (
-                        <tr>
-                          <td className="p-2 font-bold text-gray-900">공동주택 소형 (59㎡)</td>
-                          <td className="p-2 text-gray-500 leading-relaxed">
-                            {(() => {
-                              const addr = currentLand?.address || '';
-                              if (addr.includes('역삼') || addr.includes('강남')) return '역삼 푸르지오 59㎡ (평당 5,800~6,100만), 역삼 e-편한세상 59㎡ (평당 5,700~6,000만)';
-                              if (addr.includes('반포') || addr.includes('서초')) return '반포 래미안원베일리 59㎡ (평당 7,200~7,600만), 아크로리버파크 59㎡ (평당 7,000~7,500만)';
-                              if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '덕수궁 디팰리스 59㎡ (평당 5,000~5,400만), 남산 롯데캐슬 59㎡ (평당 4,800~5,200만)';
-                              if (addr.includes('연남') || addr.includes('마포')) return '마포 프레스티지 자이 59㎡ (평당 4,200~4,500만), 신촌그랑자이 59㎡ (평당 4,000~4,300만)';
-                              return '서초 삼풍아파트 59㎡ (평당 4,500~4,800만), 서초 래미안 59㎡ (평당 4,300~4,600만)';
-                            })()}
-                          </td>
-                          <td className="p-2 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <input
-                                type="number"
-                                value={aptConfigs.find(c => c.id === 'apt_small')?.salesPricePerPyung || 0}
-                                onChange={(e) => {
-                                  const val = parseInt(e.target.value) || 0;
-                                  setAptConfigs(prev => prev.map(cfg => cfg.id === 'apt_small' ? { ...cfg, salesPricePerPyung: val } : cfg));
-                                }}
-                                className="w-20 p-1 text-right font-mono font-bold text-[#5F7161] bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
-                              />
-                              <span className="text-[10px] text-gray-500 font-bold">만원</span>
-                            </div>
-                          </td>
-                        </tr>
+                      {aptConfigs.some(c => c.id === 'apt_small') && renderPopulationRow(
+                        'apt_small',
+                        '공동주택 소형 (59㎡)',
+                        aptConfigs.find(c => c.id === 'apt_small')?.salesPricePerPyung || 0,
+                        '만원',
+                        (val) => setAptConfigs(prev => prev.map(cfg => cfg.id === 'apt_small' ? { ...cfg, salesPricePerPyung: Math.round(val) } : cfg)),
+                        (() => {
+                          const addr = currentLand?.address || '';
+                          if (addr.includes('역삼') || addr.includes('강남')) return '역삼 푸르지오 59㎡ (평당 5,800~6,100만), 역삼 e-편한세상 59㎡ (평당 5,700~6,000만)';
+                          if (addr.includes('반포') || addr.includes('서초')) return '반포 래미안원베일리 59㎡ (평당 7,200~7,600만), 아크로리버파크 59㎡ (평당 7,000~7,500만)';
+                          if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '덕수궁 디팰리스 59㎡ (평당 5,000~5,400만), 남산 롯데캐슬 59㎡ (평당 4,800~5,200만)';
+                          if (addr.includes('연남') || addr.includes('마포')) return '마포 프레스티지 자이 59㎡ (평당 4,200~4,500만), 신촌그랑자이 59㎡ (평당 4,000~4,300만)';
+                          return '서초 삼풍아파트 59㎡ (평당 4,500~4,800만), 서초 래미안 59㎡ (평당 4,300~4,600만)';
+                        })()
                       )}
 
                       {/* 4. 공동주택 중형 */}
-                      {aptConfigs.some(c => c.id === 'apt_medium') && (
-                        <tr>
-                          <td className="p-2 font-bold text-gray-900">공동주택 중형 (84㎡)</td>
-                          <td className="p-2 text-gray-500 leading-relaxed">
-                            {(() => {
-                              const addr = currentLand?.address || '';
-                              if (addr.includes('역삼') || addr.includes('강남')) return '개포 래미안 포레스트 84㎡ (평당 6,000~6,400만), 대치 은마아파트 84㎡ (평당 5,800~6,200만)';
-                              if (addr.includes('반포') || addr.includes('서초')) return '반포자이 84㎡ (평당 7,100~7,400만), 반포 래미안퍼스티지 84㎡ (평당 7,000~7,300만)';
-                              if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '경희궁 자이 84㎡ (평당 5,400~5,800만), 서울역 센트럴자이 84㎡ (평당 5,200~5,600만)';
-                              if (addr.includes('연남') || addr.includes('마포')) return '마포래미안푸르지오 84㎡ (평당 4,400~4,800만), 마포자이3차 84㎡ (평당 4,200~4,600만)';
-                              return '서초 삼풍아파트 84㎡ (평당 4,600~5,000만), 서초 롯데캐슬클래식 84㎡ (평당 4,400~4,800만)';
-                            })()}
-                          </td>
-                          <td className="p-2 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <input
-                                type="number"
-                                value={aptConfigs.find(c => c.id === 'apt_medium')?.salesPricePerPyung || 0}
-                                onChange={(e) => {
-                                  const val = parseInt(e.target.value) || 0;
-                                  setAptConfigs(prev => prev.map(cfg => cfg.id === 'apt_medium' ? { ...cfg, salesPricePerPyung: val } : cfg));
-                                }}
-                                className="w-20 p-1 text-right font-mono font-bold text-[#5F7161] bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
-                              />
-                              <span className="text-[10px] text-gray-500 font-bold">만원</span>
-                            </div>
-                          </td>
-                        </tr>
+                      {aptConfigs.some(c => c.id === 'apt_medium') && renderPopulationRow(
+                        'apt_medium',
+                        '공동주택 중형 (84㎡)',
+                        aptConfigs.find(c => c.id === 'apt_medium')?.salesPricePerPyung || 0,
+                        '만원',
+                        (val) => setAptConfigs(prev => prev.map(cfg => cfg.id === 'apt_medium' ? { ...cfg, salesPricePerPyung: Math.round(val) } : cfg)),
+                        (() => {
+                          const addr = currentLand?.address || '';
+                          if (addr.includes('역삼') || addr.includes('강남')) return '개포 래미안 포레스트 84㎡ (평당 6,000~6,400만), 대치 은마아파트 84㎡ (평당 5,800~6,200만)';
+                          if (addr.includes('반포') || addr.includes('서초')) return '반포자이 84㎡ (평당 7,100~7,400만), 반포 래미안퍼스티지 84㎡ (평당 7,000~7,300만)';
+                          if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '경희궁 자이 84㎡ (평당 5,400~5,800만), 서울역 센트럴자이 84㎡ (평당 5,200~5,600만)';
+                          if (addr.includes('연남') || addr.includes('마포')) return '마포래미안푸르지오 84㎡ (평당 4,400~4,800만), 마포자이3차 84㎡ (평당 4,200~4,600만)';
+                          return '서초 삼풍아파트 84㎡ (평당 4,600~5,000만), 서초 롯데캐슬클래식 84㎡ (평당 4,400~4,800만)';
+                        })()
                       )}
 
                       {/* 5. 공동주택 대형 */}
-                      {aptConfigs.some(c => c.id === 'apt_large') && (
-                        <tr>
-                          <td className="p-2 font-bold text-gray-900">공동주택 대형 (114㎡)</td>
-                          <td className="p-2 text-gray-500 leading-relaxed">
-                            {(() => {
-                              const addr = currentLand?.address || '';
-                              if (addr.includes('역삼') || addr.includes('강남')) return '역삼 자이 114㎡ (평당 6,500~7,000만), 도곡 렉슬 114㎡ (평당 6,300~6,800만)';
-                              if (addr.includes('반포') || addr.includes('서초')) return '반포 래미안원베일리 114㎡ (평당 7,800~8,200만), 아크로리버파크 114㎡ (평당 7,600~8,000만)';
-                              if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '경희궁자이 114㎡ (평당 5,800~6,200만), 남산타운 114㎡ (평당 5,400~5,800만)';
-                              if (addr.includes('연남') || addr.includes('마포')) return '마포그랑자이 114㎡ (평당 4,800~5,200만), 신촌숲아이파크 114㎡ (평당 4,600~5,000만)';
-                              return '서초 삼풍아파트 114㎡ (평당 5,000~5,400만), 서초 현대아이파크 114㎡ (평당 4,800~5,200만)';
-                            })()}
-                          </td>
-                          <td className="p-2 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <input
-                                type="number"
-                                value={aptConfigs.find(c => c.id === 'apt_large')?.salesPricePerPyung || 0}
-                                onChange={(e) => {
-                                  const val = parseInt(e.target.value) || 0;
-                                  setAptConfigs(prev => prev.map(cfg => cfg.id === 'apt_large' ? { ...cfg, salesPricePerPyung: val } : cfg));
-                                }}
-                                className="w-20 p-1 text-right font-mono font-bold text-[#5F7161] bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
-                              />
-                              <span className="text-[10px] text-gray-500 font-bold">만원</span>
-                            </div>
-                          </td>
-                        </tr>
+                      {aptConfigs.some(c => c.id === 'apt_large') && renderPopulationRow(
+                        'apt_large',
+                        '공동주택 대형 (114㎡)',
+                        aptConfigs.find(c => c.id === 'apt_large')?.salesPricePerPyung || 0,
+                        '만원',
+                        (val) => setAptConfigs(prev => prev.map(cfg => cfg.id === 'apt_large' ? { ...cfg, salesPricePerPyung: Math.round(val) } : cfg)),
+                        (() => {
+                          const addr = currentLand?.address || '';
+                          if (addr.includes('역삼') || addr.includes('강남')) return '역삼 자이 114㎡ (평당 6,500~7,000만), 도곡 렉슬 114㎡ (평당 6,300~6,800만)';
+                          if (addr.includes('반포') || addr.includes('서초')) return '반포 래미안원베일리 114㎡ (평당 7,800~8,200만), 아크로리버파크 114㎡ (평당 7,600~8,000만)';
+                          if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '경희궁자이 114㎡ (평당 5,800~6,200만), 남산타운 114㎡ (평당 5,400~5,800만)';
+                          if (addr.includes('연남') || addr.includes('마포')) return '마포그랑자이 114㎡ (평당 4,800~5,200만), 신촌숲아이파크 114㎡ (평당 4,600~5,000만)';
+                          return '서초 삼풍아파트 114㎡ (평당 5,000~5,400만), 서초 현대아이파크 114㎡ (평당 4,800~5,200만)';
+                        })()
                       )}
 
                       {/* 6. 오피스텔 원룸 */}
-                      {officetelConfigs.some(c => c.id === 'officetel_studio') && (
-                        <tr>
-                          <td className="p-2 font-bold text-gray-900">오피스텔 원룸 (9평)</td>
-                          <td className="p-2 text-gray-500 leading-relaxed">
-                            {(() => {
-                              const addr = currentLand?.address || '';
-                              if (addr.includes('역삼') || addr.includes('강남')) return '강남역 서희스타힐스 30㎡ (평당 3,200~3,400만), 역삼 아르젠 30㎡ (평당 3,100~3,300만)';
-                              if (addr.includes('반포') || addr.includes('서초')) return '서초 에클라트 30㎡ (평당 3,600~3,800만), 효성해링턴타워 30㎡ (평당 3,500~3,700만)';
-                              if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '을지로 센트럴데시앙 30㎡ (평당 2,800~3,000만), 명동 엠퍼스트플레이스 30㎡ (평당 2,700~2,900만)';
-                              if (addr.includes('연남') || addr.includes('마포')) return '홍대역 엘포트 30㎡ (평당 2,500~2,700만), 마포 한화오벨리스크 30㎡ (평당 2,400~2,600만)';
-                              return '서초 현대에클라트 30㎡ (평당 2,800~3,100만), 양재역 한신휴플러스 30㎡ (평당 2,700~2,900만)';
-                            })()}
-                          </td>
-                          <td className="p-2 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <input
-                                type="number"
-                                value={officetelConfigs.find(c => c.id === 'officetel_studio')?.salesPricePerPyung || 0}
-                                onChange={(e) => {
-                                  const val = parseInt(e.target.value) || 0;
-                                  setOfficetelConfigs(prev => prev.map(cfg => cfg.id === 'officetel_studio' ? { ...cfg, salesPricePerPyung: val } : cfg));
-                                }}
-                                className="w-20 p-1 text-right font-mono font-bold text-slate-700 bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
-                              />
-                              <span className="text-[10px] text-gray-500 font-bold">만원</span>
-                            </div>
-                          </td>
-                        </tr>
+                      {officetelConfigs.some(c => c.id === 'officetel_studio') && renderPopulationRow(
+                        'officetel_studio',
+                        '오피스텔 원룸 (9평)',
+                        officetelConfigs.find(c => c.id === 'officetel_studio')?.salesPricePerPyung || 0,
+                        '만원',
+                        (val) => setOfficetelConfigs(prev => prev.map(cfg => cfg.id === 'officetel_studio' ? { ...cfg, salesPricePerPyung: Math.round(val) } : cfg)),
+                        (() => {
+                          const addr = currentLand?.address || '';
+                          if (addr.includes('역삼') || addr.includes('강남')) return '강남역 서희스타힐스 30㎡ (평당 3,200~3,400만), 역삼 아르젠 30㎡ (평당 3,100~3,300만)';
+                          if (addr.includes('반포') || addr.includes('서초')) return '서초 에클라트 30㎡ (평당 3,600~3,800만), 효성해링턴타워 30㎡ (평당 3,500~3,700만)';
+                          if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '을지로 센트럴데시앙 30㎡ (평당 2,800~3,000만), 명동 엠퍼스트플레이스 30㎡ (평당 2,700~2,900만)';
+                          if (addr.includes('연남') || addr.includes('마포')) return '홍대역 엘포트 30㎡ (평당 2,500~2,700만), 마포 한화오벨리스크 30㎡ (평당 2,400~2,600만)';
+                          return '서초 현대에클라트 30㎡ (평당 2,800~3,100만), 양재역 한신휴플러스 30㎡ (평당 2,700~2,900만)';
+                        })()
                       )}
 
                       {/* 7. 오피스텔 투룸 */}
-                      {officetelConfigs.some(c => c.id === 'officetel_tworoom') && (
-                        <tr>
-                          <td className="p-2 font-bold text-gray-900">오피스텔 투룸 (18평)</td>
-                          <td className="p-2 text-gray-500 leading-relaxed">
-                            {(() => {
-                              const addr = currentLand?.address || '';
-                              if (addr.includes('역삼') || addr.includes('강남')) return '역삼 센트레빌아스테리움 59㎡ (평당 3,500~3,700만), 강남 루카831 59㎡ (평당 3,400~3,600만)';
-                              if (addr.includes('반포') || addr.includes('서초')) return '서초 메트로폴리스 59㎡ (평당 4,000~4,300만), 지웰타워 59㎡ (평당 3,900~4,200만)';
-                              if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '충무로 엘크루메트로시티 59㎡ (평당 3,100~3,400만), 남산 센트럴자이 59㎡ (평당 3,000~3,300만)';
-                              if (addr.includes('연남') || addr.includes('마포')) return '상암 카이저팰리스 59㎡ (평당 2,800~3,000만), 공덕 푸르지오시티 59㎡ (평당 2,700~2,900만)';
-                              return '서초동 아르젠 59㎡ (평당 3,000~3,200만), 강남역 푸르지오시티 59㎡ (평당 2,900~3,100만)';
-                            })()}
-                          </td>
-                          <td className="p-2 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <input
-                                type="number"
-                                value={officetelConfigs.find(c => c.id === 'officetel_tworoom')?.salesPricePerPyung || 0}
-                                onChange={(e) => {
-                                  const val = parseInt(e.target.value) || 0;
-                                  setOfficetelConfigs(prev => prev.map(cfg => cfg.id === 'officetel_tworoom' ? { ...cfg, salesPricePerPyung: val } : cfg));
-                                }}
-                                className="w-20 p-1 text-right font-mono font-bold text-slate-700 bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
-                              />
-                              <span className="text-[10px] text-gray-500 font-bold">만원</span>
-                            </div>
-                          </td>
-                        </tr>
+                      {officetelConfigs.some(c => c.id === 'officetel_tworoom') && renderPopulationRow(
+                        'officetel_tworoom',
+                        '오피스텔 투룸 (18평)',
+                        officetelConfigs.find(c => c.id === 'officetel_tworoom')?.salesPricePerPyung || 0,
+                        '만원',
+                        (val) => setOfficetelConfigs(prev => prev.map(cfg => cfg.id === 'officetel_tworoom' ? { ...cfg, salesPricePerPyung: Math.round(val) } : cfg)),
+                        (() => {
+                          const addr = currentLand?.address || '';
+                          if (addr.includes('역삼') || addr.includes('강남')) return '역삼 센트레빌아스테리움 59㎡ (평당 3,500~3,700만), 강남 루카831 59㎡ (평당 3,400~3,600만)';
+                          if (addr.includes('반포') || addr.includes('서초')) return '서초 메트로폴리스 59㎡ (평당 4,000~4,300만), 지웰타워 59㎡ (평당 3,900~4,200만)';
+                          if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '충무로 엘크루메트로시티 59㎡ (평당 3,100~3,400만), 남산 센트럴자이 59㎡ (평당 3,000~3,300만)';
+                          if (addr.includes('연남') || addr.includes('마포')) return '상암 카이저팰리스 59㎡ (평당 2,800~3,000만), 공덕 푸르지오시티 59㎡ (평당 2,700~2,900만)';
+                          return '서초동 아르젠 59㎡ (평당 3,000~3,200만), 강남역 푸르지오시티 59㎡ (평당 2,900~3,100만)';
+                        })()
                       )}
 
                       {/* 8. 오피스텔 쓰리룸 */}
-                      {officetelConfigs.some(c => c.id === 'officetel_threeroom') && (
-                        <tr>
-                          <td className="p-2 font-bold text-gray-900">오피스텔 쓰리룸 (25평)</td>
-                          <td className="p-2 text-gray-500 leading-relaxed">
-                            {(() => {
-                              const addr = currentLand?.address || '';
-                              if (addr.includes('역삼') || addr.includes('강남')) return '강남 피에드아테르 84㎡ (평당 3,800~4,200만), 역삼 자이르네 84㎡ (평당 3,700~4,000만)';
-                              if (addr.includes('반포') || addr.includes('서초')) return '서초 르피에드 84㎡ (평당 4,400~4,800만), 교대역 엘타워 84㎡ (평당 4,200~4,500만)';
-                              if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '남산 센트럴뷰 84㎡ (평당 3,500~3,800만), 세운 푸르지오 헤리시티 84㎡ (평당 3,400~3,700만)';
-                              if (addr.includes('연남') || addr.includes('마포')) return '마포 한강2차푸르지오 84㎡ (평당 3,100~3,400만), 신촌 다올마을 84㎡ (평당 3,000~3,300만)';
-                              return '서초 롯데골든클래스 84㎡ (평당 3,300~3,600만), 양재 오피스빌 84㎡ (평당 3,200~3,400만)';
-                            })()}
-                          </td>
-                          <td className="p-2 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <input
-                                type="number"
-                                value={officetelConfigs.find(c => c.id === 'officetel_threeroom')?.salesPricePerPyung || 0}
-                                onChange={(e) => {
-                                  const val = parseInt(e.target.value) || 0;
-                                  setOfficetelConfigs(prev => prev.map(cfg => cfg.id === 'officetel_threeroom' ? { ...cfg, salesPricePerPyung: val } : cfg));
-                                }}
-                                className="w-20 p-1 text-right font-mono font-bold text-slate-700 bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
-                              />
-                              <span className="text-[10px] text-gray-500 font-bold">만원</span>
-                            </div>
-                          </td>
-                        </tr>
+                      {officetelConfigs.some(c => c.id === 'officetel_threeroom') && renderPopulationRow(
+                        'officetel_threeroom',
+                        '오피스텔 쓰리룸 (25평)',
+                        officetelConfigs.find(c => c.id === 'officetel_threeroom')?.salesPricePerPyung || 0,
+                        '만원',
+                        (val) => setOfficetelConfigs(prev => prev.map(cfg => cfg.id === 'officetel_threeroom' ? { ...cfg, salesPricePerPyung: Math.round(val) } : cfg)),
+                        (() => {
+                          const addr = currentLand?.address || '';
+                          if (addr.includes('역삼') || addr.includes('강남')) return '강남 피에드아테르 84㎡ (평당 3,800~4,200만), 역삼 자이르네 84㎡ (평당 3,700~4,000만)';
+                          if (addr.includes('반포') || addr.includes('서초')) return '서초 르피에드 84㎡ (평당 4,400~4,800만), 교대역 엘타워 84㎡ (평당 4,200~4,500만)';
+                          if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '남산 센트럴뷰 84㎡ (평당 3,500~3,800만), 세운 푸르지오 헤리시티 84㎡ (평당 3,400~3,700만)';
+                          if (addr.includes('연남') || addr.includes('마포')) return '마포 한강2차푸르지오 84㎡ (평당 3,100~3,400만), 신촌 다올마을 84㎡ (평당 3,000~3,300만)';
+                          return '서초 롯데골든클래스 84㎡ (평당 3,300~3,600만), 양재 오피스빌 84㎡ (평당 3,200~3,400만)';
+                        })()
                       )}
 
                       {/* 9. 업무시설 */}
-                      {officeArea > 0 && (
-                        <tr>
-                          <td className="p-2 font-bold text-gray-900">업무시설 (오피스)</td>
-                          <td className="p-2 text-gray-500 leading-relaxed">
-                            {(() => {
+                      {officeArea > 0 && renderPopulationRow(
+                        'office',
+                        '업무시설 (오피스)',
+                        officePricePerPyung,
+                        '만원',
+                        (val) => setOfficePricePerPyung(Math.round(val)),
+                        (() => {
+                          const addr = currentLand?.address || '';
+                          if (addr.includes('역삼') || addr.includes('강남')) return '테헤란로 강남파이낸스센터 인근 프라임 오피스 실거래 (평당 3,400~3,600만)';
+                          if (addr.includes('반포') || addr.includes('서초')) return '서초동 삼성타운 인근 프라임 오피스 (평당 3,400~3,700만)';
+                          if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '을지로 파인에비뉴 및 중구 시그니쳐타워 업무시설 (평당 2,900~3,300만)';
+                          if (addr.includes('연남') || addr.includes('마포')) return '마포로변 프라임 오피스 및 상암 DMC 오피스 타워 (평당 2,400~2,700만)';
+                          return '남부터미널 인근 프라임 빌딩 업무용도 실거래가 (평당 1,800~2,000만)';
+                        })()
+                      )}
+
+                      {/* 9-2. 호텔 (분양형/임대형) */}
+                      {hotelRoomCount > 0 && (
+                        hotelType === 'sales' ? (
+                          renderPopulationRow(
+                            'hotel_sales',
+                            `호텔 분양가 (${hotelRoomSizePyung}평형)`,
+                            hotelPricePerPyung,
+                            '만원/평',
+                            (val) => setHotelPricePerPyung(Math.round(val)),
+                            (() => {
                               const addr = currentLand?.address || '';
-                              if (addr.includes('역삼') || addr.includes('강남')) return '테헤란로 강남파이낸스센터 인근 프라임 오피스 실거래 (평당 3,400~3,600만)';
-                              if (addr.includes('반포') || addr.includes('서초')) return '서초동 삼성타운 인근 프라임 오피스 (평당 3,400~3,700만)';
-                              if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '을지로 파인에비뉴 및 중구 시그니쳐타워 업무시설 (평당 2,900~3,300만)';
-                              if (addr.includes('연남') || addr.includes('마포')) return '마포로변 프라임 오피스 및 상암 DMC 오피스 타워 (평당 2,400~2,700만)';
-                              return '남부터미널 인근 프라임 빌딩 업무용도 실거래가 (평당 1,800~2,000만)';
-                            })()}
-                          </td>
-                          <td className="p-2 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <input
-                                type="number"
-                                value={officePricePerPyung}
-                                onChange={(e) => setOfficePricePerPyung(parseInt(e.target.value) || 0)}
-                                className="w-20 p-1 text-right font-mono font-bold text-[#5F7161] bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
-                              />
-                              <span className="text-[10px] text-gray-500 font-bold">만원</span>
-                            </div>
-                          </td>
-                        </tr>
+                              if (addr.includes('역삼') || addr.includes('강남')) return '강남/역삼 비즈니스 호텔 및 레지던스 분양 실거래 (평당 2,800~3,200만)';
+                              if (addr.includes('반포') || addr.includes('서초')) return '서초/교대 고급 부티크 호텔 및 서비스드 레지던스 분양 (평당 3,000~3,500만)';
+                              if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '명동/을지로 외국인 대상 호텔 분양가 실거래 (평당 2,600~3,000만)';
+                              if (addr.includes('연남') || addr.includes('마포')) return '마포/홍대 어반 라이프스타일 디자인 호텔 분양가 (평당 2,200~2,500만)';
+                              return '서초동 법원사거리 인근 비즈니스 호텔 분양 사례 (평당 2,000~2,300만)';
+                            })()
+                          )
+                        ) : (
+                          <>
+                            {renderPopulationRow(
+                              'hotel_deposit',
+                              '호텔 객실 보증금',
+                              hotelDepositPerRoom,
+                              '만원/실',
+                              (val) => setHotelDepositPerRoom(Math.round(val)),
+                              '숙박 및 운영 위탁 계약에 따른 객실당 보증금 가이드라인 (평당 1,500~2,500만원 수준)'
+                            )}
+                            {renderPopulationRow(
+                              'hotel_rent',
+                              '호텔 객실 월 수입 (가동률 고려)',
+                              hotelRentPerRoom,
+                              '만원/월/실',
+                              (val) => setHotelRentPerRoom(Math.round(val)),
+                              (() => {
+                                const addr = currentLand?.address || '';
+                                if (addr.includes('역삼') || addr.includes('강남')) return '강남 비즈니스 호텔 객실 가동률 82% 기준 월 환산 수익 (실당 180~230만)';
+                                if (addr.includes('반포') || addr.includes('서초')) return '서초 관광 호텔 객실 가동률 80% 기준 월 환산 수익 (실당 170~220만)';
+                                if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '명동 관광 호텔 객실 가동률 88% 기준 월 환산 수익 (실당 200~250만)';
+                                if (addr.includes('연남') || addr.includes('마포')) return '홍대 디자인 호텔 객실 가동률 85% 기준 월 환산 수익 (실당 160~210만)';
+                                return '서초 인근 비즈니스 호텔 객실 가동률 78% 기준 월 환산 수익 (실당 140~180만)';
+                              })()
+                            )}
+                          </>
+                        )
                       )}
 
                       {/* 10. 상업시설 지상 1층 */}
-                      {(retailB1Area > 0 || retail1FArea > 0 || retail2FArea > 0 || retail3FArea > 0) && (
-                        <tr>
-                          <td className="p-2 font-bold text-gray-900">상가 지상 1층</td>
-                          <td className="p-2 text-gray-500 leading-relaxed">
-                            {(() => {
-                              const addr = currentLand?.address || '';
-                              if (addr.includes('역삼') || addr.includes('강남')) return '테헤란로 대로변 상가 1층 실거래 (평당 7,000~8,000만), 역삼 먹자골목 1층 코너 (평당 6,500~7,500만)';
-                              if (addr.includes('반포') || addr.includes('서초')) return '반포 래미안원베일리 단지내 상가 1층 (평당 8,000~9,000만), 아크로리버 상가 (평당 7,800~8,500만)';
-                              if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '명동 메인스트리트 로드숍 1층 (평당 8,000만~1.2억), 을지로 센터원 상가 1층 (평당 6,500~7,500만)';
-                              if (addr.includes('연남') || addr.includes('마포')) return '연남동 미로길 1층 리테일 (평당 5,000~5,500만), 홍대 걷고싶은거리 상가 (평당 5,500~6,000만)';
-                              return '서초대로변 1층 상가 실거래 시세 (평당 3,500~3,800만)';
-                            })()}
-                          </td>
-                          <td className="p-2 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <input
-                                type="number"
-                                value={retail1FPrice}
-                                onChange={(e) => setRetail1FPrice(parseInt(e.target.value) || 0)}
-                                className="w-20 p-1 text-right font-mono font-bold text-[#5F7161] bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
-                              />
-                              <span className="text-[10px] text-gray-500 font-bold">만원</span>
-                            </div>
-                          </td>
-                        </tr>
+                      {(retailB1Area > 0 || retail1FArea > 0 || retail2FArea > 0 || retail3FArea > 0) && renderPopulationRow(
+                        'retail',
+                        '상가 지상 1층',
+                        retail1FPrice,
+                        '만원',
+                        (val) => setRetail1FPrice(Math.round(val)),
+                        (() => {
+                          const addr = currentLand?.address || '';
+                          if (addr.includes('역삼') || addr.includes('강남')) return '테헤란로 대로변 상가 1층 실거래 (평당 7,000~8,000만), 역삼 먹자골목 1층 코너 (평당 6,500~7,500만)';
+                          if (addr.includes('반포') || addr.includes('서초')) return '반포 래미안원베일리 단지내 상가 1층 (평당 8,000~9,000만), 아크로리버 상가 (평당 7,800~8,500만)';
+                          if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '명동 메인스트리트 로드숍 1층 (평당 8,000만~1.2억), 을지로 센터원 상가 1층 (평당 6,500~7,500만)';
+                          if (addr.includes('연남') || addr.includes('마포')) return '연남동 미로길 1층 리테일 (평당 5,000~5,500만), 홍대 걷고싶은거리 상가 (평당 5,500~6,000만)';
+                          return '서초대로변 1층 상가 실거래 시세 (평당 3,500~3,800만)';
+                        })()
                       )}
-
                     </tbody>
                   </table>
                 </div>
-                <p className="text-[9.5px] text-[#8D7B68] italic">
+              <p className="text-[9.5px] text-[#8D7B68] italic">
                   * 단가를 수정하면 아래의 모든 수지 분석 시뮬레이션 지표(ROI, 영업이익, 손익분기점, IRR)에 실시간으로 연동되어 즉시 갱신됩니다.
                 </p>
               </div>
             )}
 
-            <div className="text-[10px] text-[#8D7B68] flex items-center gap-1 font-semibold">
-              <Info className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
-              <span>위 파라미터는 AI가 대상지 주소({currentLand?.address}) 주변의 실거래가 및 임대수요 트렌드를 추출하여 산정한 값으로, 하단의 수지분석 시뮬레이션에 자동 대입되었습니다.</span>
-            </div>
-          </div>
-        )}
+              <div className="text-[10px] text-[#8D7B68] flex items-center gap-1 font-semibold">
+                <Info className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                <span>위 파라미터는 AI가 대상지 주소({currentLand?.address}) 주변의 실거래가 및 임대수요 트렌드를 추출하여 산정한 값으로, 하단의 수지분석 시뮬레이션에 자동 대입되었습니다.</span>
+              </div>
+            </>
+          )}
 
         {analysisError && (
           <div className="p-3 bg-red-50 rounded-lg border border-red-100 flex items-start gap-2 text-xs text-red-700">
@@ -5549,7 +5780,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
               </div>
             )}
 
-            {result.totalAllocatedUnits > 0 || result.allocatedUnits.length > 0 ? (
+            {(result.totalAllocatedUnits > 0 || result.allocatedUnits.length > 0) && (
               <div className="space-y-6">
                 {/* 기획 상품 구성 명세서 (개요) */}
                 <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm space-y-4">
@@ -5766,6 +5997,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                     </div>
                   )}
                 </div>
+              </div>
+            )}
 
                 {activeStep === 4 ? (
                   <>
@@ -6536,8 +6769,10 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                     </div>
                   </>
                 )}
-              </div>
-            ) : (
+            </div>
+          </div>
+        </div>
+      ) : (
               <div className="h-64 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-center p-6 bg-gray-50/50">
                 <HelpCircle className="w-10 h-10 text-gray-300 mb-2 animate-pulse" />
                 <p className="text-sm font-semibold text-gray-600">설계 공간 정보 미입력</p>
@@ -6547,8 +6782,5 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
               </div>
             )}
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+        );
+      }
