@@ -276,6 +276,16 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   // Step 4 Scenario and Commercial tabs
   const [selectedScenarioId, setSelectedScenarioId] = useState<string>('base');
   const [showCalcDetails, setShowCalcDetails] = useState<boolean>(true);
+  const [showAiPopulationEditor, setShowAiPopulationEditor] = useState<boolean>(true);
+  
+  // Individual formula toggle states for Step 4
+  const [showOpProfitCalc, setShowOpProfitCalc] = useState<boolean>(false);
+  const [showProjectCostCalc, setShowProjectCostCalc] = useState<boolean>(false);
+  const [showRevenuesCalc, setShowRevenuesCalc] = useState<boolean>(false);
+  const [showRoiCalc, setShowRoiCalc] = useState<boolean>(false);
+  const [showIrrCalc, setShowIrrCalc] = useState<boolean>(false);
+  const [showBepCalc, setShowBepCalc] = useState<boolean>(false);
+
   const [activeCommercialTab, setActiveCommercialTab] = useState<'demographics' | 'competitors' | 'tenants' | 'risks'>('demographics');
   const [activeSummaryTab, setActiveSummaryTab] = useState<'general' | 'area' | 'parking' | 'amenity' | 'layout'>('general');
 
@@ -1545,10 +1555,19 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                 <Sparkles className="w-4 h-4 text-amber-600 animate-pulse" />
                 <span>AI 주변 입지·실거래 기반 수지분석 추천값 동기화</span>
               </div>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                실시간 주변 분석 동기화 완료
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAiPopulationEditor(!showAiPopulationEditor)}
+                  className="px-2.5 py-1 text-[10px] font-bold rounded-lg bg-amber-600/10 hover:bg-amber-600/20 text-amber-800 border border-amber-600/20 transition-all flex items-center gap-1 shadow-xs"
+                >
+                  {showAiPopulationEditor ? '모집단·수정 접기 ▲' : '모집단 분석 근거 및 수정 열기 ▼'}
+                </button>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                  실시간 주변 분석 동기화 완료
+                </span>
+              </div>
             </div>
 
             <p className="text-xs text-[#6E5D4F] leading-relaxed whitespace-pre-wrap font-medium">{marketAnalysisReport}</p>
@@ -1585,6 +1604,320 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                   <div className="text-xs font-bold text-gray-900">보 {aiRecommendations.retail1FDeposit?.toLocaleString()}만 / 월 {aiRecommendations.retail1FRent?.toLocaleString()}만</div>
                   <div className="text-[9px] text-gray-400">핵심 배후 상권 요율</div>
                 </div>
+              </div>
+            )}
+
+            {/* AI Surrounding Reference Population & Direct Price Editor Section */}
+            {showAiPopulationEditor && (
+              <div className="bg-white/80 p-4 rounded-xl border border-[#EDDBC7]/60 space-y-3 animate-fadeIn">
+                <div className="flex items-center gap-1.5 border-b border-[#EDDBC7]/30 pb-2">
+                  <Calculator className="w-4 h-4 text-amber-600" />
+                  <span className="text-xs font-extrabold text-[#2C251F]">📈 AI 주변 상권 실거래 모집단 및 평당 분양가 세부 조정</span>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-[11px] border-collapse">
+                    <thead>
+                      <tr className="bg-[#FAF9F5] border-b border-[#EDDBC7]/30 text-gray-600 font-bold">
+                        <th className="p-2 text-left">기획 분류</th>
+                        <th className="p-2 text-left">AI 분석 주변 실거래 근거 및 모집단</th>
+                        <th className="p-2 text-right w-36">현재 단가 (수정 가능)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-150 text-gray-750">
+                      {/* 1. 토지비 */}
+                      <tr>
+                        <td className="p-2 font-bold text-gray-900">총 토지 매입비</td>
+                        <td className="p-2 text-gray-500 leading-relaxed">
+                          {(() => {
+                            const addr = currentLand?.address || '';
+                            if (addr.includes('역삼') || addr.includes('강남')) return '역삼동 이면 상업/준주거지 최근 매각 실거래 (평당 1.1억~1.3억원 수준)';
+                            if (addr.includes('반포') || addr.includes('서초')) return '서초대로변 준주거지 및 반포동 노후 대지 수매 실거래가 (평당 1.0억~1.2억원 수준)';
+                            if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '을지로 중심상업지역 일반상업지 대로변 최고가 실거래 (평당 1.4억~1.6억원 수준)';
+                            if (addr.includes('연남') || addr.includes('마포')) return '연트럴파크 메인 상권 및 연남동 미로길 카페거리 수매가 실거래 (평당 5.0~6.5천만원 수준)';
+                            return '서초동 법원사거리 인근 준주거지역 표준지 실거래가 (평당 3.3~3.6천만원 수준)';
+                          })()}
+                        </td>
+                        <td className="p-2 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <input
+                              type="number"
+                              value={landPurchasePrice}
+                              onChange={(e) => handleLandPurchasePriceChange(parseFloat(e.target.value) || 0)}
+                              className="w-20 p-1 text-right font-mono font-bold text-slate-800 bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
+                            />
+                            <span className="text-[10px] text-gray-500 font-bold">억</span>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* 2. 평당 공사비 */}
+                      <tr>
+                        <td className="p-2 font-bold text-gray-900">평당 공사비</td>
+                        <td className="p-2 text-gray-500 leading-relaxed">
+                          국토교통부 고시 표준건축비(㎡당 약 220만원) 및 최근 3개년 원자재·인건비 인플레이션 반영 표준 가이드라인 (평당 800~1,100만원 분포)
+                        </td>
+                        <td className="p-2 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <input
+                              type="number"
+                              value={constructionCostPerPyung}
+                              onChange={(e) => setConstructionCostPerPyung(parseInt(e.target.value) || 0)}
+                              className="w-20 p-1 text-right font-mono font-bold text-slate-800 bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
+                            />
+                            <span className="text-[10px] text-gray-500 font-bold">만원</span>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* 3. 공동주택 소형 */}
+                      {aptConfigs.some(c => c.id === 'apt_small') && (
+                        <tr>
+                          <td className="p-2 font-bold text-gray-900">공동주택 소형 (59㎡)</td>
+                          <td className="p-2 text-gray-500 leading-relaxed">
+                            {(() => {
+                              const addr = currentLand?.address || '';
+                              if (addr.includes('역삼') || addr.includes('강남')) return '역삼 푸르지오 59㎡ (평당 5,800~6,100만), 역삼 e-편한세상 59㎡ (평당 5,700~6,000만)';
+                              if (addr.includes('반포') || addr.includes('서초')) return '반포 래미안원베일리 59㎡ (평당 7,200~7,600만), 아크로리버파크 59㎡ (평당 7,000~7,500만)';
+                              if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '덕수궁 디팰리스 59㎡ (평당 5,000~5,400만), 남산 롯데캐슬 59㎡ (평당 4,800~5,200만)';
+                              if (addr.includes('연남') || addr.includes('마포')) return '마포 프레스티지 자이 59㎡ (평당 4,200~4,500만), 신촌그랑자이 59㎡ (평당 4,000~4,300만)';
+                              return '서초 삼풍아파트 59㎡ (평당 4,500~4,800만), 서초 래미안 59㎡ (평당 4,300~4,600만)';
+                            })()}
+                          </td>
+                          <td className="p-2 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <input
+                                type="number"
+                                value={aptConfigs.find(c => c.id === 'apt_small')?.salesPricePerPyung || 0}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value) || 0;
+                                  setAptConfigs(prev => prev.map(cfg => cfg.id === 'apt_small' ? { ...cfg, salesPricePerPyung: val } : cfg));
+                                }}
+                                className="w-20 p-1 text-right font-mono font-bold text-[#5F7161] bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
+                              />
+                              <span className="text-[10px] text-gray-500 font-bold">만원</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+
+                      {/* 4. 공동주택 중형 */}
+                      {aptConfigs.some(c => c.id === 'apt_medium') && (
+                        <tr>
+                          <td className="p-2 font-bold text-gray-900">공동주택 중형 (84㎡)</td>
+                          <td className="p-2 text-gray-500 leading-relaxed">
+                            {(() => {
+                              const addr = currentLand?.address || '';
+                              if (addr.includes('역삼') || addr.includes('강남')) return '개포 래미안 포레스트 84㎡ (평당 6,000~6,400만), 대치 은마아파트 84㎡ (평당 5,800~6,200만)';
+                              if (addr.includes('반포') || addr.includes('서초')) return '반포자이 84㎡ (평당 7,100~7,400만), 반포 래미안퍼스티지 84㎡ (평당 7,000~7,300만)';
+                              if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '경희궁 자이 84㎡ (평당 5,400~5,800만), 서울역 센트럴자이 84㎡ (평당 5,200~5,600만)';
+                              if (addr.includes('연남') || addr.includes('마포')) return '마포래미안푸르지오 84㎡ (평당 4,400~4,800만), 마포자이3차 84㎡ (평당 4,200~4,600만)';
+                              return '서초 삼풍아파트 84㎡ (평당 4,600~5,000만), 서초 롯데캐슬클래식 84㎡ (평당 4,400~4,800만)';
+                            })()}
+                          </td>
+                          <td className="p-2 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <input
+                                type="number"
+                                value={aptConfigs.find(c => c.id === 'apt_medium')?.salesPricePerPyung || 0}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value) || 0;
+                                  setAptConfigs(prev => prev.map(cfg => cfg.id === 'apt_medium' ? { ...cfg, salesPricePerPyung: val } : cfg));
+                                }}
+                                className="w-20 p-1 text-right font-mono font-bold text-[#5F7161] bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
+                              />
+                              <span className="text-[10px] text-gray-500 font-bold">만원</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+
+                      {/* 5. 공동주택 대형 */}
+                      {aptConfigs.some(c => c.id === 'apt_large') && (
+                        <tr>
+                          <td className="p-2 font-bold text-gray-900">공동주택 대형 (114㎡)</td>
+                          <td className="p-2 text-gray-500 leading-relaxed">
+                            {(() => {
+                              const addr = currentLand?.address || '';
+                              if (addr.includes('역삼') || addr.includes('강남')) return '역삼 자이 114㎡ (평당 6,500~7,000만), 도곡 렉슬 114㎡ (평당 6,300~6,800만)';
+                              if (addr.includes('반포') || addr.includes('서초')) return '반포 래미안원베일리 114㎡ (평당 7,800~8,200만), 아크로리버파크 114㎡ (평당 7,600~8,000만)';
+                              if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '경희궁자이 114㎡ (평당 5,800~6,200만), 남산타운 114㎡ (평당 5,400~5,800만)';
+                              if (addr.includes('연남') || addr.includes('마포')) return '마포그랑자이 114㎡ (평당 4,800~5,200만), 신촌숲아이파크 114㎡ (평당 4,600~5,000만)';
+                              return '서초 삼풍아파트 114㎡ (평당 5,000~5,400만), 서초 현대아이파크 114㎡ (평당 4,800~5,200만)';
+                            })()}
+                          </td>
+                          <td className="p-2 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <input
+                                type="number"
+                                value={aptConfigs.find(c => c.id === 'apt_large')?.salesPricePerPyung || 0}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value) || 0;
+                                  setAptConfigs(prev => prev.map(cfg => cfg.id === 'apt_large' ? { ...cfg, salesPricePerPyung: val } : cfg));
+                                }}
+                                className="w-20 p-1 text-right font-mono font-bold text-[#5F7161] bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
+                              />
+                              <span className="text-[10px] text-gray-500 font-bold">만원</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+
+                      {/* 6. 오피스텔 원룸 */}
+                      {officetelConfigs.some(c => c.id === 'officetel_studio') && (
+                        <tr>
+                          <td className="p-2 font-bold text-gray-900">오피스텔 원룸 (9평)</td>
+                          <td className="p-2 text-gray-500 leading-relaxed">
+                            {(() => {
+                              const addr = currentLand?.address || '';
+                              if (addr.includes('역삼') || addr.includes('강남')) return '강남역 서희스타힐스 30㎡ (평당 3,200~3,400만), 역삼 아르젠 30㎡ (평당 3,100~3,300만)';
+                              if (addr.includes('반포') || addr.includes('서초')) return '서초 에클라트 30㎡ (평당 3,600~3,800만), 효성해링턴타워 30㎡ (평당 3,500~3,700만)';
+                              if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '을지로 센트럴데시앙 30㎡ (평당 2,800~3,000만), 명동 엠퍼스트플레이스 30㎡ (평당 2,700~2,900만)';
+                              if (addr.includes('연남') || addr.includes('마포')) return '홍대역 엘포트 30㎡ (평당 2,500~2,700만), 마포 한화오벨리스크 30㎡ (평당 2,400~2,600만)';
+                              return '서초 현대에클라트 30㎡ (평당 2,800~3,100만), 양재역 한신휴플러스 30㎡ (평당 2,700~2,900만)';
+                            })()}
+                          </td>
+                          <td className="p-2 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <input
+                                type="number"
+                                value={officetelConfigs.find(c => c.id === 'officetel_studio')?.salesPricePerPyung || 0}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value) || 0;
+                                  setOfficetelConfigs(prev => prev.map(cfg => cfg.id === 'officetel_studio' ? { ...cfg, salesPricePerPyung: val } : cfg));
+                                }}
+                                className="w-20 p-1 text-right font-mono font-bold text-slate-700 bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
+                              />
+                              <span className="text-[10px] text-gray-500 font-bold">만원</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+
+                      {/* 7. 오피스텔 투룸 */}
+                      {officetelConfigs.some(c => c.id === 'officetel_tworoom') && (
+                        <tr>
+                          <td className="p-2 font-bold text-gray-900">오피스텔 투룸 (18평)</td>
+                          <td className="p-2 text-gray-500 leading-relaxed">
+                            {(() => {
+                              const addr = currentLand?.address || '';
+                              if (addr.includes('역삼') || addr.includes('강남')) return '역삼 센트레빌아스테리움 59㎡ (평당 3,500~3,700만), 강남 루카831 59㎡ (평당 3,400~3,600만)';
+                              if (addr.includes('반포') || addr.includes('서초')) return '서초 메트로폴리스 59㎡ (평당 4,000~4,300만), 지웰타워 59㎡ (평당 3,900~4,200만)';
+                              if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '충무로 엘크루메트로시티 59㎡ (평당 3,100~3,400만), 남산 센트럴자이 59㎡ (평당 3,000~3,300만)';
+                              if (addr.includes('연남') || addr.includes('마포')) return '상암 카이저팰리스 59㎡ (평당 2,800~3,000만), 공덕 푸르지오시티 59㎡ (평당 2,700~2,900만)';
+                              return '서초동 아르젠 59㎡ (평당 3,000~3,200만), 강남역 푸르지오시티 59㎡ (평당 2,900~3,100만)';
+                            })()}
+                          </td>
+                          <td className="p-2 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <input
+                                type="number"
+                                value={officetelConfigs.find(c => c.id === 'officetel_tworoom')?.salesPricePerPyung || 0}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value) || 0;
+                                  setOfficetelConfigs(prev => prev.map(cfg => cfg.id === 'officetel_tworoom' ? { ...cfg, salesPricePerPyung: val } : cfg));
+                                }}
+                                className="w-20 p-1 text-right font-mono font-bold text-slate-700 bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
+                              />
+                              <span className="text-[10px] text-gray-500 font-bold">만원</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+
+                      {/* 8. 오피스텔 쓰리룸 */}
+                      {officetelConfigs.some(c => c.id === 'officetel_threeroom') && (
+                        <tr>
+                          <td className="p-2 font-bold text-gray-900">오피스텔 쓰리룸 (25평)</td>
+                          <td className="p-2 text-gray-500 leading-relaxed">
+                            {(() => {
+                              const addr = currentLand?.address || '';
+                              if (addr.includes('역삼') || addr.includes('강남')) return '강남 피에드아테르 84㎡ (평당 3,800~4,200만), 역삼 자이르네 84㎡ (평당 3,700~4,000만)';
+                              if (addr.includes('반포') || addr.includes('서초')) return '서초 르피에드 84㎡ (평당 4,400~4,800만), 교대역 엘타워 84㎡ (평당 4,200~4,500만)';
+                              if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '남산 센트럴뷰 84㎡ (평당 3,500~3,800만), 세운 푸르지오 헤리시티 84㎡ (평당 3,400~3,700만)';
+                              if (addr.includes('연남') || addr.includes('마포')) return '마포 한강2차푸르지오 84㎡ (평당 3,100~3,400만), 신촌 다올마을 84㎡ (평당 3,000~3,300만)';
+                              return '서초 롯데골든클래스 84㎡ (평당 3,300~3,600만), 양재 오피스빌 84㎡ (평당 3,200~3,400만)';
+                            })()}
+                          </td>
+                          <td className="p-2 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <input
+                                type="number"
+                                value={officetelConfigs.find(c => c.id === 'officetel_threeroom')?.salesPricePerPyung || 0}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value) || 0;
+                                  setOfficetelConfigs(prev => prev.map(cfg => cfg.id === 'officetel_threeroom' ? { ...cfg, salesPricePerPyung: val } : cfg));
+                                }}
+                                className="w-20 p-1 text-right font-mono font-bold text-slate-700 bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
+                              />
+                              <span className="text-[10px] text-gray-500 font-bold">만원</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+
+                      {/* 9. 업무시설 */}
+                      {officeArea > 0 && (
+                        <tr>
+                          <td className="p-2 font-bold text-gray-900">업무시설 (오피스)</td>
+                          <td className="p-2 text-gray-500 leading-relaxed">
+                            {(() => {
+                              const addr = currentLand?.address || '';
+                              if (addr.includes('역삼') || addr.includes('강남')) return '테헤란로 강남파이낸스센터 인근 프라임 오피스 실거래 (평당 3,400~3,600만)';
+                              if (addr.includes('반포') || addr.includes('서초')) return '서초동 삼성타운 인근 프라임 오피스 (평당 3,400~3,700만)';
+                              if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '을지로 파인에비뉴 및 중구 시그니쳐타워 업무시설 (평당 2,900~3,300만)';
+                              if (addr.includes('연남') || addr.includes('마포')) return '마포로변 프라임 오피스 및 상암 DMC 오피스 타워 (평당 2,400~2,700만)';
+                              return '남부터미널 인근 프라임 빌딩 업무용도 실거래가 (평당 1,800~2,000만)';
+                            })()}
+                          </td>
+                          <td className="p-2 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <input
+                                type="number"
+                                value={officePricePerPyung}
+                                onChange={(e) => setOfficePricePerPyung(parseInt(e.target.value) || 0)}
+                                className="w-20 p-1 text-right font-mono font-bold text-[#5F7161] bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
+                              />
+                              <span className="text-[10px] text-gray-500 font-bold">만원</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+
+                      {/* 10. 상업시설 지상 1층 */}
+                      {(retailB1Area > 0 || retail1FArea > 0 || retail2FArea > 0 || retail3FArea > 0) && (
+                        <tr>
+                          <td className="p-2 font-bold text-gray-900">상가 지상 1층</td>
+                          <td className="p-2 text-gray-500 leading-relaxed">
+                            {(() => {
+                              const addr = currentLand?.address || '';
+                              if (addr.includes('역삼') || addr.includes('강남')) return '테헤란로 대로변 상가 1층 실거래 (평당 7,000~8,000만), 역삼 먹자골목 1층 코너 (평당 6,500~7,500만)';
+                              if (addr.includes('반포') || addr.includes('서초')) return '반포 래미안원베일리 단지내 상가 1층 (평당 8,000~9,000만), 아크로리버 상가 (평당 7,800~8,500만)';
+                              if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '명동 메인스트리트 로드숍 1층 (평당 8,000만~1.2억), 을지로 센터원 상가 1층 (평당 6,500~7,500만)';
+                              if (addr.includes('연남') || addr.includes('마포')) return '연남동 미로길 1층 리테일 (평당 5,000~5,500만), 홍대 걷고싶은거리 상가 (평당 5,500~6,000만)';
+                              return '서초대로변 1층 상가 실거래 시세 (평당 3,500~3,800만)';
+                            })()}
+                          </td>
+                          <td className="p-2 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <input
+                                type="number"
+                                value={retail1FPrice}
+                                onChange={(e) => setRetail1FPrice(parseInt(e.target.value) || 0)}
+                                className="w-20 p-1 text-right font-mono font-bold text-[#5F7161] bg-white border border-gray-300 rounded focus:border-[#5F7161] focus:outline-none"
+                              />
+                              <span className="text-[10px] text-gray-500 font-bold">만원</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-[9.5px] text-[#8D7B68] italic">
+                  * 단가를 수정하면 아래의 모든 수지 분석 시뮬레이션 지표(ROI, 영업이익, 손익분기점, IRR)에 실시간으로 연동되어 즉시 갱신됩니다.
+                </p>
               </div>
             )}
 
@@ -5458,6 +5791,22 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           {result.financials.operatingProfit} 억원
                         </span>
                         <p className="text-[10px] text-gray-500 mt-0.5">분양 및 임대 10년 합산수지</p>
+                        <button
+                          type="button"
+                          onClick={() => setShowOpProfitCalc(!showOpProfitCalc)}
+                          className="mt-1.5 text-[9px] font-bold text-emerald-800 hover:text-[#5F7161] hover:underline flex items-center justify-center gap-0.5 w-full border border-emerald-200/50 bg-emerald-50/20 py-0.5 rounded cursor-pointer transition-colors"
+                        >
+                          {showOpProfitCalc ? '공식 접기 ▲' : '산출근거 펼치기 ▼'}
+                        </button>
+                        {showOpProfitCalc && (
+                          <div className="mt-2 p-2 bg-white rounded-lg border border-emerald-200/40 text-[10px] text-left text-gray-700 font-normal leading-relaxed space-y-1 animate-fadeIn">
+                            <div className="font-bold text-gray-900 border-b border-gray-100 pb-1">수식: 총 매출가치 - 총 투자원가</div>
+                            <div>• 총 매출가치: <span className="font-semibold text-[#5F7161]">{result.financials.totalRevenues.toLocaleString()} 억원</span></div>
+                            <div>• 총 투자비 (원가): <span className="font-semibold text-rose-600">{result.financials.totalProjectCost.toLocaleString()} 억원</span></div>
+                            <div>• 결과: {result.financials.totalRevenues.toLocaleString()}억 - {result.financials.totalProjectCost.toLocaleString()}억 = <span className="font-bold text-[#5F7161]">{result.financials.operatingProfit} 억원</span></div>
+                            <div className="text-gray-400 text-[9px] mt-0.5 leading-snug">* 사업을 통해 획득하는 모든 Inflow 총액(분양매출, 임대유입 등)에서 대지매입, 건축공사, 제세공과 부대비용의 누적 총합을 차감한 실질 세전 순이익 가치입니다.</div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -5468,29 +5817,127 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                       </h4>
 
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 text-center">
-                        <div>
+                        <div className="p-2.5 bg-white/50 border border-gray-150 rounded-xl">
                           <span className="text-[10px] text-slate-400 block">총 투자비 (원가)</span>
-                          <span className="font-bold text-sm text-gray-800 block mt-0.5">{result.financials.totalProjectCost} 억</span>
+                          <span className="font-extrabold text-sm text-gray-800 block mt-0.5">{result.financials.totalProjectCost} 억</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowProjectCostCalc(!showProjectCostCalc)}
+                            className="mt-1.5 text-[9px] font-bold text-gray-500 hover:text-[#5F7161] hover:underline flex items-center justify-center gap-0.5 mx-auto cursor-pointer"
+                          >
+                            {showProjectCostCalc ? '접기 ▲' : '산출근거 ▼'}
+                          </button>
+                          {showProjectCostCalc && (
+                            <div className="mt-2 p-2 bg-white rounded-lg border border-gray-200 text-[10px] text-left text-gray-700 font-normal leading-relaxed space-y-1 animate-fadeIn max-h-56 overflow-y-auto">
+                              <div className="font-bold text-gray-900 border-b border-gray-100 pb-1">수식: 토지비 + 공사비 + 부대비용</div>
+                              <div>• 토지매입비: <span className="font-semibold">{result.financials.landCost.toLocaleString()} 억원</span></div>
+                              <div>• 설계공사비: <span className="font-semibold">{result.financials.constructionCost.toLocaleString()} 억원</span></div>
+                              <div>• 제세부대비: <span className="font-semibold">{result.financials.otherCosts.toLocaleString()} 억원</span></div>
+                              <div>• 합계: {result.financials.landCost.toLocaleString()}억 + {result.financials.constructionCost.toLocaleString()}억 + {result.financials.otherCosts.toLocaleString()}억 = <span className="font-bold text-gray-900">{result.financials.totalProjectCost} 억원</span></div>
+                              <div className="text-gray-400 text-[9px] mt-0.5 leading-snug">* 토지대금 및 거래제세, 기획 연면적 기준 공사비, 그리고 토지비+공사비의 {otherCostsRatio}% 비율로 책정된 금융·제수수료·대행 부대비용을 가중 합산한 총 투자원가 예산입니다.</div>
+                            </div>
+                          )}
                         </div>
-                        <div>
+                        <div className="p-2.5 bg-white/50 border border-gray-150 rounded-xl">
                           <span className="text-[10px] text-slate-400 block">총 매출가치 (Inflows)</span>
-                          <span className="font-bold text-sm text-[#5F7161] block mt-0.5">{result.financials.totalRevenues} 억</span>
+                          <span className="font-extrabold text-sm text-[#5F7161] block mt-0.5">{result.financials.totalRevenues} 억</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowRevenuesCalc(!showRevenuesCalc)}
+                            className="mt-1.5 text-[9px] font-bold text-[#5F7161] hover:underline flex items-center justify-center gap-0.5 mx-auto cursor-pointer"
+                          >
+                            {showRevenuesCalc ? '접기 ▲' : '산출근거 ▼'}
+                          </button>
+                          {showRevenuesCalc && (
+                            <div className="mt-2 p-2 bg-white rounded-lg border border-gray-200 text-[10px] text-left text-gray-700 font-normal leading-relaxed space-y-1 animate-fadeIn max-h-56 overflow-y-auto">
+                              <div className="font-bold text-gray-900 border-b border-gray-100 pb-1">수식: 분양매출 + 누적임대수익 + 장래 매각가치</div>
+                              {exitStrategy === 'sales' ? (
+                                <>
+                                  <div>• 분양 총매출: <span className="font-semibold text-[#5F7161]">{result.financials.totalSalesRevenue.toLocaleString()} 억원</span></div>
+                                  <div>• 합계: <span className="font-bold text-[#5F7161]">{result.financials.totalRevenues} 억원</span></div>
+                                </>
+                              ) : exitStrategy === 'lease-exit' ? (
+                                <>
+                                  <div>• 선분양 매출: <span className="font-semibold">{result.financials.totalSalesRevenue.toLocaleString()} 억원</span></div>
+                                  <div>• 임대 보증금: <span className="font-semibold">{result.financials.totalLeaseDeposits.toLocaleString()} 억원</span></div>
+                                  <div>• 5년 임대수익: <span className="font-semibold">{(result.financials.totalAnnualRent * 5).toFixed(1)} 억원</span> (연 {result.financials.totalAnnualRent.toFixed(1)}억)</div>
+                                  <div>• 5년차 매각가: <span className="font-semibold">{(result.financials.totalAnnualRent * 18).toFixed(1)} 억원</span> (자본환원율 Cap Rate 5.5% 기준)</div>
+                                  <div>• 합계: {result.financials.totalSalesRevenue.toLocaleString()}억 + {result.financials.totalLeaseDeposits.toLocaleString()}억 + {(result.financials.totalAnnualRent * 5).toFixed(1)}억 + {(result.financials.totalAnnualRent * 18).toFixed(1)}억 = <span className="font-bold text-[#5F7161]">{result.financials.totalRevenues} 억원</span></div>
+                                </>
+                              ) : (
+                                <>
+                                  <div>• 선분양 매출: <span className="font-semibold">{result.financials.totalSalesRevenue.toLocaleString()} 억원</span></div>
+                                  <div>• 임대 보증금: <span className="font-semibold">{result.financials.totalLeaseDeposits.toLocaleString()} 억원</span></div>
+                                  <div>• 15년 임대수익: <span className="font-semibold">{(result.financials.totalAnnualRent * 15).toFixed(1)} 억원</span> (연 {result.financials.totalAnnualRent.toFixed(1)}억)</div>
+                                  <div>• 합계: {result.financials.totalSalesRevenue.toLocaleString()}억 + {result.financials.totalLeaseDeposits.toLocaleString()}억 + {(result.financials.totalAnnualRent * 15).toFixed(1)}억 = <span className="font-bold text-[#5F7161]">{result.financials.totalRevenues} 억원</span></div>
+                                </>
+                              )}
+                              <div className="text-gray-400 text-[9px] mt-0.5 leading-snug">* 출구전략에 따라 산출된 장래 유입 예상 매출가치의 합산입니다. 5년 임대후 매각전략의 경우, 연간 임대수입의 18배수로 잔존가치를 자본화하여 5년차 말 매각 매출로 산입합니다.</div>
+                            </div>
+                          )}
                         </div>
-                        <div>
+                        <div className="p-2.5 bg-white/50 border border-gray-150 rounded-xl">
                           <span className="text-[10px] text-slate-400 block">투자 수익률 (ROI)</span>
-                          <span className={`font-bold text-sm ${result.financials.roi >= 0 ? 'text-[#5F7161]' : 'text-rose-600'} block mt-0.5`}>
+                          <span className={`font-extrabold text-sm ${result.financials.roi >= 0 ? 'text-[#5F7161]' : 'text-rose-600'} block mt-0.5`}>
                             {result.financials.roi}%
                           </span>
+                          <button
+                            type="button"
+                            onClick={() => setShowRoiCalc(!showRoiCalc)}
+                            className="mt-1.5 text-[9px] font-bold text-gray-500 hover:text-[#5F7161] hover:underline flex items-center justify-center gap-0.5 mx-auto cursor-pointer"
+                          >
+                            {showRoiCalc ? '접기 ▲' : '산출근거 ▼'}
+                          </button>
+                          {showRoiCalc && (
+                            <div className="mt-2 p-2 bg-white rounded-lg border border-gray-200 text-[10px] text-left text-gray-700 font-normal leading-relaxed space-y-1 animate-fadeIn">
+                              <div className="font-bold text-gray-900 border-b border-gray-100 pb-1">수식: (영업이익 / 총 투자비) × 100</div>
+                              <div>• 예상 영업이익: <span className="font-semibold text-[#5F7161]">{result.financials.operatingProfit.toLocaleString()} 억원</span></div>
+                              <div>• 총 투자비 (원가): <span className="font-semibold text-rose-600">{result.financials.totalProjectCost.toLocaleString()} 억원</span></div>
+                              <div>• 계산: ({result.financials.operatingProfit.toLocaleString()}억 / {result.financials.totalProjectCost.toLocaleString()}억) × 100 = <span className="font-bold text-[#5F7161]">{result.financials.roi}%</span></div>
+                              <div className="text-gray-400 text-[9px] mt-0.5 leading-snug">* 총 투자예산 대비 확보되는 순영업이익의 절대 자본 효율을 판단하는 가장 명확한 투자마진 지표입니다.</div>
+                            </div>
+                          )}
                         </div>
-                        <div>
+                        <div className="p-2.5 bg-white/50 border border-gray-150 rounded-xl">
                           <span className="text-[10px] text-slate-400 block">장래 내부수익률 (IRR)</span>
-                          <span className={`font-bold text-sm ${result.irr >= 0 ? 'text-[#5F7161]' : 'text-rose-600'} block mt-0.5`}>
+                          <span className={`font-extrabold text-sm ${result.irr >= 0 ? 'text-[#5F7161]' : 'text-rose-600'} block mt-0.5`}>
                             {result.irr}%
                           </span>
+                          <button
+                            type="button"
+                            onClick={() => setShowIrrCalc(!showIrrCalc)}
+                            className="mt-1.5 text-[9px] font-bold text-gray-500 hover:text-[#5F7161] hover:underline flex items-center justify-center gap-0.5 mx-auto cursor-pointer"
+                          >
+                            {showIrrCalc ? '접기 ▲' : '산출근거 ▼'}
+                          </button>
+                          {showIrrCalc && (
+                            <div className="mt-2 p-2 bg-white rounded-lg border border-gray-200 text-[10px] text-left text-gray-700 font-normal leading-relaxed space-y-1 animate-fadeIn">
+                              <div className="font-bold text-gray-900 border-b border-gray-100 pb-1">수식: NPV = ∑ [CF_t / (1 + IRR)^t] = 0 만족 할인율</div>
+                              <div>• 연차별 수지 지출/수입 시점 반영: 20개년 시계열 역산</div>
+                              <div>• 결과: 장래 실질 복리 투자 성과 기준율 = <span className="font-bold text-[#5F7161]">{result.irr}%</span></div>
+                              <div className="text-gray-400 text-[9px] mt-0.5 leading-snug">* 대지수매(0년차), 건축공사(1~2년차), 분양수입/보증금(1~3년차) 및 계약기간 누적 임대료의 시간적 선후 관계를 반영한 화폐의 시간가치 보정 내부실질수익률(IRR)입니다.</div>
+                            </div>
+                          )}
                         </div>
-                        <div>
+                        <div className="p-2.5 bg-white/50 border border-gray-150 rounded-xl">
                           <span className="text-[10px] text-slate-400 block">손익분기 분양률</span>
-                          <span className="font-bold text-sm text-indigo-600 block mt-0.5">{result.financials.breakEvenRatio}%</span>
+                          <span className="font-extrabold text-sm text-indigo-600 block mt-0.5">{result.financials.breakEvenRatio}%</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowBepCalc(!showBepCalc)}
+                            className="mt-1.5 text-[9px] font-bold text-gray-500 hover:text-indigo-600 hover:underline flex items-center justify-center gap-0.5 mx-auto cursor-pointer"
+                          >
+                            {showBepCalc ? '접기 ▲' : '산출근거 ▼'}
+                          </button>
+                          {showBepCalc && (
+                            <div className="mt-2 p-2 bg-white rounded-lg border border-gray-200 text-[10px] text-left text-gray-700 font-normal leading-relaxed space-y-1 animate-fadeIn">
+                              <div className="font-bold text-gray-900 border-b border-gray-100 pb-1">수식: (총 투자비 / 총 매출가치) × 100</div>
+                              <div>• 총 투자비 (원가): <span className="font-semibold text-rose-600">{result.financials.totalProjectCost.toLocaleString()} 억원</span></div>
+                              <div>• 총 매출가치 (Inflows): <span className="font-semibold text-[#5F7161]">{result.financials.totalRevenues.toLocaleString()} 억원</span></div>
+                              <div>• 계산: ({result.financials.totalProjectCost.toLocaleString()}억 / {result.financials.totalRevenues.toLocaleString()}억) × 100 = <span className="font-bold text-indigo-600">{result.financials.breakEvenRatio}%</span></div>
+                              <div className="text-gray-400 text-[9px] mt-0.5 leading-snug">* 기획의 지출 예산을 전부 충당하여 개발 적자를 면하기 위한 총공급 상품의 최소 누적 계약 비율 한계선입니다.</div>
+                            </div>
+                          )}
                         </div>
                       </div>
 
