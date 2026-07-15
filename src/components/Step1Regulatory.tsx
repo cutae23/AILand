@@ -316,10 +316,75 @@ export default function Step1Regulatory({
     }
   };
 
+  const getLinkOrAddressValidation = (val: string) => {
+    const trimmed = val.trim();
+    if (!trimmed) {
+      return { status: 'empty', message: '' };
+    }
+
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      // URL validation
+      try {
+        const parsed = new URL(trimmed);
+        const host = parsed.hostname;
+        if (host.includes('eum.go.kr') || host.includes('land.go.kr') || host.includes('go.kr')) {
+          return { status: 'valid', message: '✓ 유효한 공식 토지이음/공공 연계 링크 형식입니다.' };
+        } else {
+          return { 
+            status: 'warning', 
+            message: '⚠ 토지이음 공식 도메인(eum.go.kr)이 아닙니다. 정확한 법정 규제 분석을 위해 공식 링크 또는 주소 형태를 권장합니다.' 
+          };
+        }
+      } catch (e) {
+        return { status: 'error', message: '✗ 유효하지 않은 URL 링크 주소 형식입니다. 다시 확인해 주세요.' };
+      }
+    } else {
+      // Address validation
+      const sidoKeywords = ['서울', '경기', '인천', '부산', '대구', '대전', '광주', '울산', '세종', '강원', '충북', '충남', '전라', '전북', '전남', '경상', '경북', '경남', '제주'];
+      const hasSido = sidoKeywords.some(sido => trimmed.includes(sido));
+      const parts = trimmed.split(/\s+/).filter(Boolean);
+
+      if (parts.length < 2) {
+        return { 
+          status: 'error', 
+          message: '✗ 시/도, 구/군 및 동/읍/면/로 명칭을 띄어쓰기로 구분하여 입력해 주세요. (예: 서울시 강남구 역삼동)' 
+        };
+      }
+
+      if (!hasSido) {
+        return { 
+          status: 'error', 
+          message: '✗ 대한민국 행정구역(예: 서울, 경기, 인천 등)으로 시작하는 지번 또는 도로명 주소를 입력해 주세요.' 
+        };
+      }
+
+      // Check if address ends with some typical word or has numbers
+      const lastPart = parts[parts.length - 1];
+      const hasValidEnding = /[동읍면리로길가동가번지]\s*\d*/.test(lastPart) || /\d+/.test(lastPart);
+      if (!hasValidEnding && parts.length < 3) {
+        return {
+          status: 'warning',
+          message: '⚠ 구체적인 지번(예: 700-1)이나 건물번호가 없으면 정확한 개별 필지 분석이 어려울 수 있습니다.'
+        };
+      }
+
+      return { status: 'valid', message: '✓ 올바른 주소 형식입니다. 실시간 AI 규제 분석이 가능합니다.' };
+    }
+  };
+
   // Simulated timed steps for analysis to give expert-level feeling
   const runAnalysis = async () => {
     if (usageScaleList.length === 0) {
       setError('리뷰를 시작하려면 최소 하나 이상의 개발 예정 용도 및 규모를 방법 B에 등록해 주세요.');
+      return;
+    }
+
+    const validation = getLinkOrAddressValidation(customerLink);
+    if (validation.status === 'error') {
+      setError(`[입력 오류] ${validation.message}`);
+      return;
+    } else if (validation.status === 'empty') {
+      setError('리뷰를 시작하려면 분석할 토지이음 주소 또는 고유 링크를 입력해 주세요.');
       return;
     }
 
@@ -544,6 +609,45 @@ export default function Step1Regulatory({
                   }}
                   className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 text-gray-800 bg-white"
                 />
+
+                {/* 실시간 입력값 검증 알림 메시지 */}
+                {(() => {
+                  const val = getLinkOrAddressValidation(customerLink);
+                  if (val.status === 'empty') return null;
+
+                  let textClass = '';
+                  let bgClass = '';
+                  let borderClass = '';
+
+                  if (val.status === 'valid') {
+                    textClass = 'text-emerald-700';
+                    bgClass = 'bg-emerald-50/70';
+                    borderClass = 'border-emerald-200/60';
+                  } else if (val.status === 'warning') {
+                    textClass = 'text-amber-700';
+                    bgClass = 'bg-amber-50/70';
+                    borderClass = 'border-amber-200/60';
+                  } else if (val.status === 'error') {
+                    textClass = 'text-rose-700';
+                    bgClass = 'bg-rose-50/70';
+                    borderClass = 'border-rose-200/60';
+                  }
+
+                  return (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`text-[11px] leading-relaxed p-3 rounded-lg border ${bgClass} ${borderClass} ${textClass} font-medium flex items-start gap-1.5 transition-all`}
+                    >
+                      <span className="mt-0.5 shrink-0">
+                        {val.status === 'valid' && '✓'}
+                        {val.status === 'warning' && '⚠'}
+                        {val.status === 'error' && '✗'}
+                      </span>
+                      <span>{val.message}</span>
+                    </motion.div>
+                  );
+                })()}
               </div>
 
               {/* Method B: Drag and Drop Screenshot */}

@@ -145,6 +145,19 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   const [buildingSeparationRatio, setBuildingSeparationRatio] = useState<number>(() => inputs?.buildingSeparationRatio ?? 0.8);
   const [sunlightBoundaryRatio, setSunlightBoundaryRatio] = useState<number>(() => inputs?.sunlightBoundaryRatio ?? 0.5);
   
+  // Tooltip tracking state for mobile tap support
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleGlobalClick = () => {
+      setActiveTooltip(null);
+    };
+    window.addEventListener('click', handleGlobalClick);
+    return () => {
+      window.removeEventListener('click', handleGlobalClick);
+    };
+  }, []);
+  
   // Financial parameters
   const getOfficialLandPricePerM2 = () => {
     if (!currentLand) return 500;
@@ -5616,10 +5629,16 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           </tr>
                           <tr>
                             <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">
-                              <span className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-gray-400">
+                              <span 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveTooltip(activeTooltip === 'bcr' ? null : 'bcr');
+                                }}
+                                className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-gray-400"
+                              >
                                 건폐율 (BCR)
                                 <HelpCircle className="w-3 h-3 text-gray-400" />
-                                <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed">
+                                <span className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed ${activeTooltip === 'bcr' ? 'opacity-100 pointer-events-auto' : 'pointer-events-none opacity-0 group-hover:opacity-100'}`}>
                                   <strong>건폐율 (Building Coverage Ratio):</strong> 대지면적에 대한 건축면적(1층 바닥면적 등)의 비율입니다. 건물이 대지 내에서 수평적으로 차지하는 면적 비중을 규제합니다.
                                 </span>
                               </span>
@@ -5656,10 +5675,16 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           </tr>
                           <tr>
                             <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">
-                              <span className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-gray-400">
+                              <span 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveTooltip(activeTooltip === 'far' ? null : 'far');
+                                }}
+                                className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-gray-400"
+                              >
                                 용적률 (FAR)
                                 <HelpCircle className="w-3 h-3 text-gray-400" />
-                                <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed">
+                                <span className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed ${activeTooltip === 'far' ? 'opacity-100 pointer-events-auto' : 'pointer-events-none opacity-0 group-hover:opacity-100'}`}>
                                   <strong>용적률 (Floor Area Ratio):</strong> 대지면적 대비 지상층 연면적의 백분율 비율입니다. 이 비율이 높을수록 건물을 수직으로 높게 신축하여 총 공급 면적을 극대화할 수 있습니다.
                                 </span>
                               </span>
@@ -6204,19 +6229,31 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           <th className="py-2.5 px-2 text-right">예상 매출</th>
                           <th className="py-2.5 px-2 text-right">영업이익</th>
                           <th className="py-2.5 px-2 text-right text-indigo-600">
-                            <span className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-indigo-300">
+                            <span 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveTooltip(activeTooltip === 'roi_scenarios' ? null : 'roi_scenarios');
+                              }}
+                              className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-indigo-300"
+                            >
                               ROI (%)
                               <HelpCircle className="w-2.5 h-2.5 text-indigo-400" />
-                              <span className="pointer-events-none absolute bottom-full right-0 mb-2 w-56 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed">
+                              <span className={`absolute bottom-full right-0 mb-2 w-56 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed ${activeTooltip === 'roi_scenarios' ? 'opacity-100 pointer-events-auto' : 'pointer-events-none opacity-0 group-hover:opacity-100'}`}>
                                 <strong>ROI:</strong> 총 투자비 대비 예상 영업이익의 비율로, 단기적인 자본 효율성과 사업 마진율을 나타냅니다.
                               </span>
                             </span>
                           </th>
                           <th className="py-2.5 px-2 text-right text-emerald-700">
-                            <span className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-emerald-300">
+                            <span 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveTooltip(activeTooltip === 'irr_scenarios' ? null : 'irr_scenarios');
+                              }}
+                              className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-emerald-300"
+                            >
                               IRR (%)
                               <HelpCircle className="w-2.5 h-2.5 text-emerald-500" />
-                              <span className="pointer-events-none absolute bottom-full right-0 mb-2 w-56 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed">
+                              <span className={`absolute bottom-full right-0 mb-2 w-56 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed ${activeTooltip === 'irr_scenarios' ? 'opacity-100 pointer-events-auto' : 'pointer-events-none opacity-0 group-hover:opacity-100'}`}>
                                 <strong>IRR:</strong> 연도별 현금 유출/유입의 시점을 보정하여 화폐 시간가치를 반영한 연평균 실질 복리수익률입니다.
                               </span>
                             </span>
@@ -6979,10 +7016,16 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                         </div>
                         <div className="p-2.5 bg-white/50 border border-gray-150 rounded-xl">
                           <span className="text-[10px] text-slate-400 block">
-                            <span className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-gray-300">
+                            <span 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveTooltip(activeTooltip === 'roi_summary' ? null : 'roi_summary');
+                              }}
+                              className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-gray-300"
+                            >
                               투자 수익률 (ROI)
                               <HelpCircle className="w-2.5 h-2.5 text-gray-400" />
-                              <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-60 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed">
+                              <span className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-60 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed ${activeTooltip === 'roi_summary' ? 'opacity-100 pointer-events-auto' : 'pointer-events-none opacity-0 group-hover:opacity-100'}`}>
                                 <strong>투자 수익률 (Return on Investment):</strong> 총 투자비(지출) 대비 세전 영업이익(순수익)의 비율입니다. 사업에 투입된 전체 자금 대비 회수하는 마진의 단순 자본 효율성을 파악하는 지표입니다.
                               </span>
                             </span>
@@ -7009,10 +7052,16 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                         </div>
                         <div className="p-2.5 bg-white/50 border border-gray-150 rounded-xl">
                           <span className="text-[10px] text-slate-400 block">
-                            <span className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-gray-300">
+                            <span 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveTooltip(activeTooltip === 'irr_summary' ? null : 'irr_summary');
+                              }}
+                              className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-gray-300"
+                            >
                               장래 내부수익률 (IRR)
                               <HelpCircle className="w-2.5 h-2.5 text-gray-400" />
-                              <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-60 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed">
+                              <span className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-60 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed ${activeTooltip === 'irr_summary' ? 'opacity-100 pointer-events-auto' : 'pointer-events-none opacity-0 group-hover:opacity-100'}`}>
                                 <strong>장래 내부수익률 (Internal Rate of Return):</strong> 연차별 실제 현금 유출(대지 매매, 공사비)과 유입(분양금, 임대수익)의 시간가치를 보정한 연평균 복리수익률입니다. 자본 비용 극복 마진을 정밀 판정합니다.
                               </span>
                             </span>
@@ -7038,10 +7087,16 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                         </div>
                         <div className="p-2.5 bg-white/50 border border-gray-150 rounded-xl">
                           <span className="text-[10px] text-slate-400 block">
-                            <span className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-gray-300">
+                            <span 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveTooltip(activeTooltip === 'bep_summary' ? null : 'bep_summary');
+                              }}
+                              className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-gray-300"
+                            >
                               손익분기 분양률
                               <HelpCircle className="w-2.5 h-2.5 text-gray-400" />
-                              <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-60 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed">
+                              <span className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-60 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed ${activeTooltip === 'bep_summary' ? 'opacity-100 pointer-events-auto' : 'pointer-events-none opacity-0 group-hover:opacity-100'}`}>
                                 <strong>손익분기 분양률 (Break-Even Ratio):</strong> 기획의 지출 예산(총사업비)을 모두 회수하여 개발 적자를 면하기 위해 달성해야 하는 누적 분양 계약 비중입니다.
                               </span>
                             </span>

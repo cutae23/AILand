@@ -213,6 +213,19 @@ export default function LayoutDiagram({
   // Cadastral shape configuration (EUM actual shape, perfect rectangle, irregular challenge)
   const [selectedShapeType, setSelectedShapeType] = useState<'eum' | 'rect' | 'irregular'>('eum');
   
+  // Tooltip tracking state for mobile tap support
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleGlobalClick = () => {
+      setActiveTooltip(null);
+    };
+    window.addEventListener('click', handleGlobalClick);
+    return () => {
+      window.removeEventListener('click', handleGlobalClick);
+    };
+  }, []);
+  
   // Drag and drop state
   const [activeDragIdx, setActiveDragIdx] = useState<number | null>(null);
 
@@ -1292,9 +1305,15 @@ export default function LayoutDiagram({
             <div className="space-y-1">
               <span className="text-gray-400 font-medium block">지상 층수 {useLayoutSimulation ? '(자동 산식)' : '기획'}</span>
               {useLayoutSimulation ? (
-                <div className="bg-indigo-50/70 border border-indigo-150 px-2 py-1 rounded-lg text-indigo-950 font-bold font-mono text-center relative group cursor-help">
+                <div 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveTooltip(activeTooltip === 'above_floors' ? null : 'above_floors');
+                  }}
+                  className="bg-indigo-50/70 border border-indigo-150 px-2 py-1 rounded-lg text-indigo-950 font-bold font-mono text-center relative group cursor-help"
+                >
                   {aboveGroundFloors}층
-                  <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl w-56 text-left leading-normal z-50 font-sans">
+                  <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl w-56 text-left leading-normal z-50 font-sans transition-all duration-200 ${activeTooltip === 'above_floors' ? 'block opacity-100 pointer-events-auto' : 'hidden group-hover:block pointer-events-none'}`}>
                     <strong>지상층수 자동산식:</strong>
                     <p>포디움 {podiumFloors}층 + 주동 기준층 {calculatedTypicalFloors}층 = {aboveGroundFloors}층</p>
                     <p className="mt-1 text-[9.5px] text-gray-300">※ 주동 기준층 = Math.ceil(공동주택 {combinedConfigs.reduce((sum, item) => sum + item.count, 0)}세대 / ({towerCount}동 × {unitsPerFloorLine}호))</p>
@@ -1325,9 +1344,15 @@ export default function LayoutDiagram({
             <div className="space-y-1">
               <span className="text-gray-400 font-medium block">지하 층수 {useLayoutSimulation ? '(자동 산식)' : '기획'}</span>
               {useLayoutSimulation ? (
-                <div className="bg-emerald-50/70 border border-emerald-150 px-2 py-1 rounded-lg text-emerald-950 font-bold font-mono text-center relative group cursor-help">
+                <div 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveTooltip(activeTooltip === 'under_floors' ? null : 'under_floors');
+                  }}
+                  className="bg-emerald-50/70 border border-emerald-150 px-2 py-1 rounded-lg text-emerald-950 font-bold font-mono text-center relative group cursor-help"
+                >
                   {undergroundFloors}층
-                  <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl w-56 text-left leading-normal z-50 font-sans">
+                  <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl w-56 text-left leading-normal z-50 font-sans transition-all duration-200 ${activeTooltip === 'under_floors' ? 'block opacity-100 pointer-events-auto' : 'hidden group-hover:block pointer-events-none'}`}>
                     <strong>지하층수 자동산식:</strong>
                     <p>지하층수 = Math.ceil(지하연면적 ({undergroundGFA.toLocaleString()}㎡) / (대지면적 ({landArea.toLocaleString()}㎡) × 75%)) = {undergroundFloors}층</p>
                     <p className="mt-1 text-[9.5px] text-gray-300">※ 지하연면적 = 지하 주차장 + 기전실 + 지하상가</p>
