@@ -1743,154 +1743,189 @@ export default function Step4Report({
                     </tr>
                   </thead>
                   <tbody>
-                    {(zoning.includes('상업') || zoning.includes('준주거')) ? (
-                      <>
-                        <tr className="border-b border-gray-100 hover:bg-slate-50/50">
+                    {currentScenario?.inputs?.aiSuccessfulCases && currentScenario.inputs.aiSuccessfulCases.length > 0 ? (
+                      currentScenario.inputs.aiSuccessfulCases.map((cs: any, idx: number) => (
+                        <tr key={idx} className={`hover:bg-slate-50/50 ${idx !== currentScenario.inputs.aiSuccessfulCases.length - 1 ? 'border-b border-gray-100' : ''}`}>
                           <td className="p-3">
-                            <div className="font-bold text-gray-900">도심형 하이브리드 타워 (A-스퀘어)</div>
+                            <div className="font-bold text-gray-900">{cs.name}</div>
                             <div className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
-                              <MapPin className="w-3 h-3" /> 인근 450m 이내
+                              <MapPin className="w-3 h-3" /> {cs.location || '인근'}
                             </div>
                           </td>
                           <td className="p-3">
-                            <div className="font-semibold text-gray-700">{zoning}</div>
-                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">대지 2,450㎡ (유사 크기)</div>
+                            <div className="font-semibold text-gray-700">{cs.zoning || zoning}</div>
+                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">{cs.scale || '대지 유사'}</div>
                           </td>
                           <td className="p-3 space-y-1">
-                            <span className="inline-block bg-emerald-50 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">건물 기부채납 +20%p</span>
-                            <span className="inline-block bg-indigo-50 text-indigo-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">비주거 복합가점 +15%p</span>
-                            <span className="inline-block bg-slate-100 text-slate-700 text-[9px] font-medium px-1.5 py-0.5 rounded">공개공지 +8%p</span>
+                            {cs.incentives && cs.incentives.map((inc: string, iIdx: number) => (
+                              <span key={iIdx} className={`inline-block text-[9px] font-bold px-1.5 py-0.5 rounded mr-1 ${
+                                inc.includes('기부채납') ? 'bg-emerald-50 text-emerald-800' :
+                                inc.includes('디자인') ? 'bg-indigo-50 text-indigo-800' :
+                                'bg-slate-100 text-slate-700'
+                              }`}>
+                                {inc}
+                              </span>
+                            ))}
                           </td>
                           <td className="p-3 text-center">
-                            <div className="font-bold text-indigo-650 font-mono">398.5%</div>
-                            <div className="text-[10px] text-gray-500 font-mono mt-0.5">지상 38층</div>
+                            <div className="font-bold text-indigo-650 font-mono">{cs.finalFAR}%</div>
+                            <div className="text-[10px] text-gray-500 font-mono mt-0.5">{cs.height}</div>
                           </td>
                           <td className="p-3 text-gray-600 leading-relaxed text-[10.5px]">
-                            상업·문화시설 배분 가점을 최대 수혜 적용하여 공사비 회수 기여. 저층부 스트리트 몰 연계로 분양 개시 3주 만에 전 실 완판 기록.
+                            {cs.strategy}
                           </td>
                         </tr>
-                        <tr className="border-b border-gray-100 hover:bg-slate-50/50">
-                          <td className="p-3">
-                            <div className="font-bold text-gray-900">메트로 오피스텔 랜드마크 (B-스퀘어)</div>
-                            <div className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
-                              <MapPin className="w-3 h-3" /> 인근 820m 이내
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="font-semibold text-gray-700">{zoning}</div>
-                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">대지 3,120㎡</div>
-                          </td>
-                          <td className="p-3 space-y-1">
-                            <span className="inline-block bg-indigo-50 text-indigo-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">창의디자인 최우수 +40%p</span>
-                            <span className="inline-block bg-emerald-50 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">기부채납(도서관) +25%p</span>
-                            <span className="inline-block bg-slate-100 text-slate-700 text-[9px] font-medium px-1.5 py-0.5 rounded">역세권 청년임대 +30%p</span>
-                          </td>
-                          <td className="p-3 text-center">
-                            <div className="font-bold text-indigo-650 font-mono">448.2%</div>
-                            <div className="text-[10px] text-gray-500 font-mono mt-0.5">지상 45층</div>
-                          </td>
-                          <td className="p-3 text-gray-600 leading-relaxed text-[10.5px]">
-                            도시·건축 창의혁신 디자인 공모 당선으로 일조권 사선제한 규제를 완전히 배제 승인받음. 초고층 하이엔드 복합 주거 랜드마크로 도약.
-                          </td>
-                        </tr>
-                        <tr className="hover:bg-slate-50/50">
-                          <td className="p-3">
-                            <div className="font-bold text-gray-900">친환경 그린 스마트 복합센터 (C-메트로)</div>
-                            <div className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
-                              <MapPin className="w-3 h-3" /> 인근 1.1km 이내
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="font-semibold text-gray-700">{zoning}</div>
-                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">대지 1,890㎡</div>
-                          </td>
-                          <td className="p-3 space-y-1">
-                            <span className="inline-block bg-emerald-50 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">개방형 녹지 40% +48%p</span>
-                            <span className="inline-block bg-slate-100 text-slate-700 text-[9px] font-medium px-1.5 py-0.5 rounded mr-1">녹색건축인증 1등급 +12%p</span>
-                          </td>
-                          <td className="p-3 text-center">
-                            <div className="font-bold text-indigo-650 font-mono">389.0%</div>
-                            <div className="text-[10px] text-gray-500 font-mono mt-0.5">지상 32층</div>
-                          </td>
-                          <td className="p-3 text-gray-600 leading-relaxed text-[10.5px]">
-                            지상층 대지의 40%를 완전히 개방형 시민 공원녹지로 내어주고 상향 보너스를 획득. 입주사 테라스 정원을 분양 마케팅 포인트로 활용하여 분양가 +15% 프리미엄 획득.
-                          </td>
-                        </tr>
-                      </>
+                      ))
                     ) : (
-                      <>
-                        <tr className="border-b border-gray-100 hover:bg-slate-50/50">
-                          <td className="p-3">
-                            <div className="font-bold text-gray-900">숲세권 테라스 포레 (D-Forest)</div>
-                            <div className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
-                              <MapPin className="w-3 h-3" /> 인근 650m 이내
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="font-semibold text-gray-700">{zoning}</div>
-                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">대지 2,800㎡ (유사 크기)</div>
-                          </td>
-                          <td className="p-3 space-y-1">
-                            <span className="inline-block bg-emerald-50 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">토지 기부채납(소공원) +15%p</span>
-                            <span className="inline-block bg-indigo-50 text-indigo-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">우수한 디자인 혁신 +20%p</span>
-                            <span className="inline-block bg-slate-100 text-slate-700 text-[9px] font-medium px-1.5 py-0.5 rounded">장기전세 결합 +15%p</span>
-                          </td>
-                          <td className="p-3 text-center">
-                            <div className="font-bold text-indigo-650 font-mono">248.5%</div>
-                            <div className="text-[10px] text-gray-500 font-mono mt-0.5">지상 25층</div>
-                          </td>
-                          <td className="p-3 text-gray-600 leading-relaxed text-[10.5px]">
-                            도로 확장에 치우치던 기부채납을 단지 내 소공원 조성 방식으로 우회 기획하여 단지 쾌적성을 확보함과 동시에 용적률 한계 돌파. 평균 분양 경쟁률 45:1 완판 성공.
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-slate-50/50">
-                          <td className="p-3">
-                            <div className="font-bold text-gray-900">센트럴 시그니처 에코단지 (E-Central)</div>
-                            <div className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
-                              <MapPin className="w-3 h-3" /> 인근 980m 이내
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="font-semibold text-gray-700">{zoning}</div>
-                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">대지 3,450㎡</div>
-                          </td>
-                          <td className="p-3 space-y-1">
-                            <span className="inline-block bg-indigo-50 text-indigo-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">공공임대주택 특례 +30%p</span>
-                            <span className="inline-block bg-emerald-50 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">공개공지 정원 +10%p</span>
-                            <span className="inline-block bg-slate-100 text-slate-700 text-[9px] font-medium px-1.5 py-0.5 rounded">제로에너지빌딩 +8%p</span>
-                          </td>
-                          <td className="p-3 text-center">
-                            <div className="font-bold text-indigo-650 font-mono">278.4%</div>
-                            <div className="text-[10px] text-gray-500 font-mono mt-0.5">지상 28층</div>
-                          </td>
-                          <td className="p-3 text-gray-600 leading-relaxed text-[10.5px]">
-                            임대주택 기입채납을 적극 설계 반영하여 법정 용적률 상한의 1.2배 상향 승인을 취득함. 또한 부설 주차장 완화 조항 연동을 통하여 지하 토공사비를 12% 가량 획기적으로 경감.
-                          </td>
-                        </tr>
-                        <tr className="hover:bg-slate-50/50">
-                          <td className="p-3">
-                            <div className="font-bold text-gray-900">개방형 가든 시티 (F-Garden)</div>
-                            <div className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
-                              <MapPin className="w-3 h-3" /> 인근 1.4km 이내
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="font-semibold text-gray-700">{zoning}</div>
-                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">대지 2,100㎡</div>
-                          </td>
-                          <td className="p-3 space-y-1">
-                            <span className="inline-block bg-emerald-50 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">개방형 녹지 30% +36%p</span>
-                            <span className="inline-block bg-indigo-50 text-indigo-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">특별건축구역 지정 +25%p</span>
-                          </td>
-                          <td className="p-3 text-center">
-                            <div className="font-bold text-indigo-650 font-mono">299.2%</div>
-                            <div className="text-[10px] text-gray-500 font-mono mt-0.5">지상 30층</div>
-                          </td>
-                          <td className="p-3 text-gray-600 leading-relaxed text-[10.5px]">
-                            생태형 개방 녹지와 특별건축구역 조항을 통합 접수. 동간 배치를 입체화하고 정북 방향 일조 사선 완화를 적용하여 슬림한 타워형 배치 구축 성공. 주변 시세 대비 완공 시점 평당 가격 최고가 갱신.
-                          </td>
-                        </tr>
-                      </>
+                      (zoning.includes('상업') || zoning.includes('준주거')) ? (
+                        <>
+                          <tr className="border-b border-gray-100 hover:bg-slate-50/50">
+                            <td className="p-3">
+                              <div className="font-bold text-gray-900">도심형 하이브리드 타워 (A-스퀘어)</div>
+                              <div className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
+                                <MapPin className="w-3 h-3" /> 인근 450m 이내
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              <div className="font-semibold text-gray-700">{zoning}</div>
+                              <div className="text-[10px] text-gray-400 font-mono mt-0.5">대지 2,450㎡ (유사 크기)</div>
+                            </td>
+                            <td className="p-3 space-y-1">
+                              <span className="inline-block bg-emerald-50 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">건물 기부채납 +20%p</span>
+                              <span className="inline-block bg-indigo-50 text-indigo-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">비주거 복합가점 +15%p</span>
+                              <span className="inline-block bg-slate-100 text-slate-700 text-[9px] font-medium px-1.5 py-0.5 rounded">공개공지 +8%p</span>
+                            </td>
+                            <td className="p-3 text-center">
+                              <div className="font-bold text-indigo-650 font-mono">398.5%</div>
+                              <div className="text-[10px] text-gray-500 font-mono mt-0.5">지상 38층</div>
+                            </td>
+                            <td className="p-3 text-gray-600 leading-relaxed text-[10.5px]">
+                              상업·문화시설 배분 가점을 최대 수혜 적용하여 공사비 회수 기여. 저층부 스트리트 몰 연계로 분양 개시 3주 만에 전 실 완판 기록.
+                            </td>
+                          </tr>
+                          <tr className="border-b border-gray-100 hover:bg-slate-50/50">
+                            <td className="p-3">
+                              <div className="font-bold text-gray-900">메트로 오피스텔 랜드마크 (B-스퀘어)</div>
+                              <div className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
+                                <MapPin className="w-3 h-3" /> 인근 820m 이내
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              <div className="font-semibold text-gray-700">{zoning}</div>
+                              <div className="text-[10px] text-gray-400 font-mono mt-0.5">대지 3,120㎡</div>
+                            </td>
+                            <td className="p-3 space-y-1">
+                              <span className="inline-block bg-indigo-50 text-indigo-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">창의디자인 최우수 +40%p</span>
+                              <span className="inline-block bg-emerald-50 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">기부채납(도서관) +25%p</span>
+                              <span className="inline-block bg-slate-100 text-slate-700 text-[9px] font-medium px-1.5 py-0.5 rounded">역세권 청년임대 +30%p</span>
+                            </td>
+                            <td className="p-3 text-center">
+                              <div className="font-bold text-indigo-650 font-mono">448.2%</div>
+                              <div className="text-[10px] text-gray-500 font-mono mt-0.5">지상 45층</div>
+                            </td>
+                            <td className="p-3 text-gray-600 leading-relaxed text-[10.5px]">
+                              도시·건축 창의혁신 디자인 공모 당선으로 일조권 사선제한 규제를 완전히 배제 승인받음. 초고층 하이엔드 복합 주거 랜드마크로 도약.
+                            </td>
+                          </tr>
+                          <tr className="hover:bg-slate-50/50">
+                            <td className="p-3">
+                              <div className="font-bold text-gray-900">친환경 그린 스마트 복합센터 (C-메트로)</div>
+                              <div className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
+                                <MapPin className="w-3 h-3" /> 인근 1.1km 이내
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              <div className="font-semibold text-gray-700">{zoning}</div>
+                              <div className="text-[10px] text-gray-400 font-mono mt-0.5">대지 1,890㎡</div>
+                            </td>
+                            <td className="p-3 space-y-1">
+                              <span className="inline-block bg-emerald-50 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">개방형 녹지 40% +48%p</span>
+                              <span className="inline-block bg-slate-100 text-slate-700 text-[9px] font-medium px-1.5 py-0.5 rounded mr-1">녹색건축인증 1등급 +12%p</span>
+                            </td>
+                            <td className="p-3 text-center">
+                              <div className="font-bold text-indigo-650 font-mono">389.0%</div>
+                              <div className="text-[10px] text-gray-500 font-mono mt-0.5">지상 32층</div>
+                            </td>
+                            <td className="p-3 text-gray-600 leading-relaxed text-[10.5px]">
+                              지상층 대지의 40%를 완전히 개방형 시민 공원녹지로 내어주고 상향 보너스를 획득. 입주사 테라스 정원을 분양 마케팅 포인트로 활용하여 분양가 +15% 프리미엄 획득.
+                            </td>
+                          </tr>
+                        </>
+                      ) : (
+                        <>
+                          <tr className="border-b border-gray-100 hover:bg-slate-50/50">
+                            <td className="p-3">
+                              <div className="font-bold text-gray-900">숲세권 테라스 포레 (D-Forest)</div>
+                              <div className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
+                                <MapPin className="w-3 h-3" /> 인근 650m 이내
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              <div className="font-semibold text-gray-700">{zoning}</div>
+                              <div className="text-[10px] text-gray-400 font-mono mt-0.5">대지 2,800㎡ (유사 크기)</div>
+                            </td>
+                            <td className="p-3 space-y-1">
+                              <span className="inline-block bg-emerald-50 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">토지 기부채납(소공원) +15%p</span>
+                              <span className="inline-block bg-indigo-50 text-indigo-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">우수한 디자인 혁신 +20%p</span>
+                              <span className="inline-block bg-slate-100 text-slate-700 text-[9px] font-medium px-1.5 py-0.5 rounded">장기전세 결합 +15%p</span>
+                            </td>
+                            <td className="p-3 text-center">
+                              <div className="font-bold text-indigo-650 font-mono">248.5%</div>
+                              <div className="text-[10px] text-gray-500 font-mono mt-0.5">지상 25층</div>
+                            </td>
+                            <td className="p-3 text-gray-600 leading-relaxed text-[10.5px]">
+                              도로 확장에 치우치던 기부채납을 단지 내 소공원 조성 방식으로 우회 기획하여 단지 쾌적성을 확보함과 동시에 용적률 한계 돌파. 평균 분양 경쟁률 45:1 완판 성공.
+                            </td>
+                          </tr>
+                          <tr className="border-b border-gray-100 hover:bg-slate-50/50">
+                            <td className="p-3">
+                              <div className="font-bold text-gray-900">센트럴 시그니처 에코단지 (E-Central)</div>
+                              <div className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
+                                <MapPin className="w-3 h-3" /> 인근 980m 이내
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              <div className="font-semibold text-gray-700">{zoning}</div>
+                              <div className="text-[10px] text-gray-400 font-mono mt-0.5">대지 3,450㎡</div>
+                            </td>
+                            <td className="p-3 space-y-1">
+                              <span className="inline-block bg-indigo-50 text-indigo-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">공공임대주택 특례 +30%p</span>
+                              <span className="inline-block bg-emerald-50 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">공개공지 정원 +10%p</span>
+                              <span className="inline-block bg-slate-100 text-slate-700 text-[9px] font-medium px-1.5 py-0.5 rounded">제로에너지빌딩 +8%p</span>
+                            </td>
+                            <td className="p-3 text-center">
+                              <div className="font-bold text-indigo-650 font-mono">278.4%</div>
+                              <div className="text-[10px] text-gray-500 font-mono mt-0.5">지상 28층</div>
+                            </td>
+                            <td className="p-3 text-gray-600 leading-relaxed text-[10.5px]">
+                              임대주택 기입채납을 적극 설계 반영하여 법정 용적률 상한의 1.2배 상향 승인을 취득함. 또한 부설 주차장 완화 조항 연동을 통하여 지하 토공사비를 12% 가량 획기적으로 경감.
+                            </td>
+                          </tr>
+                          <tr className="hover:bg-slate-50/50">
+                            <td className="p-3">
+                              <div className="font-bold text-gray-900">개방형 가든 시티 (F-Garden)</div>
+                              <div className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1">
+                                <MapPin className="w-3 h-3" /> 인근 1.4km 이내
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              <div className="font-semibold text-gray-700">{zoning}</div>
+                              <div className="text-[10px] text-gray-400 font-mono mt-0.5">대지 2,100㎡</div>
+                            </td>
+                            <td className="p-3 space-y-1">
+                              <span className="inline-block bg-emerald-50 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">개방형 녹지 30% +36%p</span>
+                              <span className="inline-block bg-indigo-50 text-indigo-800 text-[9px] font-bold px-1.5 py-0.5 rounded mr-1">특별건축구역 지정 +25%p</span>
+                            </td>
+                            <td className="p-3 text-center">
+                              <div className="font-bold text-indigo-650 font-mono">299.2%</div>
+                              <div className="text-[10px] text-gray-500 font-mono mt-0.5">지상 30층</div>
+                            </td>
+                            <td className="p-3 text-gray-600 leading-relaxed text-[10.5px]">
+                              생태형 개방 녹지와 특별건축구역 조항을 통합 접수. 동간 배치를 입체화하고 정북 방향 일조 사선 완화를 적용하여 슬림한 타워형 배치 구축 성공. 주변 시세 대비 완공 시점 평당 가격 최고가 갱신.
+                            </td>
+                          </tr>
+                        </>
+                      )
                     )}
                   </tbody>
                 </table>

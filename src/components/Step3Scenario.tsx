@@ -394,6 +394,24 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
     );
   };
 
+  const getRegionalName = (address: string): string => {
+    if (!address) return '해당 지역';
+    const parts = address.split(/\s+/);
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if (part.endsWith('동') || part.endsWith('읍') || part.endsWith('면')) {
+        return part;
+      }
+    }
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if (part.endsWith('구') || part.endsWith('시')) {
+        return part;
+      }
+    }
+    return parts[0] || '해당 지역';
+  };
+
   const getAddressType = () => {
     const addr = currentLand?.address || '';
     if (addr.includes('역삼') || addr.includes('강남')) return 'gangnam';
@@ -404,7 +422,12 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   };
 
   const getPopulationData = (category: string) => {
+    if (aiComparables && aiComparables[category] && aiComparables[category].length > 0) {
+      return aiComparables[category];
+    }
     const type = getAddressType();
+    const addr = currentLand?.address || '';
+    const reg = getRegionalName(addr);
     switch(category) {
       case 'land':
         if (type === 'gangnam') {
@@ -436,9 +459,9 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           ];
         }
         return [
-          { name: '서초동 1714-X 준주거 표준지', spec: '대지 396㎡ (120평)', date: '2025.08', price: '41.4억원', perPyung: '3,450만원' },
-          { name: '서초동 1690-XX 이면 필지', spec: '대지 312㎡ (94평)', date: '2025.11', price: '31.1억원', perPyung: '3,300만원' },
-          { name: '법원사거리 이면 근생대지', spec: '대지 425㎡ (129평)', date: '2026.02', price: '46.3억원', perPyung: '3,600만원' }
+          { name: `${reg} 1714-X 준주거 표준지`, spec: '대지 396㎡ (120평)', date: '2025.08', price: '41.4억원', perPyung: '3,450만원' },
+          { name: `${reg} 1690-XX 이면 필지`, spec: '대지 312㎡ (94평)', date: '2025.11', price: '31.1억원', perPyung: '3,300만원' },
+          { name: `${reg} 사거리 이면 근생대지`, spec: '대지 425㎡ (129평)', date: '2026.02', price: '46.3억원', perPyung: '3,600만원' }
         ];
 
       case 'construction':
@@ -478,9 +501,9 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           ];
         }
         return [
-          { name: '서초 삼풍아파트 (59.5㎡)', spec: '전용 18.0평', date: '2025.11', price: '8.4억원', perPyung: '4,650만원' },
-          { name: '서초 래미안 (59.8㎡)', spec: '전용 18.1평', date: '2026.01', price: '8.0억원', perPyung: '4,450만원' },
-          { name: '남부터미널 현대 (59.9㎡)', spec: '전용 18.1평', date: '2025.07', price: '7.4억원', perPyung: '4,100만원' }
+          { name: `${reg} 삼풍아파트 (59.5㎡)`, spec: '전용 18.0평', date: '2025.11', price: '5.2억원', perPyung: '2,850만원' },
+          { name: `${reg} 현대아이파크 (59.8㎡)`, spec: '전용 18.1평', date: '2026.01', price: '4.8억원', perPyung: '2,650만원' },
+          { name: `${reg} 센트럴 푸르지오 (59.9㎡)`, spec: '전용 18.1평', date: '2025.07', price: '4.5억원', perPyung: '2,500만원' }
         ];
 
       case 'apt_medium':
@@ -513,9 +536,9 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           ];
         }
         return [
-          { name: '서초 삼풍아파트 (84.9㎡)', spec: '전용 25.7평', date: '2025.09', price: '12.0억원', perPyung: '4,800만원' },
-          { name: '서초 롯데캐슬클래식 (84.8㎡)', spec: '전용 25.7평', date: '2026.02', price: '11.5억원', perPyung: '4,600만원' },
-          { name: '서초동 현대아이파크 (84.5㎡)', spec: '전용 25.6평', date: '2025.12', price: '11.0억원', perPyung: '4,400만원' }
+          { name: `${reg} 삼풍아파트 (84.9㎡)`, spec: '전용 25.7평', date: '2025.09', price: '7.2억원', perPyung: '2,800만원' },
+          { name: `${reg} 현대아이파크 (84.8㎡)`, spec: '전용 25.7평', date: '2026.02', price: '6.9억원', perPyung: '2,700만원' },
+          { name: `${reg} 센트럴 푸르지오 (84.5㎡)`, spec: '전용 25.6평', date: '2025.12', price: '6.6억원', perPyung: '2,600만원' }
         ];
 
       case 'apt_large':
@@ -548,9 +571,9 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           ];
         }
         return [
-          { name: '서초 삼풍아파트 (114.9㎡)', spec: '전용 34.8평', date: '2026.02', price: '18.1억원', perPyung: '5,200만원' },
-          { name: '서초 현대아이파크 (114.8㎡)', spec: '전용 34.7평', date: '2025.12', price: '17.4억원', perPyung: '5,000만원' },
-          { name: '서초 롯데레전드 (114.9㎡)', spec: '전용 34.8평', date: '2026.01', price: '16.7억원', perPyung: '4,800만원' }
+          { name: `${reg} 삼풍아파트 (114.9㎡)`, spec: '전용 34.8평', date: '2026.02', price: '10.4억원', perPyung: '3,000만원' },
+          { name: `${reg} 현대아이파크 (114.8㎡)`, spec: '전용 34.7평', date: '2025.12', price: '10.0억원', perPyung: '2,900만원' },
+          { name: `${reg} 롯데레전드 (114.9㎡)`, spec: '전용 34.8평', date: '2026.01', price: '9.7억원', perPyung: '2,800만원' }
         ];
 
       case 'officetel_studio':
@@ -579,8 +602,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           ];
         }
         return [
-          { name: '서초 현대에클라트 (30㎡)', spec: '전용 9.1평', date: '2025.10', price: '2.7억원', perPyung: '2,950만원' },
-          { name: '양재역 한신휴플러스 (30.1㎡)', spec: '전용 9.1평', date: '2025.12', price: '2.5억원', perPyung: '2,800만원' }
+          { name: `${reg} 현대에클라트 (30㎡)`, spec: '전용 9.1평', date: '2025.10', price: '2.1억원', perPyung: '2,350만원' },
+          { name: `${reg} 한신휴플러스 (30.1㎡)`, spec: '전용 9.1평', date: '2025.12', price: '1.9억원', perPyung: '2,200만원' }
         ];
 
       case 'officetel_tworoom':
@@ -609,8 +632,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           ];
         }
         return [
-          { name: '서초동 아르젠 (59㎡)', spec: '전용 17.8평', date: '2025.09', price: '5.5억원', perPyung: '3,100만원' },
-          { name: '강남역 푸르지오시티 (59.2㎡)', spec: '전용 17.9평', date: '2026.01', price: '5.4억원', perPyung: '3,000만원' }
+          { name: `${reg} 아르젠 (59㎡)`, spec: '전용 17.8평', date: '2025.09', price: '4.4억원', perPyung: '2,500만원' },
+          { name: `${reg} 푸르지오시티 (59.2㎡)`, spec: '전용 17.9평', date: '2026.01', price: '4.2억원', perPyung: '2,400만원' }
         ];
 
       case 'officetel_threeroom':
@@ -639,8 +662,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           ];
         }
         return [
-          { name: '서초 롯데골든클래스 (84㎡)', spec: '전용 25.4평', date: '2025.08', price: '8.8억원', perPyung: '3,450만원' },
-          { name: '양재 오피스빌 (84.3㎡)', spec: '전용 25.5평', date: '2026.02', price: '8.4억원', perPyung: '3,300만원' }
+          { name: `${reg} 롯데골든클래스 (84㎡)`, spec: '전용 25.4평', date: '2025.08', price: '6.4억원', perPyung: '2,500만원' },
+          { name: `${reg} 오피스빌 (84.3㎡)`, spec: '전용 25.5평', date: '2026.02', price: '6.1억원', perPyung: '2,400만원' }
         ];
 
       case 'office':
@@ -669,8 +692,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           ];
         }
         return [
-          { name: '남부터미널 인근 프라임 빌딩', spec: '업무용 중형', date: '2025.08', price: '평당 보 150만/월 12만', perPyung: '1,900만원' },
-          { name: '서초동 법조타운 소형 사무소', spec: '업무용 전용', date: '2025.11', price: '평당 보 160만/월 13만', perPyung: '1,950만원' }
+          { name: `${reg} 인근 중형 빌딩`, spec: '업무용 중형', date: '2025.08', price: '평당 보 130만/월 10만', perPyung: '1,600만원' },
+          { name: `${reg} 소형 사무소`, spec: '업무용 전용', date: '2025.11', price: '평당 보 140만/월 11만', perPyung: '1,650만원' }
         ];
 
       case 'retail':
@@ -699,8 +722,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           ];
         }
         return [
-          { name: '서초대로변 메인상가 1층', spec: '근린생활 지상1층', date: '2025.08', price: '평당 보 250만/월 15만', perPyung: '3,650만원' },
-          { name: '남부터미널역 근린상가 1층', spec: '근린생활 지상1층', date: '2025.11', price: '평당 보 220만/월 13만', perPyung: '3,450만원' }
+          { name: `${reg}대로변 메인상가 1층`, spec: '근린생활 지상1층', date: '2025.08', price: '평당 보 180만/월 12만', perPyung: '2,450만원' },
+          { name: `${reg}역 근린상가 1층`, spec: '근린생활 지상1층', date: '2025.11', price: '평당 보 160만/월 10만', perPyung: '2,300만원' }
         ];
 
       default:
@@ -828,6 +851,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   const [analysisError, setAnalysisError] = useState<string>('');
   const [aiRecommendations, setAiRecommendations] = useState<any>(null);
   const [isAiSynced, setIsAiSynced] = useState<boolean>(false);
+  const [aiComparables, setAiComparables] = useState<any>(() => savedScenario?.inputs?.aiComparables ?? null);
+  const [aiSuccessfulCases, setAiSuccessfulCases] = useState<any[] | null>(() => savedScenario?.inputs?.aiSuccessfulCases ?? null);
 
   // Sync state if step 1 or step 2 changes
   useEffect(() => {
@@ -981,6 +1006,9 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
         if (data.hotelDepositPerRoom !== undefined) setHotelDepositPerRoom(data.hotelDepositPerRoom);
         if (data.hotelRentPerRoom !== undefined) setHotelRentPerRoom(data.hotelRentPerRoom);
         if (data.otherCostsRatio !== undefined) setOtherCostsRatio(data.otherCostsRatio);
+
+        if (data.comparables) setAiComparables(data.comparables);
+        if (data.cases) setAiSuccessfulCases(data.cases);
 
         setIsAiSynced(true);
         setMarketAnalysisReport(data.marketAnalysis || '성공적으로 분양가를 도출했습니다.');
@@ -1813,12 +1841,13 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           typicalFloorStart, typicalFloorEnd,
           aptParkingOver85, aptParking60To85, aptParkingUnder60, otParkingOver60, otParking30To60, otParkingUnder30, plannedParkingRatio,
           useLayoutSimulation, floorCalculationMode, towerCount, unitsPerFloorLine, podiumFloors, buildingSeparationDistance, boundarySeparationDistance, buildingSeparationRatio, sunlightBoundaryRatio,
-          useCustomResidentFacilities, residentFacilities
+          useCustomResidentFacilities, residentFacilities,
+          aiComparables, aiSuccessfulCases
         },
         result
       });
     }
-  }, [result, onScenarioChange]);
+  }, [result, onScenarioChange, aiComparables, aiSuccessfulCases]);
 
   const getCommercialReport = () => {
     const isGangnam = currentLand?.id === 'gangnam-yeoksam' || currentLand?.address?.includes('역삼') || currentLand?.address?.includes('강남');
@@ -1947,7 +1976,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           if (addr.includes('반포') || addr.includes('서초')) return '서초대로변 준주거지 및 반포동 노후 대지 수매 실거래가 (평당 1.0억~1.2억원 수준)';
                           if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '을지로 중심상업지역 일반상업지 대로변 최고가 실거래 (평당 1.4억~1.6억원 수준)';
                           if (addr.includes('연남') || addr.includes('마포')) return '연트럴파크 메인 상권 및 연남동 미로길 카페거리 수매가 실거래 (평당 5.0~6.5천만원 수준)';
-                          return '서초동 법원사거리 인근 준주거지역 표준지 실거래가 (평당 3.3~3.6천만원 수준)';
+                          const reg = getRegionalName(addr);
+                          return `${reg} 인근 및 유사 입지 실거래가 (평당 2.8~3.2천만원 수준)`;
                         })()
                       )}
 
@@ -1974,7 +2004,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           if (addr.includes('반포') || addr.includes('서초')) return '반포 래미안원베일리 59㎡ (평당 7,200~7,600만), 아크로리버파크 59㎡ (평당 7,000~7,500만)';
                           if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '덕수궁 디팰리스 59㎡ (평당 5,000~5,400만), 남산 롯데캐슬 59㎡ (평당 4,800~5,200만)';
                           if (addr.includes('연남') || addr.includes('마포')) return '마포 프레스티지 자이 59㎡ (평당 4,200~4,500만), 신촌그랑자이 59㎡ (평당 4,000~4,300만)';
-                          return '서초 삼풍아파트 59㎡ (평당 4,500~4,800만), 서초 래미안 59㎡ (평당 4,300~4,600만)';
+                          const reg = getRegionalName(addr);
+                          return `${reg} 현대아이파크 59㎡ (평당 2,500~2,800만), ${reg} 센트럴 푸르지오 59㎡ (평당 2,400~2,700만)`;
                         })()
                       )}
 
@@ -1991,7 +2022,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           if (addr.includes('반포') || addr.includes('서초')) return '반포자이 84㎡ (평당 7,100~7,400만), 반포 래미안퍼스티지 84㎡ (평당 7,000~7,300만)';
                           if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '경희궁 자이 84㎡ (평당 5,400~5,800만), 서울역 센트럴자이 84㎡ (평당 5,200~5,600만)';
                           if (addr.includes('연남') || addr.includes('마포')) return '마포래미안푸르지오 84㎡ (평당 4,400~4,800만), 마포자이3차 84㎡ (평당 4,200~4,600만)';
-                          return '서초 삼풍아파트 84㎡ (평당 4,600~5,000만), 서초 롯데캐슬클래식 84㎡ (평당 4,400~4,800만)';
+                          const reg = getRegionalName(addr);
+                          return `${reg} 삼풍아파트 84㎡ (평당 2,600~3,000만), ${reg} 현대아이파크 84㎡ (평당 2,400~2,800만)`;
                         })()
                       )}
 
@@ -2008,7 +2040,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           if (addr.includes('반포') || addr.includes('서초')) return '반포 래미안원베일리 114㎡ (평당 7,800~8,200만), 아크로리버파크 114㎡ (평당 7,600~8,000만)';
                           if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '경희궁자이 114㎡ (평당 5,800~6,200만), 남산타운 114㎡ (평당 5,400~5,800만)';
                           if (addr.includes('연남') || addr.includes('마포')) return '마포그랑자이 114㎡ (평당 4,800~5,200만), 신촌숲아이파크 114㎡ (평당 4,600~5,000만)';
-                          return '서초 삼풍아파트 114㎡ (평당 5,000~5,400만), 서초 현대아이파크 114㎡ (평당 4,800~5,200만)';
+                          const reg = getRegionalName(addr);
+                          return `${reg} 스카이뷰 114㎡ (평당 2,800~3,200만), ${reg} 메트로캐슬 114㎡ (평당 2,700~3,100만)`;
                         })()
                       )}
 
@@ -2025,7 +2058,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           if (addr.includes('반포') || addr.includes('서초')) return '서초 에클라트 30㎡ (평당 3,600~3,800만), 효성해링턴타워 30㎡ (평당 3,500~3,700만)';
                           if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '을지로 센트럴데시앙 30㎡ (평당 2,800~3,000만), 명동 엠퍼스트플레이스 30㎡ (평당 2,700~2,900만)';
                           if (addr.includes('연남') || addr.includes('마포')) return '홍대역 엘포트 30㎡ (평당 2,500~2,700만), 마포 한화오벨리스크 30㎡ (평당 2,400~2,600만)';
-                          return '서초 현대에클라트 30㎡ (평당 2,800~3,100만), 양재역 한신휴플러스 30㎡ (평당 2,700~2,900만)';
+                          const reg = getRegionalName(addr);
+                          return `${reg} 현대에클라트 30㎡ (평당 2,200~2,500만), ${reg} 한신휴플러스 30㎡ (평당 2,100~2,300만)`;
                         })()
                       )}
 
@@ -2042,7 +2076,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           if (addr.includes('반포') || addr.includes('서초')) return '서초 메트로폴리스 59㎡ (평당 4,000~4,300만), 지웰타워 59㎡ (평당 3,900~4,200만)';
                           if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '충무로 엘크루메트로시티 59㎡ (평당 3,100~3,400만), 남산 센트럴자이 59㎡ (평당 3,000~3,300만)';
                           if (addr.includes('연남') || addr.includes('마포')) return '상암 카이저팰리스 59㎡ (평당 2,800~3,000만), 공덕 푸르지오시티 59㎡ (평당 2,700~2,900만)';
-                          return '서초동 아르젠 59㎡ (평당 3,000~3,200만), 강남역 푸르지오시티 59㎡ (평당 2,900~3,100만)';
+                          const reg = getRegionalName(addr);
+                          return `${reg} 아르젠 59㎡ (평당 2,400~2,600만), ${reg} 푸르지오시티 59㎡ (평당 2,300~2,500만)`;
                         })()
                       )}
 
@@ -2059,7 +2094,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           if (addr.includes('반포') || addr.includes('서초')) return '서초 르피에드 84㎡ (평당 4,400~4,800만), 교대역 엘타워 84㎡ (평당 4,200~4,500만)';
                           if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '남산 센트럴뷰 84㎡ (평당 3,500~3,800만), 세운 푸르지오 헤리시티 84㎡ (평당 3,400~3,700만)';
                           if (addr.includes('연남') || addr.includes('마포')) return '마포 한강2차푸르지오 84㎡ (평당 3,100~3,400만), 신촌 다올마을 84㎡ (평당 3,000~3,300만)';
-                          return '서초 롯데골든클래스 84㎡ (평당 3,300~3,600만), 양재 오피스빌 84㎡ (평당 3,200~3,400만)';
+                          const reg = getRegionalName(addr);
+                          return `${reg} 롯데골든클래스 84㎡ (평당 2,500~2,800만), ${reg} 오피스빌 84㎡ (평당 2,400~2,600만)`;
                         })()
                       )}
 
@@ -2076,7 +2112,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           if (addr.includes('반포') || addr.includes('서초')) return '서초동 삼성타운 인근 프라임 오피스 (평당 3,400~3,700만)';
                           if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '을지로 파인에비뉴 및 중구 시그니쳐타워 업무시설 (평당 2,900~3,300만)';
                           if (addr.includes('연남') || addr.includes('마포')) return '마포로변 프라임 오피스 및 상암 DMC 오피스 타워 (평당 2,400~2,700만)';
-                          return '남부터미널 인근 프라임 빌딩 업무용도 실거래가 (평당 1,800~2,000만)';
+                          const reg = getRegionalName(addr);
+                          return `${reg} 인근 중대형 빌딩 업무용도 실거래가 (평당 1,500~1,800만)`;
                         })()
                       )}
 
@@ -2095,7 +2132,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                               if (addr.includes('반포') || addr.includes('서초')) return '서초/교대 고급 부티크 호텔 및 서비스드 레지던스 분양 (평당 3,000~3,500만)';
                               if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '명동/을지로 외국인 대상 호텔 분양가 실거래 (평당 2,600~3,000만)';
                               if (addr.includes('연남') || addr.includes('마포')) return '마포/홍대 어반 라이프스타일 디자인 호텔 분양가 (평당 2,200~2,500만)';
-                              return '서초동 법원사거리 인근 비즈니스 호텔 분양 사례 (평당 2,000~2,300만)';
+                              const reg = getRegionalName(addr);
+                              return `${reg} 인근 비즈니스 호텔 분양 사례 (평당 1,600~1,900만)`;
                             })()
                           )
                         ) : (
