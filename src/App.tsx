@@ -14,6 +14,11 @@ import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
   const [activeStep, setActiveStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+
+  // Scroll to top when activeStep changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' as any });
+  }, [activeStep]);
   
   // App-wide state sharing logic between the steps - starting fresh
   const [regulatoryAnalysis, setRegulatoryAnalysis] = useState<LandRegulatoryAnalysis | null>(null);

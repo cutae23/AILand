@@ -310,6 +310,23 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
     const isOpen = !!expandedPopulationRows[rowId];
     const popData = getPopulationData(rowId);
 
+    const parsePerPyung = (str: string): number => {
+      if (!str) return 0;
+      const cleaned = str.replace(/[\s,]/g, '');
+      if (cleaned.includes('억')) {
+        const parts = cleaned.split('억');
+        const eokVal = parseFloat(parts[0]) || 0;
+        const restStr = parts[1] ? parts[1].replace(/[^0-9.]/g, '') : '';
+        const restVal = parseFloat(restStr) || 0;
+        return eokVal * 10000 + restVal;
+      }
+      const numStr = cleaned.replace(/[^0-9.]/g, '');
+      return parseFloat(numStr) || 0;
+    };
+
+    const validPrices = popData.map(item => parsePerPyung(item.perPyung)).filter(p => p > 0);
+    const avgPrice = validPrices.length > 0 ? Math.round(validPrices.reduce((a, b) => a + b, 0) / validPrices.length) : 0;
+
     return (
       <>
         <tr className="hover:bg-gray-50/35 transition-colors">
@@ -373,6 +390,74 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                     </tbody>
                   </table>
                 </div>
+
+                {/* 수지분석 단가 보정 산식 및 기준 안내 카드 */}
+                <div className="p-3 bg-amber-50/20 rounded-xl border border-amber-200/40 space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-amber-950">
+                    <span className="flex items-center justify-center w-4 h-4 rounded-full bg-amber-500 text-white font-mono text-[9px]">i</span>
+                    수지분석 단가 보정 산식 및 기준 안내
+                  </div>
+                  
+                  <div className="bg-white p-2.5 rounded-lg border border-amber-100/60 font-mono text-[10px] text-gray-700 space-y-2">
+                    <div className="font-bold text-amber-900 border-b border-amber-50 pb-1 flex justify-between items-center">
+                      <span>📊 주변 실거래 평균 단가:</span>
+                      <span className="font-extrabold text-[11px] text-amber-950">{avgPrice > 0 ? `${avgPrice.toLocaleString()} 만원` : '데이터 수집 중'}</span>
+                    </div>
+                    
+                    {rowId === 'construction' ? (
+                      <>
+                        <div className="space-y-1 text-slate-600 leading-relaxed text-[10px]">
+                          <p className="flex items-start gap-1">
+                            <span className="text-amber-500 flex-shrink-0">•</span>
+                            <span><strong>물가 및 자재비 급등 보정 (+8% ~ +12%):</strong> 최근 시점 건설 원자재비 및 노무비의 누적 상승률 반영</span>
+                          </p>
+                          <p className="flex items-start gap-1">
+                            <span className="text-amber-500 flex-shrink-0">•</span>
+                            <span><strong>특수 토목 및 부대 설계 보정 (+5%):</strong> 지하층 암반 터파기, 흙막이(H-Pile 등), 마감 자재 하이엔드 설계 기준 가산</span>
+                          </p>
+                        </div>
+                        <div className="mt-1.5 pt-1.5 border-t border-dashed border-amber-100 text-[10px] font-bold text-indigo-900 flex justify-between items-center bg-indigo-50/30 px-2 py-1.5 rounded-md">
+                          <span>🛠️ 계획 공사비 산출공식:</span>
+                          <span className="font-mono text-[10.5px]">
+                            {avgPrice > 0 ? (
+                              <span>{avgPrice.toLocaleString()}만원 × (1 + 10%[물가] + 5%[설계]) ≒ <strong>{value.toLocaleString()}</strong>만원</span>
+                            ) : (
+                              <span>실거래가 기준 약 15% 보정 ≒ <strong>{value.toLocaleString()}</strong>만원</span>
+                            )}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="space-y-1 text-slate-600 leading-relaxed text-[10px]">
+                          <p className="flex items-start gap-1">
+                            <span className="text-amber-500 flex-shrink-0">•</span>
+                            <span><strong>신축 프리미엄 (New-Build Premium, +15% ~ +25%):</strong> 기축 노후 단지 대비 신호대기, 마감, 첨단 주거 시스템 가치</span>
+                          </p>
+                          <p className="flex items-start gap-1">
+                            <span className="text-amber-500 flex-shrink-0">•</span>
+                            <span><strong>미래 시간가치/인플레이션 반영 (+5% ~ +10%):</strong> 본 사업 분양 및 준공 시점(2~3년 후)의 화폐가치 하락 대비 선반영</span>
+                          </p>
+                        </div>
+                        <div className="mt-1.5 pt-1.5 border-t border-dashed border-amber-100 text-[10px] font-bold text-amber-900 flex justify-between items-center bg-amber-50/40 px-2 py-1.5 rounded-md">
+                          <span>📈 계획 분양가 산출공식:</span>
+                          <span className="font-mono text-[10.5px]">
+                            {avgPrice > 0 ? (
+                              <span>{avgPrice.toLocaleString()}만원 × (1 + 15%[신축] + 7%[미래]) ≒ <strong>{value.toLocaleString()}</strong>만원</span>
+                            ) : (
+                              <span>실거래가 기준 약 22% 보정 ≒ <strong>{value.toLocaleString()}</strong>만원</span>
+                            )}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  
+                  <p className="text-[9.5px] text-[#8D7B68] leading-relaxed bg-[#FAF9F5] p-2 rounded border border-amber-100/30">
+                    💡 <strong>보정 사유:</strong> 수지분석 시 15~20년 이상 노후된 주변 단지의 실거래 평당 단가를 보정 없이 그대로 대입하면, <strong>신규 건축물의 미래 분양가치가 심각하게 왜곡(저평가)</strong>되어 사업성 검토 자체가 불가능해집니다. 따라서 기축 평균 시세 대비 신축 시점 프리미엄 및 물가 상승률을 가산하여 <strong>15% ~ 30% 상향 보정</strong>하여 기획하는 것이 공인 부동산 개발 수지분석의 실무 표준입니다.
+                  </p>
+                </div>
+
                 <div className="text-[9px] text-[#8D7B68] leading-snug pt-1 border-t border-gray-100 flex justify-between items-center">
                   <span>* {title} 산출의 기초가 되는 주변 실거래 모집단 현황입니다.</span>
                   <div className="flex items-center gap-1.5">
@@ -2158,7 +2243,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                                 if (addr.includes('반포') || addr.includes('서초')) return '서초 관광 호텔 객실 가동률 80% 기준 월 환산 수익 (실당 170~220만)';
                                 if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '명동 관광 호텔 객실 가동률 88% 기준 월 환산 수익 (실당 200~250만)';
                                 if (addr.includes('연남') || addr.includes('마포')) return '홍대 디자인 호텔 객실 가동률 85% 기준 월 환산 수익 (실당 160~210만)';
-                                return '서초 인근 비즈니스 호텔 객실 가동률 78% 기준 월 환산 수익 (실당 140~180만)';
+                                const reg = getRegionalName(addr);
+                                return `${reg} 인근 비즈니스 호텔 객실 가동률 78% 기준 월 환산 수익 (실당 140~180만)`;
                               })()
                             )}
                           </>
@@ -2178,7 +2264,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           if (addr.includes('반포') || addr.includes('서초')) return '반포 래미안원베일리 단지내 상가 1층 (평당 8,000~9,000만), 아크로리버 상가 (평당 7,800~8,500만)';
                           if (addr.includes('을지로') || addr.includes('중구') || addr.includes('명동')) return '명동 메인스트리트 로드숍 1층 (평당 8,000만~1.2억), 을지로 센터원 상가 1층 (평당 6,500~7,500만)';
                           if (addr.includes('연남') || addr.includes('마포')) return '연남동 미로길 1층 리테일 (평당 5,000~5,500만), 홍대 걷고싶은거리 상가 (평당 5,500~6,000만)';
-                          return '서초대로변 1층 상가 실거래 시세 (평당 3,500~3,800만)';
+                          const reg = getRegionalName(addr);
+                          return `${reg} 주변 1층 상가 실거래 시세 (평당 3,500~3,800만)`;
                         })()
                       )}
                     </tbody>
