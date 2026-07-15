@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { LandRegulatoryAnalysis, FARRelaxationResult, ScenarioResult, AllocatedUnitResult } from '../types';
-import { CircleDollarSign, Coins, TrendingUp, Building2, Layers, Compass, HelpCircle, ArrowRight, Table, Sparkles, Loader2, RefreshCw, AlertTriangle, Home, Briefcase, Info, Plus, Trash2, Calculator, Activity, Puzzle } from 'lucide-react';
+import { CircleDollarSign, Coins, TrendingUp, Building2, Layers, Compass, HelpCircle, ArrowRight, Table, Sparkles, Loader2, RefreshCw, AlertTriangle, Home, Briefcase, Info, Plus, Trash2, Calculator, Activity, Puzzle, ChevronDown, ChevronUp, Sliders, Calendar, Percent, ArrowDownRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import LayoutDiagram from './LayoutDiagram';
 
@@ -123,6 +123,13 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   // [USER ADDITIONS] New State: exitStrategy
   const [exitStrategy, setExitStrategy] = useState<'sales' | 'lease-exit' | 'lease-permanent'>(() => inputs?.exitStrategy ?? 'sales');
 
+  // [USER ADDITIONS] Step 4 Interactive Parameter States
+  const [step4ExitYear, setStep4ExitYear] = useState<number>(() => inputs?.step4ExitYear ?? 5);
+  const [step4VacancyRate, setStep4VacancyRate] = useState<number>(() => inputs?.step4VacancyRate ?? 5.0); // %
+  const [step4RentGrowth, setStep4RentGrowth] = useState<number>(() => inputs?.step4RentGrowth ?? 2.5); // %
+  const [step4CapRate, setStep4CapRate] = useState<number>(() => inputs?.step4CapRate ?? 5.5); // %
+  const [step4DiscountRate, setStep4DiscountRate] = useState<number>(() => inputs?.step4DiscountRate ?? 4.5); // %
+
   // [USER ADDITIONS] New States: Typical Floor Range (기준층 범위 설정)
   const [typicalFloorStart, setTypicalFloorStart] = useState<number>(() => inputs?.typicalFloorStart ?? 2);
   const [typicalFloorEnd, setTypicalFloorEnd] = useState<number>(() => inputs?.typicalFloorEnd ?? 7);
@@ -183,6 +190,48 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   const [landPurchasePrice, setLandPurchasePrice] = useState<number>(() => inputs?.landPurchasePrice ?? initTotalPrice); // 토지매입가 (총액, 억원)
   const [constructionCostPerPyung, setConstructionCostPerPyung] = useState<number>(() => inputs?.constructionCostPerPyung ?? 850); // 평당 공사비 (만원, 예: 850만원)
   const [otherCostsRatio, setOtherCostsRatio] = useState<number>(() => inputs?.otherCostsRatio ?? 20); // 기타 비용 비율 (%)
+
+  const [designCostRatio, setDesignCostRatio] = useState<number>(3.0); // 설계비 비율 (%)
+  const [supervisionCostRatio, setSupervisionCostRatio] = useState<number>(1.5); // 감리비 비율 (%)
+  const [taxCostRatio, setTaxCostRatio] = useState<number>(4.5); // 세금 및 공과금 비율 (%)
+  const [financeCostRatio, setFinanceCostRatio] = useState<number>(6.0); // 금융비용 및 이자 비율 (%)
+  const [marketingCostRatio, setMarketingCostRatio] = useState<number>(5.0); // 마케팅 및 분양대행비 (%)
+  const [showBusinessCostDetail, setShowBusinessCostDetail] = useState<boolean>(false); // 사업비 상세 내역 토글 상태
+
+  const updateDetailRatio = (field: 'design' | 'supervision' | 'tax' | 'finance' | 'marketing', val: number) => {
+    let d = designCostRatio;
+    let s = supervisionCostRatio;
+    let t = taxCostRatio;
+    let f = financeCostRatio;
+    let m = marketingCostRatio;
+    if (field === 'design') { d = val; setDesignCostRatio(val); }
+    else if (field === 'supervision') { s = val; setSupervisionCostRatio(val); }
+    else if (field === 'tax') { t = val; setTaxCostRatio(val); }
+    else if (field === 'finance') { f = val; setFinanceCostRatio(val); }
+    else if (field === 'marketing') { m = val; setMarketingCostRatio(val); }
+    
+    const total = parseFloat((d + s + t + f + m).toFixed(2));
+    setOtherCostsRatio(total);
+  };
+
+  const handleOtherCostsRatioChange = (newRatio: number) => {
+    setOtherCostsRatio(newRatio);
+    const currentSum = designCostRatio + supervisionCostRatio + taxCostRatio + financeCostRatio + marketingCostRatio;
+    if (currentSum > 0) {
+      const scale = newRatio / currentSum;
+      setDesignCostRatio(parseFloat((designCostRatio * scale).toFixed(2)));
+      setSupervisionCostRatio(parseFloat((supervisionCostRatio * scale).toFixed(2)));
+      setTaxCostRatio(parseFloat((taxCostRatio * scale).toFixed(2)));
+      setFinanceCostRatio(parseFloat((financeCostRatio * scale).toFixed(2)));
+      setMarketingCostRatio(parseFloat((marketingCostRatio * scale).toFixed(2)));
+    } else {
+      setDesignCostRatio(parseFloat((newRatio * 0.15).toFixed(2)));
+      setSupervisionCostRatio(parseFloat((newRatio * 0.075).toFixed(2)));
+      setTaxCostRatio(parseFloat((newRatio * 0.225).toFixed(2)));
+      setFinanceCostRatio(parseFloat((newRatio * 0.3).toFixed(2)));
+      setMarketingCostRatio(parseFloat((newRatio * 0.25).toFixed(2)));
+    }
+  };
 
   const [showFormulaPanel, setShowFormulaPanel] = useState<boolean>(true); // 산출식 패널 접고 펴기 상태 (기본값: 펼침)
 
@@ -1580,8 +1629,10 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
       landCostMultiplier: number,
       constructionCostMultiplier: number,
       pricePerPyungMultiplier: number,
-      rentMultiplier: number
+      rentMultiplier: number,
+      forcedExitStrategy?: 'sales' | 'lease-exit' | 'lease-permanent'
     ) => {
+      const activeExitStrat = forcedExitStrategy || exitStrategy;
       // E. Financial Analysis Calculations
       const landCost = landPurchasePrice * landCostMultiplier;
       const constructionCostWon = totalGFAByPyung * (constructionCostPerPyung * constructionCostMultiplier) * 10000;
@@ -1640,24 +1691,128 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
         return sum + (item.areaPyung * (item.pricePerPyung * pricePerPyungMultiplier));
       }, 0);
 
-      const finalSalesRevenue = exitStrategy === 'sales'
+      const aptSalesInEok = aptSales / 10000;
+      const officetelSalesInEok = officetelSales / 10000;
+
+      const isSalesStrat = activeExitStrat === 'sales';
+
+      // Apartments conversion under lease strategies
+      const calculatedAptDeposit = isSalesStrat ? 0 : aptSalesInEok * 0.55;
+      const calculatedAptAnnualRent = isSalesStrat ? 0 : (aptSalesInEok * 0.45) * 0.045;
+
+      // Officetels conversion under lease strategies
+      const calculatedOfficetelDeposit = isSalesStrat ? 0 : officetelSalesInEok * 0.50;
+      const calculatedOfficetelAnnualRent = isSalesStrat ? 0 : (officetelSalesInEok * 0.50) * 0.050;
+
+      // Hotel conversion under lease strategies
+      const hotelSalesInEok = (hotelRoomCount * hotelRoomSizePyung * (hotelPricePerPyung * pricePerPyungMultiplier)) / 10000;
+      const calculatedHotelDeposit = isSalesStrat 
+        ? 0 
+        : (hotelType === 'lease' ? (hotelDepositsVal / 10000) : hotelSalesInEok * 0.45);
+      const calculatedHotelAnnualRent = isSalesStrat 
+        ? 0 
+        : (hotelType === 'lease' ? (hotelAnnualRentVal / 10000) : (hotelSalesInEok * 0.55) * 0.055);
+
+      // Retail conversion under lease strategies
+      const retailSalesInEok = ((retailB1Area * (retailB1Price * pricePerPyungMultiplier)) + (retail1FArea * (retail1FPrice * pricePerPyungMultiplier)) + (retail2FArea * (retail2FPrice * pricePerPyungMultiplier)) + (retail3FArea * (retail3FPrice * pricePerPyungMultiplier))) / 10000;
+      const calculatedRetailDeposit = isSalesStrat 
+        ? 0 
+        : (retailType === 'lease' ? (retailDepositsVal / 10000) : retailSalesInEok * 0.40);
+      const calculatedRetailAnnualRent = isSalesStrat 
+        ? 0 
+        : (retailType === 'lease' ? (retailAnnualRentVal / 10000) : (retailSalesInEok * 0.60) * 0.060);
+
+      // Office conversion under lease strategies
+      const officeSalesInEok = (officeArea * (officePricePerPyung * pricePerPyungMultiplier)) / 10000;
+      const calculatedOfficeDeposit = isSalesStrat 
+        ? 0 
+        : (officeType === 'lease' ? (officeDepositsVal / 10000) : officeSalesInEok * 0.40);
+      const calculatedOfficeAnnualRent = isSalesStrat 
+        ? 0 
+        : (officeType === 'lease' ? (officeAnnualRentVal / 10000) : (officeSalesInEok * 0.60) * 0.050);
+
+      // Custom Usages conversion under lease strategies
+      const calculatedCustomDeposit = isSalesStrat 
+        ? 0 
+        : (customUsages.reduce((sum, item) => {
+            const itemSalesInEok = (item.areaPyung * (item.pricePerPyung * pricePerPyungMultiplier)) / 10000;
+            return sum + (item.type === 'lease' 
+              ? ((item.areaPyung * (item.depositPerPyung * rentMultiplier)) / 10000) 
+              : itemSalesInEok * 0.40);
+          }, 0));
+      const calculatedCustomAnnualRent = isSalesStrat 
+        ? 0 
+        : (customUsages.reduce((sum, item) => {
+            const itemSalesInEok = (item.areaPyung * (item.pricePerPyung * pricePerPyungMultiplier)) / 10000;
+            return sum + (item.type === 'lease' 
+              ? (((item.areaPyung * (item.rentPerPyung * rentMultiplier) * 12)) / 10000) 
+              : (itemSalesInEok * 0.60) * 0.050);
+          }, 0));
+
+      const finalSalesRevenue = isSalesStrat
         ? parseFloat(((aptSales + officetelSales + 
                       (hotelRoomCount * hotelRoomSizePyung * (hotelPricePerPyung * pricePerPyungMultiplier)) + 
                       ((retailB1Area * (retailB1Price * pricePerPyungMultiplier)) + (retail1FArea * (retail1FPrice * pricePerPyungMultiplier)) + (retail2FArea * (retail2FPrice * pricePerPyungMultiplier)) + (retail3FArea * (retail3FPrice * pricePerPyungMultiplier))) + 
                       (officeArea * (officePricePerPyung * pricePerPyungMultiplier)) + customAllSalesVal) / 10000).toFixed(2))
-        : totalSalesRevenue;
+        : 0;
 
-      const finalLeaseDeposits = exitStrategy === 'sales' ? 0 : totalLeaseDeposits;
-      const finalAnnualRent = exitStrategy === 'sales' ? 0 : totalAnnualRent;
+      const finalLeaseDeposits = isSalesStrat ? 0 : parseFloat((
+        calculatedAptDeposit + 
+        calculatedOfficetelDeposit + 
+        calculatedHotelDeposit + 
+        calculatedRetailDeposit + 
+        calculatedOfficeDeposit + 
+        calculatedCustomDeposit
+      ).toFixed(2));
 
-      const leaseExitValue = finalAnnualRent * 18; // ~5.5% cap rate exit value
+      const rawAnnualRent = isSalesStrat ? 0 : parseFloat((
+        calculatedAptAnnualRent + 
+        calculatedOfficetelAnnualRent + 
+        calculatedHotelAnnualRent + 
+        calculatedRetailAnnualRent + 
+        calculatedOfficeAnnualRent + 
+        calculatedCustomAnnualRent
+      ).toFixed(2));
+
+      // [USER ADDITIONS] Vacancy rate adjusted rent
+      const finalAnnualRent = parseFloat((rawAnnualRent * (1 - (step4VacancyRate / 100))).toFixed(2));
+
+      // [USER ADDITIONS] Year-by-year rent timeline with compound rent growth
+      const rentInflowTimeline: number[] = [];
+      let sumOfRents = 0;
+      const E = step4ExitYear;
+
+      if (!isSalesStrat) {
+        if (activeExitStrat === 'lease-exit') {
+          for (let opYear = 1; opYear <= E; opYear++) {
+            const currentYearRent = finalAnnualRent * Math.pow(1 + (step4RentGrowth / 100), opYear - 1);
+            rentInflowTimeline.push(currentYearRent);
+            sumOfRents += currentYearRent;
+          }
+        } else {
+          // lease-permanent holds for 18 operational years (Year 3 to 20)
+          for (let opYear = 1; opYear <= 18; opYear++) {
+            const currentYearRent = finalAnnualRent * Math.pow(1 + (step4RentGrowth / 100), opYear - 1);
+            rentInflowTimeline.push(currentYearRent);
+            sumOfRents += currentYearRent;
+          }
+        }
+      }
+
+      // [USER ADDITIONS] Exit Value / Terminal Value calculations based on Cap Rate
+      const dynamicCapRateMultiplier = 100 / step4CapRate;
+      const exitYearRent = rentInflowTimeline[E - 1] || finalAnnualRent;
+      const leaseExitValue = isSalesStrat ? 0 : parseFloat((exitYearRent * dynamicCapRateMultiplier).toFixed(2));
+
+      const terminalYearRent = rentInflowTimeline[17] || finalAnnualRent;
+      const permanentTerminalValue = isSalesStrat ? 0 : parseFloat((terminalYearRent * dynamicCapRateMultiplier * 1.25).toFixed(2));
 
       // Comprehensive NPV/Inflow Evaluation based on scenario
-      const totalRevenues = exitStrategy === 'sales'
+      const totalRevenues = isSalesStrat
         ? finalSalesRevenue
-        : exitStrategy === 'lease-exit'
-          ? parseFloat((finalSalesRevenue + finalLeaseDeposits + (finalAnnualRent * 5) + leaseExitValue).toFixed(2))
-          : parseFloat((finalSalesRevenue + finalLeaseDeposits + (finalAnnualRent * 15)).toFixed(2));
+        : activeExitStrat === 'lease-exit'
+          ? parseFloat((finalLeaseDeposits + sumOfRents + leaseExitValue).toFixed(2))
+          : parseFloat((finalLeaseDeposits + sumOfRents + permanentTerminalValue).toFixed(2));
 
       // Profitability
       const operatingProfit = parseFloat((totalRevenues - totalProjectCost).toFixed(2));
@@ -1674,27 +1829,42 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
       const constructionAndOther = constructionCost + otherCosts;
 
       // Year 1 (Construction Year 1)
-      cashFlows[1] = parseFloat(((finalSalesRevenue * 0.3) - (constructionAndOther * 0.5)).toFixed(2));
+      cashFlows[1] = isSalesStrat
+        ? parseFloat(((finalSalesRevenue * 0.3) - (constructionAndOther * 0.5)).toFixed(2))
+        : parseFloat((-(constructionAndOther * 0.5)).toFixed(2));
 
       // Year 2 (Construction Year 2)
-      cashFlows[2] = parseFloat(((finalSalesRevenue * 0.4) - (constructionAndOther * 0.5)).toFixed(2));
+      cashFlows[2] = isSalesStrat
+        ? parseFloat(((finalSalesRevenue * 0.4) - (constructionAndOther * 0.5)).toFixed(2))
+        : parseFloat((-(constructionAndOther * 0.5)).toFixed(2));
 
       // Year 3 (Completion & Operational Year 1)
-      cashFlows[3] = parseFloat(((finalSalesRevenue * 0.3) + finalLeaseDeposits + finalAnnualRent).toFixed(2));
+      cashFlows[3] = isSalesStrat
+        ? parseFloat(((finalSalesRevenue * 0.3)).toFixed(2))
+        : parseFloat((finalLeaseDeposits + (rentInflowTimeline[0] || finalAnnualRent)).toFixed(2));
 
       // Year 4 to 20 (Operational Years)
       for (let t = 4; t <= 20; t++) {
-        if (exitStrategy === 'sales') {
+        if (isSalesStrat) {
           cashFlows[t] = 0;
-        } else if (exitStrategy === 'lease-exit') {
-          if (t === 5) {
-            cashFlows[t] = parseFloat((finalAnnualRent + leaseExitValue).toFixed(2)); // rent + bulk exit sale in Year 5
+        } else if (activeExitStrat === 'lease-exit') {
+          const opIndex = t - 3; // opYear index (0-based)
+          if (opIndex < E - 1) {
+            cashFlows[t] = parseFloat((rentInflowTimeline[opIndex] || 0).toFixed(2));
+          } else if (opIndex === E - 1) {
+            // Exit Year: last year rent + building exit sales value
+            cashFlows[t] = parseFloat(((rentInflowTimeline[opIndex] || 0) + leaseExitValue).toFixed(2));
           } else {
-            cashFlows[t] = 0; // sold already
+            cashFlows[t] = 0;
           }
         } else {
           // lease-permanent
-          cashFlows[t] = parseFloat(finalAnnualRent.toFixed(2));
+          const opIndex = t - 3;
+          if (t === 20) {
+            cashFlows[t] = parseFloat(((rentInflowTimeline[opIndex] || 0) + permanentTerminalValue).toFixed(2));
+          } else {
+            cashFlows[t] = parseFloat((rentInflowTimeline[opIndex] || 0).toFixed(2));
+          }
         }
       }
 
@@ -1710,6 +1880,14 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
       }
 
       const irr = calculateIRR(cashFlows);
+
+      // [USER ADDITIONS] Dynamic NPV calculation based on discount rate
+      let npvSum = 0;
+      const discountRateDecimal = step4DiscountRate / 100;
+      for (let t = 0; t < cashFlows.length; t++) {
+        npvSum += cashFlows[t] / Math.pow(1 + discountRateDecimal, t);
+      }
+      const finalNPV = parseFloat(npvSum.toFixed(2));
 
       // G. Value Diagnosis Scoring and Radar Chart
       // Normalize axis values to 0-100 scales for Radar Chart presentation
@@ -1794,7 +1972,11 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           breakEvenRatio,
           totalSaleablePyung,
           bepPricePerPyung,
-          bepRequiredUnits
+          bepRequiredUnits,
+          npv: finalNPV,
+          sumOfRents,
+          exitValue: leaseExitValue,
+          terminalValue: permanentTerminalValue
         },
         cashFlows,
         cumulativeCashFlow,
@@ -1815,6 +1997,19 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
     };
 
     const activeScenario = scenarioData[selectedScenarioId] || scenarioData.base;
+
+    // Precalculate comparison metrics for active scenario under different exit strategies
+    const multipliersMap = {
+      base: [1.0, 1.0, 1.0, 1.0],
+      conservative: [1.10, 1.15, 0.90, 0.85],
+      optimistic: [1.00, 0.95, 1.12, 1.15],
+      inflation: [1.00, 1.35, 1.00, 1.00],
+      slump: [1.00, 1.00, 0.80, 1.00]
+    };
+    const m = multipliersMap[selectedScenarioId] || multipliersMap.base;
+    const salesCompare = calculateForScenario(m[0], m[1], m[2], m[3], 'sales');
+    const leaseExitCompare = calculateForScenario(m[0], m[1], m[2], m[3], 'lease-exit');
+    const leasePermanentCompare = calculateForScenario(m[0], m[1], m[2], m[3], 'lease-permanent');
 
     return {
       aboveGroundGFA,
@@ -1883,6 +2078,9 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
       isBoundarySatisfied,
       scenarios: scenarioData,
       activeScenarioId: selectedScenarioId,
+      salesCompare,
+      leaseExitCompare,
+      leasePermanentCompare,
       // Standard mapped fields to support legacy charts transparently
       cashFlows: activeScenario.cashFlows,
       cumulativeCashFlow: activeScenario.cumulativeCashFlow,
@@ -1906,7 +2104,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
     typicalFloorStart, typicalFloorEnd,
     aptParkingOver85, aptParking60To85, aptParkingUnder60, otParkingOver60, otParking30To60, otParkingUnder30, plannedParkingRatio,
     useLayoutSimulation, floorCalculationMode, towerCount, unitsPerFloorLine, podiumFloors, buildingSeparationDistance, boundarySeparationDistance, buildingSeparationRatio, sunlightBoundaryRatio,
-    useCustomResidentFacilities, residentFacilities
+    useCustomResidentFacilities, residentFacilities,
+    step4ExitYear, step4VacancyRate, step4RentGrowth, step4CapRate, step4DiscountRate
   ]);
 
   useEffect(() => {
@@ -1927,12 +2126,13 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           aptParkingOver85, aptParking60To85, aptParkingUnder60, otParkingOver60, otParking30To60, otParkingUnder30, plannedParkingRatio,
           useLayoutSimulation, floorCalculationMode, towerCount, unitsPerFloorLine, podiumFloors, buildingSeparationDistance, boundarySeparationDistance, buildingSeparationRatio, sunlightBoundaryRatio,
           useCustomResidentFacilities, residentFacilities,
-          aiComparables, aiSuccessfulCases
+          aiComparables, aiSuccessfulCases,
+          step4ExitYear, step4VacancyRate, step4RentGrowth, step4CapRate, step4DiscountRate
         },
         result
       });
     }
-  }, [result, onScenarioChange, aiComparables, aiSuccessfulCases]);
+  }, [result, onScenarioChange, aiComparables, aiSuccessfulCases, step4ExitYear, step4VacancyRate, step4RentGrowth, step4CapRate, step4DiscountRate]);
 
   const getCommercialReport = () => {
     const isGangnam = currentLand?.id === 'gangnam-yeoksam' || currentLand?.address?.includes('역삼') || currentLand?.address?.includes('강남');
@@ -4869,9 +5069,206 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                         max="40"
                         step="1"
                         value={otherCostsRatio}
-                        onChange={(e) => setOtherCostsRatio(Number(e.target.value))}
-                        className="w-full accent-[#5F7161]"
+                        onChange={(e) => handleOtherCostsRatioChange(Number(e.target.value))}
+                        className="w-full accent-[#5F7161] cursor-pointer"
                       />
+
+                      {/* 사업비 상세 내역 토글 버튼 */}
+                      <div className="pt-1.5 border-t border-gray-200/50">
+                        <button
+                          type="button"
+                          onClick={() => setShowBusinessCostDetail(!showBusinessCostDetail)}
+                          className="w-full flex items-center justify-between text-[10px] font-bold text-[#5F7161] hover:text-[#4a584c] transition-colors py-1 cursor-pointer"
+                        >
+                          <span className="flex items-center gap-1">
+                            <Coins className="w-3.5 h-3.5" />
+                            사업비 상세 내역 (설계, 감리, 세금 등) {showBusinessCostDetail ? '접기' : '상세 입력'}
+                          </span>
+                          {showBusinessCostDetail ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+
+                      {/* 사업비 세부 항목 상세 입력 패널 */}
+                      {showBusinessCostDetail && (
+                        <div className="mt-2 p-2.5 bg-white rounded-lg border border-gray-150 space-y-3.5 text-[10.5px]">
+                          <p className="text-[9.5px] text-gray-400 font-medium leading-normal bg-slate-50 p-1.5 rounded border border-gray-100">
+                            💡 토지비 및 공사비를 합산한 <strong>원가액 ({(result.financials.landCost + result.financials.constructionCost).toLocaleString()}억)</strong>을 기준으로 각 항목별 비율 및 사업비 예산이 실시간 자동 계산됩니다.
+                          </p>
+
+                          {/* 1. 설계비 */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center">
+                              <span className="font-semibold text-gray-600 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-orange-400"></span>설계비 비율
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="15"
+                                  step="0.1"
+                                  value={designCostRatio}
+                                  onChange={(e) => updateDetailRatio('design', Math.max(0, parseFloat(e.target.value) || 0))}
+                                  className="w-11 text-center bg-gray-50 border border-gray-200 py-0.5 rounded text-[10px] font-bold"
+                                />
+                                <span className="text-gray-500 font-medium">%</span>
+                                <span className="text-[10px] font-bold text-gray-400 font-mono ml-1.5">
+                                  ({Math.round((result.financials.landCost + result.financials.constructionCost) * (designCostRatio / 100)).toLocaleString()}억원)
+                                </span>
+                              </div>
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="15"
+                              step="0.1"
+                              value={designCostRatio}
+                              onChange={(e) => updateDetailRatio('design', Number(e.target.value))}
+                              className="w-full accent-orange-400 h-1 cursor-pointer"
+                            />
+                          </div>
+
+                          {/* 2. 감리비 */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center">
+                              <span className="font-semibold text-gray-600 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>감리비 비율
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="10"
+                                  step="0.1"
+                                  value={supervisionCostRatio}
+                                  onChange={(e) => updateDetailRatio('supervision', Math.max(0, parseFloat(e.target.value) || 0))}
+                                  className="w-11 text-center bg-gray-50 border border-gray-200 py-0.5 rounded text-[10px] font-bold"
+                                />
+                                <span className="text-gray-500 font-medium">%</span>
+                                <span className="text-[10px] font-bold text-gray-400 font-mono ml-1.5">
+                                  ({Math.round((result.financials.landCost + result.financials.constructionCost) * (supervisionCostRatio / 100)).toLocaleString()}억원)
+                                </span>
+                              </div>
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="10"
+                              step="0.1"
+                              value={supervisionCostRatio}
+                              onChange={(e) => updateDetailRatio('supervision', Number(e.target.value))}
+                              className="w-full accent-indigo-400 h-1 cursor-pointer"
+                            />
+                          </div>
+
+                          {/* 3. 세금 및 공과금 */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center">
+                              <span className="font-semibold text-gray-600 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>세금 및 제세공과금
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="15"
+                                  step="0.1"
+                                  value={taxCostRatio}
+                                  onChange={(e) => updateDetailRatio('tax', Math.max(0, parseFloat(e.target.value) || 0))}
+                                  className="w-11 text-center bg-gray-50 border border-gray-200 py-0.5 rounded text-[10px] font-bold"
+                                />
+                                <span className="text-gray-500 font-medium">%</span>
+                                <span className="text-[10px] font-bold text-gray-400 font-mono ml-1.5">
+                                  ({Math.round((result.financials.landCost + result.financials.constructionCost) * (taxCostRatio / 100)).toLocaleString()}억원)
+                                </span>
+                              </div>
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="15"
+                              step="0.1"
+                              value={taxCostRatio}
+                              onChange={(e) => updateDetailRatio('tax', Number(e.target.value))}
+                              className="w-full accent-emerald-400 h-1 cursor-pointer"
+                            />
+                          </div>
+
+                          {/* 4. 금융비용 */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center">
+                              <span className="font-semibold text-gray-600 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#3D5A80]"></span>금융비용 및 이자
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="25"
+                                  step="0.1"
+                                  value={financeCostRatio}
+                                  onChange={(e) => updateDetailRatio('finance', Math.max(0, parseFloat(e.target.value) || 0))}
+                                  className="w-11 text-center bg-gray-50 border border-gray-200 py-0.5 rounded text-[10px] font-bold"
+                                />
+                                <span className="text-gray-500 font-medium">%</span>
+                                <span className="text-[10px] font-bold text-gray-400 font-mono ml-1.5">
+                                  ({Math.round((result.financials.landCost + result.financials.constructionCost) * (financeCostRatio / 100)).toLocaleString()}억원)
+                                </span>
+                              </div>
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="25"
+                              step="0.1"
+                              value={financeCostRatio}
+                              onChange={(e) => updateDetailRatio('finance', Number(e.target.value))}
+                              className="w-full accent-[#3D5A80] h-1 cursor-pointer"
+                            />
+                          </div>
+
+                          {/* 5. 마케팅 및 분양대행 */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center">
+                              <span className="font-semibold text-gray-600 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-pink-400"></span>마케팅 및 분양대행비
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="15"
+                                  step="0.1"
+                                  value={marketingCostRatio}
+                                  onChange={(e) => updateDetailRatio('marketing', Math.max(0, parseFloat(e.target.value) || 0))}
+                                  className="w-11 text-center bg-gray-50 border border-gray-200 py-0.5 rounded text-[10px] font-bold"
+                                />
+                                <span className="text-gray-500 font-medium">%</span>
+                                <span className="text-[10px] font-bold text-gray-400 font-mono ml-1.5">
+                                  ({Math.round((result.financials.landCost + result.financials.constructionCost) * (marketingCostRatio / 100)).toLocaleString()}억원)
+                                </span>
+                              </div>
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="15"
+                              step="0.1"
+                              value={marketingCostRatio}
+                              onChange={(e) => updateDetailRatio('marketing', Number(e.target.value))}
+                              className="w-full accent-pink-400 h-1 cursor-pointer"
+                            />
+                          </div>
+
+                          {/* 합계 요약 */}
+                          <div className="pt-2 border-t border-dashed border-gray-200 flex justify-between items-center font-bold text-gray-800 bg-[#FAF9F5] p-2 rounded-lg">
+                            <span>📋 세부 사업비(간접비) 합계</span>
+                            <span className="text-[#5F7161]">
+                              {otherCostsRatio.toFixed(1)} % / {result.financials.otherCosts.toLocaleString()} 억원
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
@@ -5218,7 +5615,15 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                             </td>
                           </tr>
                           <tr>
-                            <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">건폐율 (BCR)</td>
+                            <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">
+                              <span className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-gray-400">
+                                건폐율 (BCR)
+                                <HelpCircle className="w-3 h-3 text-gray-400" />
+                                <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed">
+                                  <strong>건폐율 (Building Coverage Ratio):</strong> 대지면적에 대한 건축면적(1층 바닥면적 등)의 비율입니다. 건물이 대지 내에서 수평적으로 차지하는 면적 비중을 규제합니다.
+                                </span>
+                              </span>
+                            </td>
                             <td className="py-2 px-3 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
                               {appliedBCR} %
                             </td>
@@ -5250,7 +5655,15 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                             </td>
                           </tr>
                           <tr>
-                            <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">용적률 (FAR)</td>
+                            <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">
+                              <span className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-gray-400">
+                                용적률 (FAR)
+                                <HelpCircle className="w-3 h-3 text-gray-400" />
+                                <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed">
+                                  <strong>용적률 (Floor Area Ratio):</strong> 대지면적 대비 지상층 연면적의 백분율 비율입니다. 이 비율이 높을수록 건물을 수직으로 높게 신축하여 총 공급 면적을 극대화할 수 있습니다.
+                                </span>
+                              </span>
+                            </td>
                             <td className="py-2 px-3 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
                               {result.consumedFAR.toFixed(2)} %
                             </td>
@@ -5790,8 +6203,24 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           <th className="py-2.5 px-2 text-right">총사업비</th>
                           <th className="py-2.5 px-2 text-right">예상 매출</th>
                           <th className="py-2.5 px-2 text-right">영업이익</th>
-                          <th className="py-2.5 px-2 text-right text-indigo-600">ROI (%)</th>
-                          <th className="py-2.5 px-2 text-right text-emerald-700">IRR (%)</th>
+                          <th className="py-2.5 px-2 text-right text-indigo-600">
+                            <span className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-indigo-300">
+                              ROI (%)
+                              <HelpCircle className="w-2.5 h-2.5 text-indigo-400" />
+                              <span className="pointer-events-none absolute bottom-full right-0 mb-2 w-56 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed">
+                                <strong>ROI:</strong> 총 투자비 대비 예상 영업이익의 비율로, 단기적인 자본 효율성과 사업 마진율을 나타냅니다.
+                              </span>
+                            </span>
+                          </th>
+                          <th className="py-2.5 px-2 text-right text-emerald-700">
+                            <span className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-emerald-300">
+                              IRR (%)
+                              <HelpCircle className="w-2.5 h-2.5 text-emerald-500" />
+                              <span className="pointer-events-none absolute bottom-full right-0 mb-2 w-56 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed">
+                                <strong>IRR:</strong> 연도별 현금 유출/유입의 시점을 보정하여 화폐 시간가치를 반영한 연평균 실질 복리수익률입니다.
+                              </span>
+                            </span>
+                          </th>
                           <th className="py-2.5 px-3 text-right">회수기간</th>
                         </tr>
                       </thead>
@@ -6127,6 +6556,319 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
                 {activeStep === 4 ? (
                   <>
+                    {/* 분양 vs 임대주택 수지 실시간 비교 및 전환 */}
+                    <div className="bg-white p-5 rounded-2xl border border-gray-150 shadow-sm space-y-4 animate-fadeIn">
+                      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-gray-100 pb-3">
+                        <div className="space-y-1">
+                          <h4 className="text-xs font-bold text-gray-800 uppercase tracking-widest flex items-center gap-1.5">
+                            <Activity className="w-4 h-4 text-[#5F7161] animate-pulse" />
+                            분양 vs 임대주택 출구 전략 수지 비교
+                          </h4>
+                          <p className="text-[10px] text-gray-400 font-medium">
+                            '분양' 방식과 '임대주택' 방식을 실시간으로 전환하며 수지 차이를 비교하고, 리포트에 반영할 출구전략을 실시간으로 지정합니다.
+                          </p>
+                        </div>
+                        {/* Segmented Toggle Control */}
+                        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl self-start sm:self-center border border-slate-200">
+                          <button
+                            type="button"
+                            onClick={() => setExitStrategy('sales')}
+                            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${exitStrategy === 'sales' ? 'bg-[#5F7161] text-white shadow font-semibold' : 'text-gray-500 hover:text-gray-800 hover:bg-slate-200/50'}`}
+                          >
+                            💸 분양 방식 (Sales)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setExitStrategy('lease-exit')}
+                            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${exitStrategy === 'lease-exit' ? 'bg-[#5F7161] text-white shadow font-semibold' : 'text-gray-500 hover:text-gray-800 hover:bg-slate-200/50'}`}
+                          >
+                            🏢 임대 후 매각 (Lease-Exit)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setExitStrategy('lease-permanent')}
+                            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${exitStrategy === 'lease-permanent' ? 'bg-[#5F7161] text-white shadow font-semibold' : 'text-gray-500 hover:text-gray-800 hover:bg-slate-200/50'}`}
+                          >
+                            🔄 장기 임대 (Permanent)
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Side-by-side Strategy Metrics Comparison Card */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* 1. Sales Strategy Summary Card */}
+                        <div 
+                          onClick={() => setExitStrategy('sales')}
+                          className={`p-4 rounded-xl border transition-all cursor-pointer ${exitStrategy === 'sales' ? 'bg-emerald-50/30 border-emerald-500/30 ring-2 ring-emerald-500/10 shadow-sm' : 'bg-slate-50/50 border-slate-150 hover:bg-slate-100/80 hover:border-slate-300'}`}
+                        >
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-[11px] font-extrabold text-gray-800">💸 일괄 분양 전략 (Sales)</span>
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${exitStrategy === 'sales' ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-600'}`}>
+                              {exitStrategy === 'sales' ? '활성 분석' : '대비안'}
+                            </span>
+                          </div>
+                          <div className="space-y-1.5 text-[10.5px]">
+                            <div className="flex justify-between text-gray-500">
+                              <span>총사업비 (지출):</span>
+                              <span className="font-mono text-gray-700">{(result.salesCompare.financials.totalProjectCost).toFixed(1)}억</span>
+                            </div>
+                            <div className="flex justify-between text-gray-500">
+                              <span>예상 매출 (유입):</span>
+                              <span className="font-mono text-[#5F7161]">{(result.salesCompare.financials.totalRevenues).toFixed(1)}억</span>
+                            </div>
+                            <div className="flex justify-between border-t border-dashed border-gray-200 pt-1">
+                              <span className="font-bold text-gray-700">예상 영업이익:</span>
+                              <span className="font-mono font-bold text-emerald-700">{(result.salesCompare.financials.operatingProfit).toFixed(1)}억</span>
+                            </div>
+                            <div className="flex justify-between text-xs font-bold mt-1 bg-white p-1.5 rounded border border-gray-150">
+                              <span className="text-gray-600">ROI / IRR:</span>
+                              <span className="font-mono text-indigo-600">{result.salesCompare.financials.roi}% / {result.salesCompare.irr}%</span>
+                            </div>
+                            <div className="flex justify-between text-[10px] bg-purple-50/40 px-1.5 py-1 rounded border border-purple-100 mt-1">
+                              <span className="text-purple-700 font-bold">순현재가치 (NPV):</span>
+                              <span className="font-mono font-bold text-purple-700">{(result.salesCompare.financials.npv ?? 0).toFixed(1)}억</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 2. Lease then Exit Strategy Summary Card */}
+                        <div 
+                          onClick={() => setExitStrategy('lease-exit')}
+                          className={`p-4 rounded-xl border transition-all cursor-pointer ${exitStrategy === 'lease-exit' ? 'bg-emerald-50/30 border-emerald-500/30 ring-2 ring-emerald-500/10 shadow-sm' : 'bg-slate-50/50 border-slate-150 hover:bg-slate-100/80 hover:border-slate-300'}`}
+                        >
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-[11px] font-extrabold text-gray-800">🏢 {step4ExitYear}년 임대 후 매각 (Lease-Exit)</span>
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${exitStrategy === 'lease-exit' ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-600'}`}>
+                              {exitStrategy === 'lease-exit' ? '활성 분석' : '대비안'}
+                            </span>
+                          </div>
+                          <div className="space-y-1.5 text-[10.5px]">
+                            <div className="flex justify-between text-gray-500">
+                              <span>총사업비 (지출):</span>
+                              <span className="font-mono text-gray-700">{(result.leaseExitCompare.financials.totalProjectCost).toFixed(1)}억</span>
+                            </div>
+                            <div className="flex justify-between text-gray-500">
+                              <span>예상 매출 (유입):</span>
+                              <span className="font-mono text-[#5F7161]">{(result.leaseExitCompare.financials.totalRevenues).toFixed(1)}억</span>
+                            </div>
+                            <div className="flex justify-between border-t border-dashed border-gray-200 pt-1">
+                              <span className="font-bold text-gray-700">예상 영업이익:</span>
+                              <span className="font-mono font-bold text-emerald-700">{(result.leaseExitCompare.financials.operatingProfit).toFixed(1)}억</span>
+                            </div>
+                            <div className="flex justify-between text-xs font-bold mt-1 bg-white p-1.5 rounded border border-gray-150">
+                              <span className="text-gray-600">ROI / IRR:</span>
+                              <span className="font-mono text-indigo-600">{result.leaseExitCompare.financials.roi}% / {result.leaseExitCompare.irr}%</span>
+                            </div>
+                            <div className="flex justify-between text-[10px] bg-purple-50/40 px-1.5 py-1 rounded border border-purple-100 mt-1">
+                              <span className="text-purple-700 font-bold">순현재가치 (NPV):</span>
+                              <span className="font-mono font-bold text-purple-700">{(result.leaseExitCompare.financials.npv ?? 0).toFixed(1)}억</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 3. Long Term Yield Strategy Summary Card */}
+                        <div 
+                          onClick={() => setExitStrategy('lease-permanent')}
+                          className={`p-4 rounded-xl border transition-all cursor-pointer ${exitStrategy === 'lease-permanent' ? 'bg-emerald-50/30 border-emerald-500/30 ring-2 ring-emerald-500/10 shadow-sm' : 'bg-slate-50/50 border-slate-150 hover:bg-slate-100/80 hover:border-slate-300'}`}
+                        >
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-[11px] font-extrabold text-gray-800">🔄 18년 장기 임대 (Permanent)</span>
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${exitStrategy === 'lease-permanent' ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-600'}`}>
+                              {exitStrategy === 'lease-permanent' ? '활성 분석' : '대비안'}
+                            </span>
+                          </div>
+                          <div className="space-y-1.5 text-[10.5px]">
+                            <div className="flex justify-between text-gray-500">
+                              <span>총사업비 (지출):</span>
+                              <span className="font-mono text-gray-700">{(result.leasePermanentCompare.financials.totalProjectCost).toFixed(1)}억</span>
+                            </div>
+                            <div className="flex justify-between text-gray-500">
+                              <span>예상 매출 (유입):</span>
+                              <span className="font-mono text-[#5F7161]">{(result.leasePermanentCompare.financials.totalRevenues).toFixed(1)}억</span>
+                            </div>
+                            <div className="flex justify-between border-t border-dashed border-gray-200 pt-1">
+                              <span className="font-bold text-gray-700">예상 영업이익:</span>
+                              <span className="font-mono font-bold text-emerald-700">{(result.leasePermanentCompare.financials.operatingProfit).toFixed(1)}억</span>
+                            </div>
+                            <div className="flex justify-between text-xs font-bold mt-1 bg-white p-1.5 rounded border border-gray-150">
+                              <span className="text-gray-600">ROI / IRR:</span>
+                              <span className="font-mono text-indigo-600">{result.leasePermanentCompare.financials.roi}% / {result.leasePermanentCompare.irr}%</span>
+                            </div>
+                            <div className="flex justify-between text-[10px] bg-purple-50/40 px-1.5 py-1 rounded border border-purple-100 mt-1">
+                              <span className="text-purple-700 font-bold">순현재가치 (NPV):</span>
+                              <span className="font-mono font-bold text-purple-700">{(result.leasePermanentCompare.financials.npv ?? 0).toFixed(1)}억</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* [USER ADDITIONS] Step 4 Exit Strategy Detailed Configuration Panel */}
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-4">
+                        <div className="flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                          <Sliders className="w-4 h-4 text-[#5F7161]" />
+                          <span className="text-xs font-extrabold text-gray-800">⚙️ 출구 전략 상세 임대/매각 시뮬레이션 변수 조정</span>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+                          {/* 1. Exit Year */}
+                          <div className="space-y-1.5 bg-white p-3 rounded-lg border border-slate-150 shadow-sm">
+                            <div className="flex justify-between items-center">
+                              <label className="text-[10px] font-extrabold text-gray-700 flex items-center gap-1">
+                                <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                                매각 시점 (Exit)
+                              </label>
+                              <span className="text-[11px] font-extrabold text-indigo-600 font-mono">{step4ExitYear}년차</span>
+                            </div>
+                            <input
+                              type="range"
+                              min={3}
+                              max={10}
+                              step={1}
+                              value={step4ExitYear}
+                              onChange={(e) => setStep4ExitYear(Number(e.target.value))}
+                              className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#5F7161]"
+                            />
+                            <p className="text-[8.5px] text-gray-400">임대 후 매각 전략의 운영 기간</p>
+                          </div>
+
+                          {/* 2. Vacancy Rate */}
+                          <div className="space-y-1.5 bg-white p-3 rounded-lg border border-slate-150 shadow-sm">
+                            <div className="flex justify-between items-center">
+                              <label className="text-[10px] font-extrabold text-gray-700 flex items-center gap-1">
+                                <Percent className="w-3.5 h-3.5 text-gray-400" />
+                                연평균 공실률
+                              </label>
+                              <span className="text-[11px] font-extrabold text-indigo-600 font-mono">{step4VacancyRate}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min={0}
+                              max={20}
+                              step={0.5}
+                              value={step4VacancyRate}
+                              onChange={(e) => setStep4VacancyRate(Number(e.target.value))}
+                              className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#5F7161]"
+                            />
+                            <p className="text-[8.5px] text-gray-400">총 임대 수입 차감 비율</p>
+                          </div>
+
+                          {/* 3. Rent Growth Rate */}
+                          <div className="space-y-1.5 bg-white p-3 rounded-lg border border-slate-150 shadow-sm">
+                            <div className="flex justify-between items-center">
+                              <label className="text-[10px] font-extrabold text-gray-700 flex items-center gap-1">
+                                <TrendingUp className="w-3.5 h-3.5 text-gray-400" />
+                                임대료 상승률
+                              </label>
+                              <span className="text-[11px] font-extrabold text-[#5F7161] font-mono">{step4RentGrowth}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min={0}
+                              max={10}
+                              step={0.1}
+                              value={step4RentGrowth}
+                              onChange={(e) => setStep4RentGrowth(Number(e.target.value))}
+                              className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#5F7161]"
+                            />
+                            <p className="text-[8.5px] text-gray-400">매년 복리로 증가하는 임대료 비율</p>
+                          </div>
+
+                          {/* 4. Cap Rate */}
+                          <div className="space-y-1.5 bg-white p-3 rounded-lg border border-slate-150 shadow-sm">
+                            <div className="flex justify-between items-center">
+                              <label className="text-[10px] font-extrabold text-gray-700 flex items-center gap-1">
+                                <Coins className="w-3.5 h-3.5 text-gray-400" />
+                                자본환원율 (Cap)
+                              </label>
+                              <span className="text-[11px] font-extrabold text-emerald-600 font-mono">{step4CapRate}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min={3.0}
+                              max={10.0}
+                              step={0.1}
+                              value={step4CapRate}
+                              onChange={(e) => setStep4CapRate(Number(e.target.value))}
+                              className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#5F7161]"
+                            />
+                            <p className="text-[8.5px] text-gray-400">건물 매각가 산정용 (환원율)</p>
+                          </div>
+
+                          {/* 5. Discount Rate */}
+                          <div className="space-y-1.5 bg-white p-3 rounded-lg border border-slate-150 shadow-sm">
+                            <div className="flex justify-between items-center">
+                              <label className="text-[10px] font-extrabold text-gray-700 flex items-center gap-1">
+                                <ArrowDownRight className="w-3.5 h-3.5 text-gray-400" />
+                                할인율 (Discount)
+                              </label>
+                              <span className="text-[11px] font-extrabold text-purple-600 font-mono">{step4DiscountRate}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min={2.0}
+                              max={12.0}
+                              step={0.1}
+                              value={step4DiscountRate}
+                              onChange={(e) => setStep4DiscountRate(Number(e.target.value))}
+                              className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#5F7161]"
+                            />
+                            <p className="text-[8.5px] text-gray-400">NPV 분석용 할인율</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Comparison Chart: Profits, ROI, IRR */}
+                      <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-150 space-y-3">
+                        <span className="text-[10.5px] font-bold text-gray-700 block mb-1">📊 출구 전략별 핵심 재무 성과 비교 분석 ({selectedScenarioId === 'base' ? '기본안' : selectedScenarioId === 'conservative' ? '보수안' : selectedScenarioId === 'optimistic' ? '낙관안' : selectedScenarioId === 'inflation' ? '공사비 폭등' : '분양가 침체'} 기준)</span>
+                        
+                        <div className="h-64 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                              data={[
+                                {
+                                  name: '💸 일괄 분양',
+                                  '영업이익 (억원)': result.salesCompare.financials.operatingProfit,
+                                  'ROI (%)': result.salesCompare.financials.roi,
+                                  'IRR (%)': result.salesCompare.irr,
+                                },
+                                {
+                                  name: '🏢 5년 임대후 매각',
+                                  '영업이익 (억원)': result.leaseExitCompare.financials.operatingProfit,
+                                  'ROI (%)': result.leaseExitCompare.financials.roi,
+                                  'IRR (%)': result.leaseExitCompare.irr,
+                                },
+                                {
+                                  name: '🔄 15년 장기임대',
+                                  '영업이익 (억원)': result.leasePermanentCompare.financials.operatingProfit,
+                                  'ROI (%)': result.leasePermanentCompare.financials.roi,
+                                  'IRR (%)': result.leasePermanentCompare.irr,
+                                }
+                              ]}
+                              margin={{ top: 20, right: 30, left: 10, bottom: 5 }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                              <XAxis dataKey="name" stroke="#64748b" style={{ fontSize: '10px', fontWeight: 'bold' }} />
+                              <YAxis stroke="#64748b" style={{ fontSize: '10px' }} />
+                              <Tooltip
+                                contentStyle={{
+                                  backgroundColor: '#1e293b',
+                                  border: 'none',
+                                  borderRadius: '12px',
+                                  color: '#fff',
+                                  fontSize: '11px',
+                                  padding: '10px'
+                                }}
+                              />
+                              <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+                              <Bar dataKey="영업이익 (억원)" fill="#5F7161" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="ROI (%)" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="IRR (%)" fill="#10b981" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Visual scorecard */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
@@ -6218,24 +6960,33 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                                 <>
                                   <div>• 선분양 매출: <span className="font-semibold">{result.financials.totalSalesRevenue.toLocaleString()} 억원</span></div>
                                   <div>• 임대 보증금: <span className="font-semibold">{result.financials.totalLeaseDeposits.toLocaleString()} 억원</span></div>
-                                  <div>• 5년 임대수익: <span className="font-semibold">{(result.financials.totalAnnualRent * 5).toFixed(1)} 억원</span> (연 {result.financials.totalAnnualRent.toFixed(1)}억)</div>
-                                  <div>• 5년차 매각가: <span className="font-semibold">{(result.financials.totalAnnualRent * 18).toFixed(1)} 억원</span> (자본환원율 Cap Rate 5.5% 기준)</div>
-                                  <div>• 합계: {result.financials.totalSalesRevenue.toLocaleString()}억 + {result.financials.totalLeaseDeposits.toLocaleString()}억 + {(result.financials.totalAnnualRent * 5).toFixed(1)}억 + {(result.financials.totalAnnualRent * 18).toFixed(1)}억 = <span className="font-bold text-[#5F7161]">{result.financials.totalRevenues} 억원</span></div>
+                                  <div>• {step4ExitYear}년 누적임대수익: <span className="font-semibold">{(result.financials.sumOfRents ?? 0).toFixed(1)} 억원</span> (공실률 {step4VacancyRate}%, 연상승률 {step4RentGrowth}%)</div>
+                                  <div>• {step4ExitYear}년차 매각가: <span className="font-semibold">{(result.financials.exitValue ?? 0).toFixed(1)} 억원</span> (자본환원율 Cap Rate {step4CapRate}% 기준)</div>
+                                  <div>• 합계: {result.financials.totalSalesRevenue.toLocaleString()}억 + {result.financials.totalLeaseDeposits.toLocaleString()}억 + {(result.financials.sumOfRents ?? 0).toFixed(1)}억 + {(result.financials.exitValue ?? 0).toFixed(1)}억 = <span className="font-bold text-[#5F7161]">{result.financials.totalRevenues} 억원</span></div>
                                 </>
                               ) : (
                                 <>
                                   <div>• 선분양 매출: <span className="font-semibold">{result.financials.totalSalesRevenue.toLocaleString()} 억원</span></div>
                                   <div>• 임대 보증금: <span className="font-semibold">{result.financials.totalLeaseDeposits.toLocaleString()} 억원</span></div>
-                                  <div>• 15년 임대수익: <span className="font-semibold">{(result.financials.totalAnnualRent * 15).toFixed(1)} 억원</span> (연 {result.financials.totalAnnualRent.toFixed(1)}억)</div>
-                                  <div>• 합계: {result.financials.totalSalesRevenue.toLocaleString()}억 + {result.financials.totalLeaseDeposits.toLocaleString()}억 + {(result.financials.totalAnnualRent * 15).toFixed(1)}억 = <span className="font-bold text-[#5F7161]">{result.financials.totalRevenues} 억원</span></div>
+                                  <div>• 18년 누적임대수익: <span className="font-semibold">{(result.financials.sumOfRents ?? 0).toFixed(1)} 억원</span> (공실률 {step4VacancyRate}%, 연상승률 {step4RentGrowth}%)</div>
+                                  <div>• 18년차 잔존가치: <span className="font-semibold">{(result.financials.terminalValue ?? 0).toFixed(1)} 억원</span> (자본환원율 Cap Rate {step4CapRate}% 기준)</div>
+                                  <div>• 합계: {result.financials.totalSalesRevenue.toLocaleString()}억 + {result.financials.totalLeaseDeposits.toLocaleString()}억 + {(result.financials.sumOfRents ?? 0).toFixed(1)}억 + {(result.financials.terminalValue ?? 0).toFixed(1)}억 = <span className="font-bold text-[#5F7161]">{result.financials.totalRevenues} 억원</span></div>
                                 </>
                               )}
-                              <div className="text-gray-400 text-[9px] mt-0.5 leading-snug">* 출구전략에 따라 산출된 장래 유입 예상 매출가치의 합산입니다. 5년 임대후 매각전략의 경우, 연간 임대수입의 18배수로 잔존가치를 자본화하여 5년차 말 매각 매출로 산입합니다.</div>
+                              <div className="text-gray-400 text-[9px] mt-0.5 leading-snug">* 출구전략에 따라 산출된 장래 유입 예상 매출가치의 합산입니다. 임대 후 매각전략의 경우, 연간 임대수입에 자본환원율 (Cap Rate {step4CapRate}%) 역산 배수를 적용하여 잔존 가치를 자본화한 후 매각 매출로 산입합니다.</div>
                             </div>
                           )}
                         </div>
                         <div className="p-2.5 bg-white/50 border border-gray-150 rounded-xl">
-                          <span className="text-[10px] text-slate-400 block">투자 수익률 (ROI)</span>
+                          <span className="text-[10px] text-slate-400 block">
+                            <span className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-gray-300">
+                              투자 수익률 (ROI)
+                              <HelpCircle className="w-2.5 h-2.5 text-gray-400" />
+                              <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-60 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed">
+                                <strong>투자 수익률 (Return on Investment):</strong> 총 투자비(지출) 대비 세전 영업이익(순수익)의 비율입니다. 사업에 투입된 전체 자금 대비 회수하는 마진의 단순 자본 효율성을 파악하는 지표입니다.
+                              </span>
+                            </span>
+                          </span>
                           <span className={`font-extrabold text-sm ${result.financials.roi >= 0 ? 'text-[#5F7161]' : 'text-rose-600'} block mt-0.5`}>
                             {result.financials.roi}%
                           </span>
@@ -6257,7 +7008,15 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           )}
                         </div>
                         <div className="p-2.5 bg-white/50 border border-gray-150 rounded-xl">
-                          <span className="text-[10px] text-slate-400 block">장래 내부수익률 (IRR)</span>
+                          <span className="text-[10px] text-slate-400 block">
+                            <span className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-gray-300">
+                              장래 내부수익률 (IRR)
+                              <HelpCircle className="w-2.5 h-2.5 text-gray-400" />
+                              <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-60 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed">
+                                <strong>장래 내부수익률 (Internal Rate of Return):</strong> 연차별 실제 현금 유출(대지 매매, 공사비)과 유입(분양금, 임대수익)의 시간가치를 보정한 연평균 복리수익률입니다. 자본 비용 극복 마진을 정밀 판정합니다.
+                              </span>
+                            </span>
+                          </span>
                           <span className={`font-extrabold text-sm ${result.irr >= 0 ? 'text-[#5F7161]' : 'text-rose-600'} block mt-0.5`}>
                             {result.irr}%
                           </span>
@@ -6278,7 +7037,15 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           )}
                         </div>
                         <div className="p-2.5 bg-white/50 border border-gray-150 rounded-xl">
-                          <span className="text-[10px] text-slate-400 block">손익분기 분양률</span>
+                          <span className="text-[10px] text-slate-400 block">
+                            <span className="group relative inline-flex items-center gap-1 cursor-help border-b border-dashed border-gray-300">
+                              손익분기 분양률
+                              <HelpCircle className="w-2.5 h-2.5 text-gray-400" />
+                              <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-60 p-2.5 bg-gray-900 text-white text-[10px] rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-xl z-50 font-normal text-left leading-relaxed">
+                                <strong>손익분기 분양률 (Break-Even Ratio):</strong> 기획의 지출 예산(총사업비)을 모두 회수하여 개발 적자를 면하기 위해 달성해야 하는 누적 분양 계약 비중입니다.
+                              </span>
+                            </span>
+                          </span>
                           <span className="font-extrabold text-sm text-indigo-600 block mt-0.5">{result.financials.breakEvenRatio}%</span>
                           <button
                             type="button"
@@ -6309,6 +7076,154 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                         <div className="flex justify-between text-[10px] text-gray-400 mt-1">
                           <span>수익 마진 완충 여력</span>
                           <span className="font-semibold text-gray-600">위험 한계 안전률: 약 {100 - result.financials.breakEvenRatio}% 가용가능</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* [VISUAL FINANCIAL CHART] */}
+                    <div className="bg-[#FAF9F5] rounded-2xl border border-[#EDDBC7]/60 p-5 shadow-sm space-y-4">
+                      <div className="flex items-center justify-between border-b border-[#EDDBC7]/40 pb-3">
+                        <div className="space-y-1">
+                          <h4 className="text-xs font-bold text-[#2C251F] uppercase tracking-wider flex items-center gap-1.5">
+                            <TrendingUp className="w-4 h-4 text-[#5F7161]" />
+                            재무 구조 시각화 차트 (수지분석 요약)
+                          </h4>
+                          <p className="text-[10px] text-[#8D7B68]">총매출액, 총투자원가 및 영업이익의 구성비율과 재무 밸런스를 직관적으로 확인하세요.</p>
+                        </div>
+                      </div>
+
+                      {/* Charts Grid */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        {/* 1. Bar Chart: Financial Balance */}
+                        <div className="bg-white p-4 rounded-xl border border-gray-150 flex flex-col justify-between">
+                          <div>
+                            <span className="text-[10.5px] font-bold text-gray-700 block mb-1">💼 종합 재무 구조 (매출 vs 원가 vs 영업이익)</span>
+                            <span className="text-[9px] text-gray-400 block mb-3">전체 사업 자금의 총량과 최종 세전 수익 밸런스를 비교합니다. (단위: 억원)</span>
+                          </div>
+                          
+                          <div className="h-56 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart
+                                data={[
+                                  { name: '총 투자원가', '금액(억)': result.financials.totalProjectCost, fill: '#D58970' },
+                                  { name: '총 매출가치', '금액(억)': result.financials.totalRevenues, fill: '#5F7161' },
+                                  { name: '세전 영업이익', '금액(억)': result.financials.operatingProfit, fill: '#3D5A80' }
+                                ]}
+                                margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
+                              >
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
+                                <XAxis dataKey="name" tick={{ fontSize: 9.5, fill: '#6B7280' }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 9.5, fill: '#6B7280' }} axisLine={false} tickLine={false} unit="억" />
+                                <Tooltip
+                                  cursor={{ fill: '#F9FAFB' }}
+                                  content={({ active, payload }) => {
+                                    if (active && payload && payload.length) {
+                                      const data = payload[0].payload;
+                                      return (
+                                        <div className="bg-white border border-gray-150 p-2 rounded-lg shadow-sm font-sans text-[10.5px]">
+                                          <p className="font-bold text-gray-800">{data.name}</p>
+                                          <p className="text-[#5F7161] font-semibold mt-0.5">금액: {payload[0].value?.toLocaleString()} 억원</p>
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  }}
+                                />
+                                <Bar dataKey="금액(억)" radius={[6, 6, 0, 0]} maxBarSize={45}>
+                                  {
+                                    [
+                                      { name: '총 투자원가', value: result.financials.totalProjectCost, fill: '#D58970' },
+                                      { name: '총 매출가치', value: result.financials.totalRevenues, fill: '#5F7161' },
+                                      { name: '세전 영업이익', value: result.financials.operatingProfit, fill: '#3D5A80' }
+                                    ].map((entry, index) => (
+                                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                                    ))
+                                  }
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+
+                          <div className="flex justify-around text-[9.5px] mt-2 border-t border-gray-50 pt-2 font-mono">
+                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#D58970]"></span> 원가: {result.financials.totalProjectCost.toLocaleString()}억</span>
+                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#5F7161]"></span> 매출: {result.financials.totalRevenues.toLocaleString()}억</span>
+                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#3D5A80]"></span> 이익: {result.financials.operatingProfit.toLocaleString()}억</span>
+                          </div>
+                        </div>
+
+                        {/* 2. Pie Chart: Cost & Revenue Breakdown */}
+                        <div className="bg-white p-4 rounded-xl border border-gray-150 flex flex-col justify-between">
+                          <div>
+                            <span className="text-[10.5px] font-bold text-gray-700 block mb-1">🛠️ 투자 비용(원가) 세부 구성 비율</span>
+                            <span className="text-[9px] text-gray-400 block mb-3">원가 항목별 투입 비용 비중을 분석하여 리스크 요인을 진단합니다.</span>
+                          </div>
+
+                          <div className="h-56 w-full flex items-center justify-center relative">
+                            <div className="w-2/3 h-full">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                  <Pie
+                                    data={[
+                                      { name: '토지매입비', value: result.financials.landCost, color: '#E29578' },
+                                      { name: '설계공사비', value: result.financials.constructionCost, color: '#88B04B' },
+                                      { name: '제세부대비', value: result.financials.otherCosts, color: '#92A8D1' }
+                                    ].filter(item => item.value > 0)}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={50}
+                                    outerRadius={75}
+                                    paddingAngle={3}
+                                    dataKey="value"
+                                  >
+                                    {[
+                                      { name: '토지매입비', value: result.financials.landCost, color: '#E29578' },
+                                      { name: '설계공사비', value: result.financials.constructionCost, color: '#88B04B' },
+                                      { name: '제세부대비', value: result.financials.otherCosts, color: '#92A8D1' }
+                                    ].filter(item => item.value > 0).map((entry, index) => (
+                                      <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
+                                  </Pie>
+                                  <Tooltip
+                                    content={({ active, payload }) => {
+                                      if (active && payload && payload.length) {
+                                        const data = payload[0].payload;
+                                        const total = result.financials.totalProjectCost || 1;
+                                        const percentage = ((data.value / total) * 100).toFixed(1);
+                                        return (
+                                          <div className="bg-white border border-gray-150 p-2 rounded-lg shadow-sm font-sans text-[10.5px]">
+                                            <p className="font-bold text-gray-800">{data.name}</p>
+                                            <p className="text-gray-600 mt-0.5">금액: {data.value?.toLocaleString()} 억원 ({percentage}%)</p>
+                                          </div>
+                                        );
+                                      }
+                                      return null;
+                                    }}
+                                  />
+                                </PieChart>
+                              </ResponsiveContainer>
+                            </div>
+
+                            {/* Centered Total Cost */}
+                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-4">
+                              <span className="text-[9px] text-gray-400 font-medium">총 원가</span>
+                              <span className="text-[12.5px] font-extrabold text-gray-900">{result.financials.totalProjectCost.toLocaleString()}억</span>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-1 text-[9px] mt-2 border-t border-gray-50 pt-2 text-center">
+                            <div>
+                              <p className="text-gray-400">토지매입</p>
+                              <p className="font-bold text-[#E29578] font-mono mt-0.5">{result.financials.totalProjectCost > 0 ? ((result.financials.landCost / result.financials.totalProjectCost) * 100).toFixed(1) : 0}%</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400">설계공사</p>
+                              <p className="font-bold text-[#88B04B] font-mono mt-0.5">{result.financials.totalProjectCost > 0 ? ((result.financials.constructionCost / result.financials.totalProjectCost) * 100).toFixed(1) : 0}%</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400">제세부대</p>
+                              <p className="font-bold text-[#92A8D1] font-mono mt-0.5">{result.financials.totalProjectCost > 0 ? ((result.financials.otherCosts / result.financials.totalProjectCost) * 100).toFixed(1) : 0}%</p>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -6455,7 +7370,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                                   <div className="bg-[#FAF9F5] p-2.5 rounded-lg border border-[#EDDBC7]/40 flex items-center justify-between">
                                     <span className="font-bold text-[#2C251F]">적용 중인 출구 전략: </span>
                                     <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-md bg-[#5F7161] text-white">
-                                      {exitStrategy === 'sales' ? '전체 조기 일괄 분양형' : exitStrategy === 'lease-exit' ? '5년 임대 후 일괄 매각형' : '장기 임대 운영형 (15년)'}
+                                      {exitStrategy === 'sales' ? '전체 조기 일괄 분양형' : exitStrategy === 'lease-exit' ? `${step4ExitYear}년 임대 후 일괄 매각형` : '장기 임대 운영형 (18년)'}
                                     </span>
                                   </div>
 
@@ -6479,8 +7394,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                                     {exitStrategy === 'lease-exit' && (
                                       <>
                                         <div className="flex justify-between font-bold text-gray-900 border-b border-gray-200 pb-1.5">
-                                          <span>[5년 임대후 매각 산식]</span>
-                                          <span>분양형 매출 + 보증금 회수 + (연간임대료 × 5) + 5년차 매각가치(Exit Value)</span>
+                                          <span>[{step4ExitYear}년 임대후 매각 산식]</span>
+                                          <span>분양형 매출 + 보증금 회수 + ({step4ExitYear}개년 임대수익) + {step4ExitYear}년차 매각가치(Exit Value)</span>
                                         </div>
                                         <div className="flex justify-between text-gray-600 mt-1">
                                           <span>• 분양형 상품 매출액 (Apt/Ot 등 분양 전환):</span>
@@ -6491,12 +7406,12 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                                           <span>{result.financials.totalLeaseDeposits.toLocaleString()} 억원</span>
                                         </div>
                                         <div className="flex justify-between text-gray-600">
-                                          <span>• 5개년 누적 월세 수익액 (Annual Rent × 5):</span>
-                                          <span>{(result.financials.totalAnnualRent * 5).toFixed(2)} 억원 (연간 {result.financials.totalAnnualRent.toLocaleString()}억)</span>
+                                          <span>• {step4ExitYear}개년 누적 월세 수익액 (Annual Rent 누적):</span>
+                                          <span>{(result.financials.sumOfRents ?? 0).toFixed(2)} 억원 (연평균 {((result.financials.sumOfRents ?? 0)/step4ExitYear).toFixed(2)}억)</span>
                                         </div>
                                         <div className="flex justify-between text-gray-600">
-                                          <span>• 5년차 임대지분 일괄 매각가치 (Exit Value):</span>
-                                          <span>{(result.financials.totalAnnualRent * 18).toFixed(2)} 억원 (연 임대료 환원율 5.5% 기준 18배 가치 평가)</span>
+                                          <span>• {step4ExitYear}년차 임대지분 일괄 매각가치 (Exit Value):</span>
+                                          <span>{(result.financials.exitValue ?? 0).toFixed(2)} 억원 (연 임대료 자본환원율 {step4CapRate}% 기준 {(100 / step4CapRate).toFixed(1)}배 가치 평가)</span>
                                         </div>
                                         <div className="flex justify-between text-emerald-800 font-bold border-t border-gray-200 pt-1.5 mt-1">
                                           <span>• 최종 합산 수지 총 가치:</span>
@@ -6507,8 +7422,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                                     {exitStrategy === 'lease-permanent' && (
                                       <>
                                         <div className="flex justify-between font-bold text-gray-900 border-b border-gray-200 pb-1.5">
-                                          <span>[15년 영구 임대 운영 산식]</span>
-                                          <span>분양형 매출 + 보증금 회수 + (연간임대료 × 15개년)</span>
+                                          <span>[18년 장기 임대 운영 산식]</span>
+                                          <span>분양형 매출 + 보증금 회수 + (18개년 임대수익) + 18년차 잔존가치(Terminal Value)</span>
                                         </div>
                                         <div className="flex justify-between text-gray-600 mt-1">
                                           <span>• 분양형 상품 매출액 (Apt/Ot 분양):</span>
@@ -6519,8 +7434,12 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                                           <span>{result.financials.totalLeaseDeposits.toLocaleString()} 억원</span>
                                         </div>
                                         <div className="flex justify-between text-gray-600">
-                                          <span>• 15개년 장기 누적 임대수익액 (Annual Rent × 15):</span>
-                                          <span>{(result.financials.totalAnnualRent * 15).toFixed(2)} 억원 (연간 {result.financials.totalAnnualRent.toLocaleString()}억)</span>
+                                          <span>• 18개년 장기 누적 임대수익액 (Annual Rent 누적):</span>
+                                          <span>{(result.financials.sumOfRents ?? 0).toFixed(2)} 억원 (연평균 {((result.financials.sumOfRents ?? 0)/18).toFixed(2)}억)</span>
+                                        </div>
+                                        <div className="flex justify-between text-gray-600">
+                                          <span>• 18년차 임대지분 영구 잔존가치 (Terminal Value):</span>
+                                          <span>{(result.financials.terminalValue ?? 0).toFixed(2)} 억원 (자본환원율 {step4CapRate}% 기준 잔존 평가)</span>
                                         </div>
                                         <div className="flex justify-between text-emerald-800 font-bold border-t border-gray-200 pt-1.5 mt-1">
                                           <span>• 최종 합산 수지 총 가치:</span>
