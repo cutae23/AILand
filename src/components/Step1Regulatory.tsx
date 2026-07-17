@@ -379,13 +379,12 @@ export default function Step1Regulatory({
       return;
     }
 
-    const validation = getLinkOrAddressValidation(customerLink);
-    if (validation.status === 'error') {
-      setError(`[입력 오류] ${validation.message}`);
-      return;
-    } else if (validation.status === 'empty') {
-      setError('리뷰를 시작하려면 분석할 토지이음 주소 또는 고유 링크를 입력해 주세요.');
-      return;
+    if (customerLink.trim()) {
+      const validation = getLinkOrAddressValidation(customerLink);
+      if (validation.status === 'error') {
+        setError(`[입력 오류] ${validation.message}`);
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -593,7 +592,7 @@ export default function Step1Regulatory({
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
                     <Link2 className="w-3.5 h-3.5 text-indigo-600" />
-                    토지이음 주소 또는 고유 링크 입력 <span className="text-gray-400 text-[10px] font-normal">(필수)</span>
+                    토지이음 주소 또는 고유 링크 입력 <span className="text-gray-400 text-[10px] font-normal">(선택)</span>
                   </label>
                   <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[9px] font-bold rounded">
                     🗺️ 실시간 이음 파싱
@@ -601,7 +600,7 @@ export default function Step1Regulatory({
                 </div>
                 <input
                   type="text"
-                  placeholder="예: 서울특별시 강남구 역삼동 700-1 또는 토지이음 복사 링크"
+                  placeholder="예: 서울특별시 강남구 역삼동 700-1 (선택사항, 입력하지 않아도 분석 가능)"
                   value={customerLink}
                   onChange={(e) => {
                     setCustomerLink(e.target.value);
