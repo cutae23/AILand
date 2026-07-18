@@ -650,6 +650,26 @@ export default function Step4Report({
                   </td>
                 </tr>
                 <tr className="border-b border-gray-100">
+                  <td className="p-3 bg-slate-50/50 font-bold text-gray-700">건축면적 (Building Area)</td>
+                  <td className="p-3 text-gray-800 font-mono font-bold" colSpan={3}>
+                    {hasScenario ? (
+                      <>
+                        <span>{Math.round(sInputs.landArea * (sInputs.appliedBCR / 100)).toLocaleString('ko-KR')} ㎡ </span>
+                        <span className="text-[10px] text-gray-400 font-normal">({Math.round(sInputs.landArea * (sInputs.appliedBCR / 100) * 0.3025).toLocaleString('ko-KR')}평) </span>
+                        <span className="text-[10px] text-emerald-600 font-bold ml-2">
+                          (🟢 법정한도인 {Math.round(sInputs.landArea * (baselineBCR / 100)).toLocaleString('ko-KR')} ㎡보다 작음)
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span>{Math.round(areaSize * (baselineBCR / 100)).toLocaleString('ko-KR')} ㎡ </span>
+                        <span className="text-[10px] text-gray-400 font-normal">({Math.round(areaSize * (baselineBCR / 100) * 0.3025).toLocaleString('ko-KR')}평) </span>
+                        <span className="text-[10px] text-emerald-600 font-bold ml-2">(법정한도 부합)</span>
+                      </>
+                    )}
+                  </td>
+                </tr>
+                <tr className="border-b border-gray-100">
                   <td className="p-3 bg-slate-50/50 font-bold text-gray-700">총 연면적</td>
                   <td className="p-3 text-gray-800 font-mono font-bold">
                     {displayTotalArea.toLocaleString('ko-KR', { maximumFractionDigits: 1 })} ㎡ ({(displayTotalArea * 0.3025).toLocaleString('ko-KR', { maximumFractionDigits: 1 })} 평)
@@ -1033,9 +1053,15 @@ export default function Step4Report({
                   <p>
                     2. <strong>기준층 ({sInputs.typicalFloorStart}층 ~ {sInputs.typicalFloorEnd}층, 평균 {((sResult.aboveGroundGFA - Math.min(sResult.aboveGroundGFA, Math.round(sInputs.landArea * (sInputs.appliedBCR / 100)))) / sResult.typicalFloorCount).toLocaleString('ko-KR', { maximumFractionDigits: 1 })} ㎡ [약 {((sResult.aboveGroundGFA - Math.min(sResult.aboveGroundGFA, Math.round(sInputs.landArea * (sInputs.appliedBCR / 100)))) / sResult.typicalFloorCount * 0.3025).toFixed(1)}평])</strong>: 대지 내 조망권 및 일조 확보 사선 한계를 고려한 수직형 타워 설계 층군입니다. 주거(공동주택/오피스텔) 및 특화 용도별 균등 면적과 표준 층고({sInputs.defaultFloorHeight}m)가 정밀하게 배분되어 공사원가 절감 및 구조 안정성을 향상시킵니다.
                   </p>
-                  <p>
-                    3. <strong>지하층 (B1층 ~ B{sInputs.undergroundFloors}층)</strong>: 법정 필수 주차 대수({Math.ceil(sResult.parkingSpaces)}대) 및 설비 전기 기계 면적을 수용하는 대규모 주차 데크 층군입니다. 층당 {(sResult.undergroundGFA / sInputs.undergroundFloors).toLocaleString('ko-KR', { maximumFractionDigits: 1 })} ㎡ (약 {((sResult.undergroundGFA / sInputs.undergroundFloors) * 0.3025).toFixed(1)}평) 수준의 균일한 구조 모듈과 심도 {sResult.totalUndergroundDepth.toFixed(1)}m 규격의 토목 굴착 계획이 연계되어 있습니다.
-                  </p>
+                  {sInputs.undergroundFloors > 0 ? (
+                    <p>
+                      3. <strong>지하층 (B1층 ~ B{sInputs.undergroundFloors}층)</strong>: 법정 필수 주차 대수({Math.ceil(sResult.parkingSpaces)}대) 및 설비 전기 기계 면적을 수용하는 대규모 주차 데크 층군입니다. 층당 {(sResult.undergroundGFA / sInputs.undergroundFloors).toLocaleString('ko-KR', { maximumFractionDigits: 1 })} ㎡ (약 {((sResult.undergroundGFA / sInputs.undergroundFloors) * 0.3025).toFixed(1)}평) 수준의 균일한 구조 모듈과 심도 {sResult.totalUndergroundDepth.toFixed(1)}m 규격의 토목 굴착 계획이 연계되어 있습니다.
+                    </p>
+                  ) : (
+                    <p>
+                      3. <strong>지하층 계획 없음</strong>: 기획 면적이 작거나 대지 면적이 충분히 넓어 지하 개발 없이 모든 기능(주차 및 설비 시설 등)을 지상 또는 옥외에서 수용하는 평탄형 계획을 적용합니다.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

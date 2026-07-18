@@ -49,7 +49,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
   const [landArea, setLandArea] = useState<number>(() => inputs?.landArea ?? initialLandArea);
   const [appliedFAR, setAppliedFAR] = useState<number>(() => inputs?.appliedFAR ?? initialFAR);
-  const [appliedBCR, setAppliedBCR] = useState<number>(() => inputs?.appliedBCR ?? initialBCR);
+  const [appliedBCR, setAppliedBCR] = useState<number>(() => inputs?.appliedBCR ?? (initialBCR - 2.0));
   const [netRatio, setNetRatio] = useState<number>(() => inputs?.netRatio ?? 75); // 전용률 (%)
   
   // Custom Ratios per Usage for Wall/General Common
@@ -107,6 +107,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   // [USER ADDITIONS] New States: Above ground & Underground floors & individual Floor Heights
   const [aboveGroundFloors, rawSetAboveGroundFloors] = useState<number>(() => inputs?.aboveGroundFloors ?? 7);
   const [undergroundFloors, setUndergroundFloors] = useState<number>(() => inputs?.undergroundFloors ?? 2);
+  const [basementLandUtilRatio, setBasementLandUtilRatio] = useState<number>(() => inputs?.basementLandUtilRatio ?? 70); // 지하층 대지면적 활용률 (%)
   const [defaultFloorHeight, setDefaultFloorHeight] = useState<number>(() => inputs?.defaultFloorHeight ?? 3.3); // 3.3m
   const [customFloorHeights, setCustomFloorHeights] = useState<Record<string, number>>(() => inputs?.customFloorHeights ?? {
     '1F': 4.5, // 1F is usually higher (e.g., 4.5m)
@@ -1005,7 +1006,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   useEffect(() => {
     if (currentLand && !savedScenario) {
       setLandArea(currentLand.areaSize);
-      setAppliedBCR(currentLand.baselineBCR);
+      setAppliedBCR(currentLand.baselineBCR - 2.0);
       
       const isGangnam = currentLand.id === 'gangnam-yeoksam';
       const isSeocho = currentLand.id === 'seocho-banpo';
@@ -1482,9 +1483,9 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
     const undergroundGFA = parseFloat((parkingArea + machineryArea + retailB1GFA).toFixed(2));
 
     // Automatically calculate underground floors when layout simulation is active:
-    // Required basement floor area is roughly 75% of landArea for excavations in Korea.
-    const calculatedUndergroundFloors = undergroundGFA > 0 && landArea > 0
-      ? Math.max(1, Math.ceil(undergroundGFA / (landArea * 0.75)))
+    // 지하층수 = Math.ceil((지하층연면적 * 100) / (대지면적 * 지하대지활용률))
+    const calculatedUndergroundFloors = (undergroundGFA > 0 && landArea > 0 && basementLandUtilRatio > 0)
+      ? Math.ceil((undergroundGFA * 100) / (landArea * basementLandUtilRatio))
       : 0;
 
     const effectiveUndergroundFloors = useLayoutSimulation 
@@ -2082,6 +2083,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
       auxiliaryArea,
       aboveGroundFloors: effectiveAboveGroundFloors,
       undergroundFloors: effectiveUndergroundFloors,
+      basementLandUtilRatio,
       defaultFloorHeight,
       customFloorHeights,
       exitStrategy,
@@ -2131,7 +2133,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
     retail1FDeposit, retail2FDeposit, retail3FDeposit, retailB1Rent, retail1FRent, retail2FRent, retail3FRent, 
     officeArea, officePricePerPyung, officeDepositPerPyung, officeRentPerPyung, officeType, officeNetRatio,
     wallCommonRatioApt, generalCommonRatioApt, wallCommonRatioOt, generalCommonRatioOt, parkingAreaPerCar,
-    designedParkingSpaces, machineryRatio, auxiliaryArea, aboveGroundFloors, undergroundFloors, 
+    designedParkingSpaces, machineryRatio, auxiliaryArea, aboveGroundFloors, undergroundFloors, basementLandUtilRatio,
     defaultFloorHeight, customFloorHeights, exitStrategy,
     aptAuxArea, officetelAuxArea, hotelAuxArea, officeAuxArea, selectedScenarioId, customUsages,
     typicalFloorStart, typicalFloorEnd,
@@ -2152,7 +2154,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           retail1FDeposit, retail2FDeposit, retail3FDeposit, retailB1Rent, retail1FRent, retail2FRent, retail3FRent, 
           officeArea, officePricePerPyung, officeDepositPerPyung, officeRentPerPyung, officeType, officeNetRatio,
           wallCommonRatioApt, generalCommonRatioApt, wallCommonRatioOt, generalCommonRatioOt, parkingAreaPerCar,
-          designedParkingSpaces, machineryRatio, auxiliaryArea, aboveGroundFloors, undergroundFloors, 
+          designedParkingSpaces, machineryRatio, auxiliaryArea, aboveGroundFloors: result.aboveGroundFloors, undergroundFloors: result.undergroundFloors, basementLandUtilRatio,
           defaultFloorHeight, customFloorHeights, exitStrategy,
           aptAuxArea, officetelAuxArea, hotelAuxArea, officeAuxArea, customUsages,
           typicalFloorStart, typicalFloorEnd,
@@ -2554,7 +2556,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                       </div>
                       <div className="bg-gray-50/50 p-2 rounded-xl text-center border border-gray-100">
                         <span className="text-gray-400 block text-[9px] font-medium">지하 규모</span>
-                        <strong className="text-gray-800 text-[11px] font-bold">{undergroundFloors} 층</strong>
+                        <strong className="text-gray-800 text-[11px] font-bold">{result.undergroundFloors} 층</strong>
                       </div>
                       <div className="bg-gray-50/50 p-2 rounded-xl text-center border border-gray-100">
                         <span className="text-gray-400 block text-[9px] font-medium">용적률 요율</span>
@@ -3139,7 +3141,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                       <Home className="w-4 h-4 text-[#5F7161]" />
                       🏡 주거시설 부대복리시설 기획 (면적)
                     </span>
-                    <span className="text-[10px] text-[#5F7161] font-bold font-mono">주거 부대시설 합계: {aptAuxArea + officetelAuxArea} 평</span>
+                    <span className="text-[10px] text-[#5F7161] font-bold font-mono">주거 부대시설 합계: {Math.round((aptAuxArea + officetelAuxArea) * 3.30578).toLocaleString()} ㎡ (약 {aptAuxArea + officetelAuxArea}평)</span>
                   </h4>
 
                   <div className="space-y-4 text-xs">
@@ -3151,23 +3153,30 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           <input
                             type="number"
                             min="0"
-                            max="1000"
-                            value={aptAuxArea}
+                            max="3300"
+                            value={Math.round(aptAuxArea * 3.30578)}
                             disabled={useCustomResidentFacilities}
-                            onChange={(e) => setAptAuxArea(Math.max(0, Math.min(1000, Number(e.target.value) || 0)))}
-                            className={`w-14 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-[#5F7161] font-mono ${useCustomResidentFacilities ? 'opacity-70 bg-gray-50 text-gray-500' : ''}`}
+                            onChange={(e) => {
+                              const m2Val = Math.max(0, Math.min(3300, Number(e.target.value) || 0));
+                              setAptAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                            }}
+                            className={`w-16 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-[#5F7161] font-mono ${useCustomResidentFacilities ? 'opacity-70 bg-gray-50 text-gray-500' : ''}`}
                           />
-                          <span className="font-bold text-gray-800">평</span>
+                          <span className="font-bold text-gray-800">㎡</span>
+                          <span className="text-[10px] text-gray-400 font-normal">(약 {Math.round(aptAuxArea)}평)</span>
                         </div>
                       </div>
                       <input
                         type="range"
                         min="0"
-                        max="100"
+                        max="330"
                         step="1"
-                        value={Math.min(aptAuxArea, 100)}
+                        value={Math.round(aptAuxArea * 3.30578)}
                         disabled={useCustomResidentFacilities}
-                        onChange={(e) => setAptAuxArea(Number(e.target.value))}
+                        onChange={(e) => {
+                          const m2Val = Number(e.target.value);
+                          setAptAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                        }}
                         className={`w-full accent-[#5F7161] ${useCustomResidentFacilities ? 'opacity-50 cursor-not-allowed' : ''}`}
                       />
 
@@ -3220,15 +3229,17 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                                     <input
                                       type="number"
                                       min="0"
-                                      max="500"
-                                      value={f.area}
+                                      max="1650"
+                                      value={Math.round(f.area * 3.30578)}
                                       onChange={(e) => {
-                                        const val = Math.max(0, Math.min(500, Number(e.target.value) || 0));
-                                        setResidentFacilities(prev => prev.map(item => item.id === f.id ? { ...item, area: val } : item));
+                                        const m2Val = Math.max(0, Math.min(1650, Number(e.target.value) || 0));
+                                        const pyungVal = Number((m2Val / 3.30578).toFixed(2));
+                                        setResidentFacilities(prev => prev.map(item => item.id === f.id ? { ...item, area: pyungVal } : item));
                                       }}
-                                      className="w-10 text-center font-semibold bg-gray-50 border border-gray-200 py-0.5 rounded text-[11px] font-mono focus:outline-none focus:border-[#5F7161]"
+                                      className="w-12 text-center font-semibold bg-gray-50 border border-gray-200 py-0.5 rounded text-[11px] font-mono focus:outline-none focus:border-[#5F7161]"
                                     />
-                                    <span className="text-[10px] text-gray-500 font-bold">평</span>
+                                    <span className="text-[10px] text-gray-500 font-bold">㎡</span>
+                                    <span className="text-[9px] text-gray-400 italic">(약 {Math.round(f.area)}평)</span>
                                   </div>
                                   <button
                                     type="button"
@@ -3245,7 +3256,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                             )}
                             <div className="flex justify-between items-center text-[10px] text-[#5F7161] font-semibold border-t border-gray-100 pt-1.5 px-1 mt-1">
                               <span>합계 (자동 연동)</span>
-                              <span className="font-mono">{aptAuxArea}평 (약 {Math.round(aptAuxArea * 3.3)}㎡)</span>
+                              <span className="font-mono">{Math.round(aptAuxArea * 3.30578).toLocaleString()} ㎡ (약 {Math.round(aptAuxArea)}평)</span>
                             </div>
                           </div>
                         ) : (
@@ -3264,21 +3275,28 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           <input
                             type="number"
                             min="0"
-                            max="1000"
-                            value={officetelAuxArea}
-                            onChange={(e) => setOfficetelAuxArea(Math.max(0, Math.min(1000, Number(e.target.value) || 0)))}
-                            className="w-14 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-[#5F7161] font-mono"
+                            max="3300"
+                            value={Math.round(officetelAuxArea * 3.30578)}
+                            onChange={(e) => {
+                              const m2Val = Math.max(0, Math.min(3300, Number(e.target.value) || 0));
+                              setOfficetelAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                            }}
+                            className="w-16 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-[#5F7161] font-mono"
                           />
-                          <span className="font-bold text-gray-800">평</span>
+                          <span className="font-bold text-gray-800">㎡</span>
+                          <span className="text-[10px] text-gray-400 font-normal">(약 {Math.round(officetelAuxArea)}평)</span>
                         </div>
                       </div>
                       <input
                         type="range"
                         min="0"
-                        max="50"
+                        max="165"
                         step="1"
-                        value={Math.min(officetelAuxArea, 50)}
-                        onChange={(e) => setOfficetelAuxArea(Number(e.target.value))}
+                        value={Math.round(officetelAuxArea * 3.30578)}
+                        onChange={(e) => {
+                          const m2Val = Number(e.target.value);
+                          setOfficetelAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                        }}
                         className="w-full accent-[#5F7161]"
                       />
                     </div>
@@ -3465,7 +3483,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                       <Building2 className="w-4 h-4 text-emerald-600" />
                       🏨 호텔 부대복리시설 기획 (면적)
                     </span>
-                    <span className="text-[10px] text-emerald-700 font-bold font-mono">{hotelAuxArea} 평 (약 {Math.round(hotelAuxArea * 3.3)}㎡)</span>
+                    <span className="text-[10px] text-emerald-700 font-bold font-mono">{Math.round(hotelAuxArea * 3.30578).toLocaleString()} ㎡ (약 {hotelAuxArea}평)</span>
                   </h4>
 
                   <div className="space-y-3 text-xs">
@@ -3476,21 +3494,28 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           <input
                             type="number"
                             min="0"
-                            max="1000"
-                            value={hotelAuxArea}
-                            onChange={(e) => setHotelAuxArea(Math.max(0, Math.min(1000, Number(e.target.value) || 0)))}
-                            className="w-14 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-emerald-600 font-mono"
+                            max="3300"
+                            value={Math.round(hotelAuxArea * 3.30578)}
+                            onChange={(e) => {
+                              const m2Val = Math.max(0, Math.min(3300, Number(e.target.value) || 0));
+                              setHotelAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                            }}
+                            className="w-16 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-emerald-600 font-mono"
                           />
-                          <span className="font-bold text-gray-800">평</span>
+                          <span className="font-bold text-gray-800">㎡</span>
+                          <span className="text-[10px] text-gray-400 font-normal">(약 {Math.round(hotelAuxArea)}평)</span>
                         </div>
                       </div>
                       <input
                         type="range"
                         min="0"
-                        max="200"
-                        step="5"
-                        value={Math.min(hotelAuxArea, 200)}
-                        onChange={(e) => setHotelAuxArea(Number(e.target.value))}
+                        max="660"
+                        step="1"
+                        value={Math.round(hotelAuxArea * 3.30578)}
+                        onChange={(e) => {
+                          const m2Val = Number(e.target.value);
+                          setHotelAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                        }}
                         className="w-full accent-emerald-600"
                       />
                       <p className="text-[10px] text-gray-400 mt-1">
@@ -4293,29 +4318,38 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="block text-[10px] font-semibold text-gray-500">지하 층수</label>
+                          <label className="block text-[10px] font-semibold text-gray-500">지하 층수 (자동 산정)</label>
+                          <div className="h-7 flex items-center px-2.5 bg-amber-50 border border-amber-100 rounded-lg text-amber-900 font-extrabold text-xs">
+                            지하 {result.undergroundFloors} 층
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5 col-span-2">
+                          <label className="block text-[10px] font-semibold text-gray-500">지하 대지활용률 (Basement Land Util %)</label>
                           <div className="flex items-center gap-1">
                             <button
                               type="button"
-                              onClick={() => setUndergroundFloors(Math.max(0, undergroundFloors - 1))}
+                              onClick={() => setBasementLandUtilRatio(Math.max(10, basementLandUtilRatio - 5))}
                               className="w-7 h-7 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer"
                             >
                               -
                             </button>
                             <input
                               type="number"
-                              value={undergroundFloors}
-                              onChange={(e) => setUndergroundFloors(Math.max(0, parseInt(e.target.value) || 0))}
-                              className="w-12 text-center text-xs font-bold bg-white border border-gray-200 py-1 rounded-lg focus:outline-none"
+                              min="10"
+                              max="100"
+                              value={basementLandUtilRatio}
+                              onChange={(e) => setBasementLandUtilRatio(Math.max(10, Math.min(100, parseInt(e.target.value) || 70)))}
+                              className="w-16 text-center text-xs font-bold bg-white border border-gray-200 py-1 rounded-lg focus:outline-none focus:border-indigo-500 font-mono"
                             />
                             <button
                               type="button"
-                              onClick={() => setUndergroundFloors(undergroundFloors + 1)}
+                              onClick={() => setBasementLandUtilRatio(Math.min(100, basementLandUtilRatio + 5))}
                               className="w-7 h-7 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer"
                             >
                               +
                             </button>
-                            <span className="text-gray-500 text-[11px]">층</span>
+                            <span className="text-gray-500 text-[10px] font-semibold">% (대지 {Math.round(landArea * (basementLandUtilRatio / 100)).toLocaleString()} ㎡ 활용)</span>
                           </div>
                         </div>
                       </div>
@@ -4357,7 +4391,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5">
                           <div className="space-y-1">
                             <label className="block text-[10px] font-semibold text-gray-500">동수 (몇 동)</label>
                             <div className="flex items-center gap-1">
@@ -4463,7 +4497,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                                 >
                                   -
                                 </button>
-                                <span className="w-8 text-center font-bold text-gray-700">{undergroundFloors}층</span>
+                                <span className="w-8 text-center font-bold text-gray-700">{result.undergroundFloors}층</span>
                                 <button
                                   type="button"
                                   onClick={() => setUndergroundFloors(undergroundFloors + 1)}
@@ -4473,6 +4507,35 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                                 </button>
                               </div>
                             )}
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="block text-[10px] font-semibold text-gray-500">지하 대지활용률</label>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setBasementLandUtilRatio(Math.max(10, basementLandUtilRatio - 5))}
+                                className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded hover:bg-gray-50 text-[11px] font-bold cursor-pointer"
+                              >
+                                -
+                              </button>
+                              <input
+                                type="number"
+                                min="10"
+                                max="100"
+                                value={basementLandUtilRatio}
+                                onChange={(e) => setBasementLandUtilRatio(Math.max(10, Math.min(100, parseInt(e.target.value) || 70)))}
+                                className="w-10 text-center text-[11.5px] font-bold bg-white border border-gray-200 py-0.5 rounded focus:outline-none focus:border-indigo-500 font-mono"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setBasementLandUtilRatio(Math.min(100, basementLandUtilRatio + 5))}
+                                className="w-5 h-5 flex items-center justify-center border border-gray-200 bg-white rounded hover:bg-gray-50 text-[11px] font-bold cursor-pointer"
+                              >
+                                +
+                              </button>
+                              <span className="text-[10px] text-gray-400 font-bold">%</span>
+                            </div>
                           </div>
                         </div>
 
@@ -4489,6 +4552,12 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                             <span className="text-emerald-800 font-bold">산정 결과 지상 층수:</span>
                             <span className="font-extrabold text-emerald-700 text-xs">
                               지상 {result.aboveGroundFloors} 층 (포디움 {podiumFloors}층 + 주거 {result.calculatedTypicalFloors}층)
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-[10px] pt-1 border-t border-emerald-100/50">
+                            <span className="text-amber-800 font-bold">산정 결과 지하 층수 (대지 {basementLandUtilRatio}% 활용):</span>
+                            <span className="font-extrabold text-amber-700 text-xs">
+                              지하 {result.undergroundFloors} 층 (활용 면적: {Math.round(landArea * (basementLandUtilRatio / 100)).toLocaleString()} ㎡)
                             </span>
                           </div>
                         </div>
@@ -4707,7 +4776,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                   <div className="p-3.5 bg-[#FCFAF7] border border-gray-100 rounded-xl space-y-3">
                     <h4 className="text-[11px] font-bold text-[#2C251F] uppercase tracking-wider border-b border-gray-100 pb-1.5 flex justify-between items-center">
                       <span>🧩 용도별 부대시설 기획 (면적 입력)</span>
-                      <span className="text-xs font-bold text-[#5F7161]">합계: {auxiliaryArea} 평</span>
+                      <span className="text-xs font-bold text-[#5F7161]">합계: {Math.round(auxiliaryArea * 3.30578).toLocaleString()} ㎡</span>
                     </h4>
                     
                     <div className="space-y-3 text-xs">
@@ -4719,23 +4788,30 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                             <input
                               type="number"
                               min="0"
-                              max="1000"
-                              value={aptAuxArea}
+                              max="3300"
+                              value={Math.round(aptAuxArea * 3.30578)}
                               disabled={useCustomResidentFacilities}
-                              onChange={(e) => setAptAuxArea(Math.max(0, Math.min(1000, Number(e.target.value) || 0)))}
-                              className={`w-14 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-indigo-500 font-mono ${useCustomResidentFacilities ? 'opacity-70 bg-gray-50 text-gray-500' : ''}`}
+                              onChange={(e) => {
+                                const m2Val = Math.max(0, Math.min(3300, Number(e.target.value) || 0));
+                                setAptAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                              }}
+                              className={`w-16 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-[#5F7161] font-mono ${useCustomResidentFacilities ? 'opacity-70 bg-gray-50 text-gray-500' : ''}`}
                             />
-                            <span className="font-bold text-gray-800">평</span>
+                            <span className="font-bold text-gray-800">㎡</span>
+                            <span className="text-[10px] text-gray-400 font-normal">(약 {Math.round(aptAuxArea)}평)</span>
                           </div>
                         </div>
                         <input
                           type="range"
                           min="0"
-                          max="100"
+                          max="330"
                           step="1"
-                          value={Math.min(aptAuxArea, 100)}
+                          value={Math.round(aptAuxArea * 3.30578)}
                           disabled={useCustomResidentFacilities}
-                          onChange={(e) => setAptAuxArea(Number(e.target.value))}
+                          onChange={(e) => {
+                            const m2Val = Number(e.target.value);
+                            setAptAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                          }}
                           className={`w-full accent-[#5F7161] ${useCustomResidentFacilities ? 'opacity-50 cursor-not-allowed' : ''}`}
                         />
 
@@ -4787,15 +4863,17 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                                       <input
                                         type="number"
                                         min="0"
-                                        max="500"
-                                        value={f.area}
+                                        max="1650"
+                                        value={Math.round(f.area * 3.30578)}
                                         onChange={(e) => {
-                                          const val = Math.max(0, Math.min(500, Number(e.target.value) || 0));
-                                          setResidentFacilities(prev => prev.map(item => item.id === f.id ? { ...item, area: val } : item));
+                                          const m2Val = Math.max(0, Math.min(1650, Number(e.target.value) || 0));
+                                          const pyungVal = Number((m2Val / 3.30578).toFixed(2));
+                                          setResidentFacilities(prev => prev.map(item => item.id === f.id ? { ...item, area: pyungVal } : item));
                                         }}
-                                        className="w-10 text-center font-semibold bg-gray-50 border border-gray-200 py-0.5 rounded text-[11px] font-mono focus:outline-none focus:border-indigo-500"
+                                        className="w-12 text-center font-semibold bg-gray-50 border border-gray-200 py-0.5 rounded text-[11px] font-mono focus:outline-none focus:border-indigo-500"
                                       />
-                                      <span className="text-[10px] text-gray-500 font-bold">평</span>
+                                      <span className="text-[10px] text-gray-500 font-bold">㎡</span>
+                                      <span className="text-[9px] text-gray-400 italic">(약 {Math.round(f.area)}평)</span>
                                     </div>
                                     <button
                                       onClick={() => {
@@ -4811,7 +4889,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                               )}
                               <div className="flex justify-between items-center text-[10px] text-[#5F7161] font-semibold border-t border-gray-100 pt-1.5 px-1 mt-1">
                                 <span>합계 (자동 연동)</span>
-                                <span>{aptAuxArea}평 (약 {Math.round(aptAuxArea * 3.3)}㎡)</span>
+                                <span>{Math.round(aptAuxArea * 3.30578).toLocaleString()} ㎡ (약 {Math.round(aptAuxArea)}평)</span>
                               </div>
                             </div>
                           ) : (
@@ -4830,21 +4908,28 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                             <input
                               type="number"
                               min="0"
-                              max="1000"
-                              value={officetelAuxArea}
-                              onChange={(e) => setOfficetelAuxArea(Math.max(0, Math.min(1000, Number(e.target.value) || 0)))}
-                              className="w-14 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-indigo-500 font-mono"
+                              max="3300"
+                              value={Math.round(officetelAuxArea * 3.30578)}
+                              onChange={(e) => {
+                                const m2Val = Math.max(0, Math.min(3300, Number(e.target.value) || 0));
+                                setOfficetelAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                              }}
+                              className="w-16 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-indigo-500 font-mono"
                             />
-                            <span className="font-bold text-gray-800">평</span>
+                            <span className="font-bold text-gray-800">㎡</span>
+                            <span className="text-[10px] text-gray-400 font-normal">(약 {Math.round(officetelAuxArea)}평)</span>
                           </div>
                         </div>
                         <input
                           type="range"
                           min="0"
-                          max="50"
+                          max="165"
                           step="1"
-                          value={Math.min(officetelAuxArea, 50)}
-                          onChange={(e) => setOfficetelAuxArea(Number(e.target.value))}
+                          value={Math.round(officetelAuxArea * 3.30578)}
+                          onChange={(e) => {
+                            const m2Val = Number(e.target.value);
+                            setOfficetelAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                          }}
                           className="w-full accent-[#5F7161]"
                         />
                       </div>
@@ -4857,21 +4942,28 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                             <input
                               type="number"
                               min="0"
-                              max="1000"
-                              value={hotelAuxArea}
-                              onChange={(e) => setHotelAuxArea(Math.max(0, Math.min(1000, Number(e.target.value) || 0)))}
-                              className="w-14 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-indigo-500 font-mono"
+                              max="3300"
+                              value={Math.round(hotelAuxArea * 3.30578)}
+                              onChange={(e) => {
+                                const m2Val = Math.max(0, Math.min(3300, Number(e.target.value) || 0));
+                                setHotelAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                              }}
+                              className="w-16 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-indigo-500 font-mono"
                             />
-                            <span className="font-bold text-gray-800">평</span>
+                            <span className="font-bold text-gray-800">㎡</span>
+                            <span className="text-[10px] text-gray-400 font-normal">(약 {Math.round(hotelAuxArea)}평)</span>
                           </div>
                         </div>
                         <input
                           type="range"
                           min="0"
-                          max="200"
-                          step="5"
-                          value={Math.min(hotelAuxArea, 200)}
-                          onChange={(e) => setHotelAuxArea(Number(e.target.value))}
+                          max="660"
+                          step="1"
+                          value={Math.round(hotelAuxArea * 3.30578)}
+                          onChange={(e) => {
+                            const m2Val = Number(e.target.value);
+                            setHotelAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                          }}
                           className="w-full accent-[#5F7161]"
                         />
                       </div>
@@ -4884,21 +4976,28 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                             <input
                               type="number"
                               min="0"
-                              max="1000"
-                              value={officeAuxArea}
-                              onChange={(e) => setOfficeAuxArea(Math.max(0, Math.min(1000, Number(e.target.value) || 0)))}
-                              className="w-14 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-indigo-500 font-mono"
+                              max="3300"
+                              value={Math.round(officeAuxArea * 3.30578)}
+                              onChange={(e) => {
+                                const m2Val = Math.max(0, Math.min(3300, Number(e.target.value) || 0));
+                                setOfficeAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                              }}
+                              className="w-16 text-center text-xs font-bold bg-white border border-gray-200 py-0.5 rounded-lg focus:outline-none focus:border-indigo-500 font-mono"
                             />
-                            <span className="font-bold text-gray-800">평</span>
+                            <span className="font-bold text-gray-800">㎡</span>
+                            <span className="text-[10px] text-gray-400 font-normal">(약 {Math.round(officeAuxArea)}평)</span>
                           </div>
                         </div>
                         <input
                           type="range"
                           min="0"
-                          max="100"
+                          max="330"
                           step="1"
-                          value={Math.min(officeAuxArea, 100)}
-                          onChange={(e) => setOfficeAuxArea(Number(e.target.value))}
+                          value={Math.round(officeAuxArea * 3.30578)}
+                          onChange={(e) => {
+                            const m2Val = Number(e.target.value);
+                            setOfficeAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                          }}
                           className="w-full accent-[#5F7161]"
                         />
                       </div>
@@ -4997,7 +5096,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
               </h3>
               
               <div className="space-y-4 text-xs text-gray-600">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block text-[11px] font-semibold text-gray-500 mb-1">총 대지 면적 (㎡)</label>
                     <input
@@ -5013,6 +5112,26 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                       type="number"
                       value={appliedFAR}
                       onChange={(e) => setAppliedFAR(Number(e.target.value))}
+                      className="w-full text-xs px-3 py-2 bg-[#F9F7F2] border border-[#E5E2DD] rounded-xl focus:outline-none focus:border-[#5F7161] font-bold text-gray-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-500 mb-1">
+                      계획 건폐율 (%) <span className="text-[9px] text-gray-400 font-normal">(법정 {currentLand?.baselineBCR || 60}%)</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={appliedBCR}
+                      onChange={(e) => {
+                        const maxBcr = currentLand?.baselineBCR || 60;
+                        const val = Math.max(0.1, Number(e.target.value) || 0);
+                        if (val >= maxBcr) {
+                          setAppliedBCR(Number((maxBcr - 0.5).toFixed(1)));
+                        } else {
+                          setAppliedBCR(Number(val.toFixed(1)));
+                        }
+                      }}
                       className="w-full text-xs px-3 py-2 bg-[#F9F7F2] border border-[#E5E2DD] rounded-xl focus:outline-none focus:border-[#5F7161] font-bold text-gray-800"
                     />
                   </div>
@@ -5587,7 +5706,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                     setAboveGroundFloors={setAboveGroundFloors}
                     podiumFloors={podiumFloors}
                     setPodiumFloors={setPodiumFloors}
-                    undergroundFloors={undergroundFloors}
+                    undergroundFloors={result.undergroundFloors}
                     setUndergroundFloors={setUndergroundFloors}
                     buildingSeparationDistance={buildingSeparationDistance}
                     setBuildingSeparationDistance={setBuildingSeparationDistance}
@@ -5608,6 +5727,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                     isCommercialZone={result.isCommercialZone}
                     useLayoutSimulation={useLayoutSimulation}
                     undergroundGFA={result.undergroundGFA}
+                    basementLandUtilRatio={basementLandUtilRatio}
                   />
                 )}
 
@@ -5750,7 +5870,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           <tr>
                             <td className="py-2 px-3 font-semibold bg-gray-50/50 border-r border-gray-100">건축 규모</td>
                             <td colSpan={3} className="py-2 px-3 font-semibold text-gray-800">
-                              지하 {undergroundFloors}층 ~ 지상 {result.aboveGroundFloors}층 <span className="text-[10px] text-gray-400 font-normal">(지하 깊이: {result.totalUndergroundDepth.toFixed(1)}m / 지상 최고높이: {result.totalBuildingHeight.toFixed(1)}m)</span>
+                              지하 {result.undergroundFloors}층 ~ 지상 {result.aboveGroundFloors}층 <span className="text-[10px] text-gray-400 font-normal">(지하 깊이: {result.totalUndergroundDepth.toFixed(1)}m / 지상 최고높이: {result.totalBuildingHeight.toFixed(1)}m)</span>
                             </td>
                           </tr>
                           <tr>
@@ -6194,7 +6314,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           <div className="flex justify-between items-baseline border-t border-gray-55 pt-1.5 mt-1.5">
                             <span className="font-semibold text-gray-700">기획 적용면적:</span>
                             <strong className="text-emerald-700 font-mono">
-                              {(aptAuxArea * 3.30578).toFixed(1)} ㎡ ({aptAuxArea}평)
+                              {(aptAuxArea * 3.30578).toFixed(1)} ㎡ (약 {aptAuxArea}평)
                             </strong>
                           </div>
                         </div>
@@ -6218,13 +6338,13 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                             {residentFacilities.map((f, i) => (
                               <div key={f.id} className="flex justify-between items-center py-1 border-b border-gray-50">
                                 <span className="text-gray-600 font-medium">{i + 1}. {f.name}</span>
-                                <strong className="text-gray-800 font-mono">{f.area}평 ({Math.round(f.area * 3.3)}㎡)</strong>
+                                <strong className="text-gray-800 font-mono">{Math.round(f.area * 3.30578).toLocaleString()} ㎡ (약 {f.area}평)</strong>
                               </div>
                             ))}
                           </div>
                           <div className="flex justify-between items-center text-[11px] font-bold text-emerald-800 pt-1.5 border-t border-gray-100 mt-2">
                             <span>총합계 면적</span>
-                            <span>{aptAuxArea}평 ({(aptAuxArea * 3.30578).toFixed(1)}㎡)</span>
+                            <span>{(aptAuxArea * 3.30578).toFixed(1)} ㎡ (약 {aptAuxArea}평)</span>
                           </div>
                         </div>
                       )}
@@ -7809,16 +7929,16 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           </div>
                         )}
 
-                        {undergroundFloors > 0 && (
+                        {result.undergroundFloors > 0 && (
                           <div className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-100 space-y-2">
                             <div className="flex justify-between items-center">
-                              <span className="font-bold text-gray-800 text-[12px]">🚗 지하 1층 ~ 지하 {undergroundFloors}층 (지하 반복층)</span>
+                              <span className="font-bold text-gray-800 text-[12px]">🚗 지하 1층 ~ 지하 {result.undergroundFloors}층 (지하 반복층)</span>
                               <span className="font-mono text-xs font-bold text-[#5F7161]">평균 층고: 3.5 m</span>
                             </div>
                             <div className="text-[11px] text-slate-600 space-y-1">
-                              <p>• 층별 평균 지하 면적: <strong>{Math.round(result.undergroundGFA / undergroundFloors).toLocaleString()} ㎡</strong> (약 {parseFloat((result.undergroundGFA * 0.3025 / undergroundFloors).toFixed(1))}평) / 층당</p>
+                              <p>• 층별 평균 지하 면적: <strong>{Math.round(result.undergroundGFA / result.undergroundFloors).toLocaleString()} ㎡</strong> (약 {parseFloat((result.undergroundGFA * 0.3025 / result.undergroundFloors).toFixed(1))}평) / 층당</p>
                               <p className="text-[10px] text-gray-400 font-mono bg-white p-1.5 rounded border border-gray-200/50">
-                                [산식] 지하 층별 면적 = 지하 연면적 ({result.undergroundGFA.toLocaleString()}㎡) ÷ 지하 {undergroundFloors}개층
+                                [산식] 지하 층별 면적 = 지하 연면적 ({result.undergroundGFA.toLocaleString()}㎡) ÷ 지하 {result.undergroundFloors}개층
                               </p>
                             </div>
                           </div>

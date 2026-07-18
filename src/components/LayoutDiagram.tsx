@@ -56,6 +56,7 @@ interface LayoutDiagramProps {
   undergroundGFA?: number;
   defaultFloorHeight?: number;
   customFloorHeights?: Record<string, number>;
+  basementLandUtilRatio?: number;
 }
 
 export const TOWER_PRESETS = [
@@ -192,7 +193,8 @@ export default function LayoutDiagram({
   useLayoutSimulation = false,
   undergroundGFA = 0,
   defaultFloorHeight = 3.3,
-  customFloorHeights = {}
+  customFloorHeights = {},
+  basementLandUtilRatio = 70
 }: LayoutDiagramProps) {
   // View mode toggle: 'layout' for site layout plan, 'section' for building cross-section
   const [viewMode, setViewMode] = useState<'layout' | 'section'>('layout');
@@ -1342,41 +1344,21 @@ export default function LayoutDiagram({
 
             {/* Underground Floors */}
             <div className="space-y-1">
-              <span className="text-gray-400 font-medium block">지하 층수 {useLayoutSimulation ? '(자동 산식)' : '기획'}</span>
-              {useLayoutSimulation ? (
-                <div 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveTooltip(activeTooltip === 'under_floors' ? null : 'under_floors');
-                  }}
-                  className="bg-emerald-50/70 border border-emerald-150 px-2 py-1 rounded-lg text-emerald-950 font-bold font-mono text-center relative group cursor-help"
-                >
-                  {undergroundFloors}층
-                  <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl w-56 text-left leading-normal z-50 font-sans transition-all duration-200 ${activeTooltip === 'under_floors' ? 'block opacity-100 pointer-events-auto' : 'hidden group-hover:block pointer-events-none'}`}>
-                    <strong>지하층수 자동산식:</strong>
-                    <p>지하층수 = Math.ceil(지하연면적 ({undergroundGFA.toLocaleString()}㎡) / (대지면적 ({landArea.toLocaleString()}㎡) × 75%)) = {undergroundFloors}층</p>
-                    <p className="mt-1 text-[9.5px] text-gray-300">※ 지하연면적 = 지하 주차장 + 기전실 + 지하상가</p>
-                  </div>
+              <span className="text-gray-400 font-medium block">지하 층수 (자동 산식)</span>
+              <div 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveTooltip(activeTooltip === 'under_floors' ? null : 'under_floors');
+                }}
+                className="bg-emerald-50/70 border border-emerald-150 px-2 py-1 rounded-lg text-emerald-950 font-bold font-mono text-center relative group cursor-help w-full"
+              >
+                {undergroundFloors}층
+                <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl w-56 text-left leading-normal z-50 font-sans transition-all duration-200 ${activeTooltip === 'under_floors' ? 'block opacity-100 pointer-events-auto' : 'hidden group-hover:block pointer-events-none'}`}>
+                  <strong>지하층수 자동산식:</strong>
+                  <p>지하층수 = Math.ceil(지하연면적 ({undergroundGFA.toLocaleString()}㎡) × 100 / (대지면적 ({landArea.toLocaleString()}㎡) × 지하대지활용률 ({basementLandUtilRatio}%))) = {undergroundFloors}층</p>
+                  <p className="mt-1 text-[9.5px] text-gray-300">※ 지하연면적 = 지하 주차장 + 기전실 + 지하상가</p>
                 </div>
-              ) : (
-                <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-lg border border-gray-150 justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setUndergroundFloors(Math.max(0, undergroundFloors - 1))}
-                    className="p-0.5 text-gray-400 hover:text-indigo-600 cursor-pointer"
-                  >
-                    <Minus className="w-3.5 h-3.5" />
-                  </button>
-                  <strong className="text-gray-800 font-mono">{undergroundFloors}층</strong>
-                  <button
-                    type="button"
-                    onClick={() => setUndergroundFloors(undergroundFloors + 1)}
-                    className="p-0.5 text-gray-400 hover:text-indigo-600 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
+              </div>
             </div>
           </div>
 
