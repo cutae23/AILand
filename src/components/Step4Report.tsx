@@ -332,7 +332,7 @@ export default function Step4Report({
         if (f === -1) {
           usagesList.push("설비/기계/전기실");
           if ((sInputs.retailB1Area ?? 0) > 0) {
-            usagesList.push(`지하 상업시설 (${sInputs.retailB1Area}평)`);
+            usagesList.push(`지하 상업시설 (${Math.round(sInputs.retailB1Area * 3.30578).toLocaleString()}㎡ / ${sInputs.retailB1Area}평)`);
           }
         }
         usage = usagesList.join(" / ");
@@ -345,7 +345,7 @@ export default function Step4Report({
           area = groundFloorArea;
           const groundUsages = ["1층 로비 및 방재실"];
           if ((sInputs.retail1FArea ?? 0) > 0) {
-            groundUsages.push(`1층 판매시설 (${sInputs.retail1FArea}평)`);
+            groundUsages.push(`1층 판매시설 (${Math.round(sInputs.retail1FArea * 3.30578).toLocaleString()}㎡ / ${sInputs.retail1FArea}평)`);
           }
           if ((sInputs.auxiliaryArea ?? 0) > 0 || (sInputs.aptAuxArea ?? 0) > 0) {
             groundUsages.push("부대복리시설");
@@ -369,8 +369,8 @@ export default function Step4Report({
           } else {
             if (f < sInputs.typicalFloorStart) {
               floorUsages.push("저층부 설계");
-              if ((sInputs.retail2FArea ?? 0) > 0 && f === 2) floorUsages.push(`2층 판매시설 (${sInputs.retail2FArea}평)`);
-              else if ((sInputs.retail3FArea ?? 0) > 0 && f === 3) floorUsages.push(`3층 판매시설 (${sInputs.retail3FArea}평)`);
+              if ((sInputs.retail2FArea ?? 0) > 0 && f === 2) floorUsages.push(`2층 판매시설 (${Math.round(sInputs.retail2FArea * 3.30578).toLocaleString()}㎡ / ${sInputs.retail2FArea}평)`);
+              else if ((sInputs.retail3FArea ?? 0) > 0 && f === 3) floorUsages.push(`3층 판매시설 (${Math.round(sInputs.retail3FArea * 3.30578).toLocaleString()}㎡ / ${sInputs.retail3FArea}평)`);
               else floorUsages.push("시설 진입층 및 완충 공간");
             } else {
               floorUsages.push("고층부 기획 세대 배치");
@@ -596,9 +596,9 @@ export default function Step4Report({
               <span className="font-bold text-sm text-[#2C251F] block mt-1">{zoning}</span>
             </div>
             <div>
-              <span className="text-[10px] text-gray-450 uppercase tracking-widest font-bold block">대지 실평수 / 면적</span>
+              <span className="text-[10px] text-gray-450 uppercase tracking-widest font-bold block">대지 공식 면적 / 실평수</span>
               <span className="font-bold text-sm text-[#2C251F] block mt-1">
-                {((areaSize ?? 0) * 0.3025).toFixed(1)}평 / {(areaSize ?? 0).toLocaleString()} ㎡
+                {(areaSize ?? 0).toLocaleString()} ㎡ ({((areaSize ?? 0) * 0.3025).toFixed(1)}평)
               </span>
             </div>
           </div>
@@ -888,7 +888,7 @@ export default function Step4Report({
                 <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 mt-2 text-[10px]">
                   <span className="text-gray-450 font-medium">추가 확보 연면적 가치:</span>
                   <span className="font-bold text-[#5F7161]">
-                    +{(((areaSize ?? 0) * ((finalFAR ?? 0) - (baselineFAR ?? 0)) / 100) * 0.3025).toFixed(1)} 평
+                    +{(((areaSize ?? 0) * ((finalFAR ?? 0) - (baselineFAR ?? 0)) / 100)).toLocaleString('ko-KR', { maximumFractionDigits: 1 })} ㎡ (약 {(((areaSize ?? 0) * ((finalFAR ?? 0) - (baselineFAR ?? 0)) / 100) * 0.3025).toFixed(1)}평)
                   </span>
                 </div>
               </div>
@@ -919,8 +919,8 @@ export default function Step4Report({
                   <span className="text-lg font-extrabold text-gray-900 block font-mono">
                     {sResult.totalGFA.toLocaleString('ko-KR', { maximumFractionDigits: 1 })} ㎡
                   </span>
-                  <span className="text-[9px] text-[#8D7B68] block mt-0.5">
-                    {(sResult.totalGFA * 0.3025).toLocaleString('ko-KR', { maximumFractionDigits: 1 })} 평
+                  <span className="text-[10px] text-[#8D7B68] block mt-0.5">
+                    (약 {(sResult.totalGFA * 0.3025).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}평)
                   </span>
                 </div>
                 <div className="bg-[#FAF9F5] border border-[#EDDBC7]/60 rounded-2xl p-4 text-center">
@@ -928,8 +928,8 @@ export default function Step4Report({
                   <span className="text-lg font-extrabold text-gray-900 block font-mono">
                     {sResult.aboveGroundGFA.toLocaleString('ko-KR', { maximumFractionDigits: 1 })} ㎡
                   </span>
-                  <span className="text-[9px] text-[#8D7B68] block mt-0.5">
-                    {(sResult.aboveGroundGFA * 0.3025).toLocaleString('ko-KR', { maximumFractionDigits: 1 })} 평
+                  <span className="text-[10px] text-[#8D7B68] block mt-0.5">
+                    (약 {(sResult.aboveGroundGFA * 0.3025).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}평)
                   </span>
                 </div>
                 <div className="bg-[#FAF9F5] border border-[#EDDBC7]/60 rounded-2xl p-4 text-center">
@@ -937,8 +937,8 @@ export default function Step4Report({
                   <span className="text-lg font-extrabold text-indigo-650 block font-mono">
                     {sResult.undergroundGFA.toLocaleString('ko-KR', { maximumFractionDigits: 1 })} ㎡
                   </span>
-                  <span className="text-[9px] text-[#8D7B68] block mt-0.5">
-                    {(sResult.undergroundGFA * 0.3025).toLocaleString('ko-KR', { maximumFractionDigits: 1 })} 평
+                  <span className="text-[10px] text-[#8D7B68] block mt-0.5">
+                    (약 {(sResult.undergroundGFA * 0.3025).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}평)
                   </span>
                 </div>
                 <div className="bg-[#FAF9F5] border border-[#EDDBC7]/60 rounded-2xl p-4 text-center">
@@ -971,7 +971,7 @@ export default function Step4Report({
                         <th className="py-3 px-4 w-24">층 구분</th>
                         <th className="py-3 px-3">계획 용도 및 주요 시설</th>
                         <th className="py-3 px-3 text-right">계획 면적 (㎡)</th>
-                        <th className="py-3 px-3 text-right">평형 환산 (평)</th>
+                        <th className="py-3 px-3 text-right">실평수 환산 (평)</th>
                         <th className="py-3 px-3 text-right">층고 (m)</th>
                         <th className="py-3 px-4 text-right">지상고 / 지하고</th>
                       </tr>
@@ -1010,7 +1010,7 @@ export default function Step4Report({
                               {(item.area ?? 0).toLocaleString()} ㎡
                             </td>
                             <td className="py-2.5 px-3 text-right font-mono text-gray-500">
-                              {((item.area ?? 0) * 0.3025).toFixed(1)} 평
+                              약 {((item.area ?? 0) * 0.3025).toFixed(1)}평
                             </td>
                             <td className="py-2.5 px-3 text-right font-mono text-gray-800">
                               {(item.height ?? 0).toFixed(1)} m
@@ -1031,10 +1031,10 @@ export default function Step4Report({
                     1. <strong>지상 1층 (지상고 +0.0m ~ +{dynamicFloorsData.find((f: any) => f.floor === 1)?.height.toFixed(1)}m)</strong>: 건폐율 규제 한계({sInputs.appliedBCR}%)에 입각한 최대 대지 활용 설계안입니다. 주 진입 로비 및 주민 공동 라운지, 판매 복합 공간을 집중 배정하였습니다.
                   </p>
                   <p>
-                    2. <strong>기준층 ({sInputs.typicalFloorStart}층 ~ {sInputs.typicalFloorEnd}층, 평균 {((sResult.aboveGroundGFA - Math.min(sResult.aboveGroundGFA, Math.round(sInputs.landArea * (sInputs.appliedBCR / 100)))) / sResult.typicalFloorCount * 0.3025).toFixed(1)}평)</strong>: 대지 내 조망권 및 일조 확보 사선 한계를 고려한 수직형 타워 설계 층군입니다. 주거(공동주택/오피스텔) 및 특화 용도별 균등 면적과 표준 층고({sInputs.defaultFloorHeight}m)가 정밀하게 배분되어 공사원가 절감 및 구조 안정성을 향상시킵니다.
+                    2. <strong>기준층 ({sInputs.typicalFloorStart}층 ~ {sInputs.typicalFloorEnd}층, 평균 {((sResult.aboveGroundGFA - Math.min(sResult.aboveGroundGFA, Math.round(sInputs.landArea * (sInputs.appliedBCR / 100)))) / sResult.typicalFloorCount).toLocaleString('ko-KR', { maximumFractionDigits: 1 })} ㎡ [약 {((sResult.aboveGroundGFA - Math.min(sResult.aboveGroundGFA, Math.round(sInputs.landArea * (sInputs.appliedBCR / 100)))) / sResult.typicalFloorCount * 0.3025).toFixed(1)}평])</strong>: 대지 내 조망권 및 일조 확보 사선 한계를 고려한 수직형 타워 설계 층군입니다. 주거(공동주택/오피스텔) 및 특화 용도별 균등 면적과 표준 층고({sInputs.defaultFloorHeight}m)가 정밀하게 배분되어 공사원가 절감 및 구조 안정성을 향상시킵니다.
                   </p>
                   <p>
-                    3. <strong>지하층 (B1층 ~ B{sInputs.undergroundFloors}층)</strong>: 법정 필수 주차 대수({Math.ceil(sResult.parkingSpaces)}대) 및 설비 전기 기계 면적을 수용하는 대규모 주차 데크 층군입니다. 층당 {((sResult.undergroundGFA / sInputs.undergroundFloors) * 0.3025).toFixed(1)}평 수준의 균일한 구조 모듈과 심도 {sResult.totalUndergroundDepth.toFixed(1)}m 규격의 토목 굴착 계획이 연계되어 있습니다.
+                    3. <strong>지하층 (B1층 ~ B{sInputs.undergroundFloors}층)</strong>: 법정 필수 주차 대수({Math.ceil(sResult.parkingSpaces)}대) 및 설비 전기 기계 면적을 수용하는 대규모 주차 데크 층군입니다. 층당 {(sResult.undergroundGFA / sInputs.undergroundFloors).toLocaleString('ko-KR', { maximumFractionDigits: 1 })} ㎡ (약 {((sResult.undergroundGFA / sInputs.undergroundFloors) * 0.3025).toFixed(1)}평) 수준의 균일한 구조 모듈과 심도 {sResult.totalUndergroundDepth.toFixed(1)}m 규격의 토목 굴착 계획이 연계되어 있습니다.
                   </p>
                 </div>
               </div>
@@ -1066,7 +1066,7 @@ export default function Step4Report({
                     <thead>
                       <tr className="border-b border-gray-200 text-gray-450 font-medium">
                         <th className="py-2">시설 구분</th>
-                        <th className="py-2">단위 평형(평)</th>
+                        <th className="py-2">단위 전용면적 (㎡) / 약 평수</th>
                         <th className="py-2 text-center">세대/호실수</th>
                         <th className="py-2 text-right">공급 단가(억원)</th>
                         <th className="py-2 text-right">합산 매출액(억원)</th>
@@ -1076,7 +1076,7 @@ export default function Step4Report({
                       {sResult.allocatedUnits.map((u: any) => (
                         <tr key={u.id} className="border-b border-gray-100 text-gray-700">
                           <td className="py-2.5 font-semibold text-gray-900">{u.name}</td>
-                          <td className="py-2.5">{u.pyung}평 ({((u.sizeM2 ?? 0)).toFixed(1)}㎡)</td>
+                          <td className="py-2.5">{((u.sizeM2 ?? 0)).toFixed(1)}㎡ (약 {u.pyung}평)</td>
                           <td className="py-2.5 text-center font-bold">{u.count} 세대/실</td>
                           <td className="py-2.5 text-right">{((u.unitSalesPrice ?? 0)).toFixed(2)} 억</td>
                           <td className="py-2.5 text-right font-bold text-slate-900">{((u.totalSalesPrice ?? 0)).toFixed(2)} 억</td>
@@ -1167,10 +1167,10 @@ export default function Step4Report({
                       <li>
                         <strong className="text-gray-850">• 공사비 (Construction Cost):</strong>
                         <div className="font-mono text-gray-950 bg-white p-1.5 rounded border border-gray-150 mt-0.5 font-bold flex justify-between">
-                          <span>대입 공식: 연면적평 × 평당공사비</span>
+                          <span>대입 공식: 연면적(㎡) × ㎡당 공사비</span>
                           <span>{sResult.financials.constructionCost} 억원</span>
                         </div>
-                        <span className="text-[10px] text-gray-400 block mt-0.5">총 {Math.round(sResult.totalGFAByPyung).toLocaleString()}평 × 평당 {sInputs.constructionCostPerPyung}만원 × 시나리오 가중치</span>
+                        <span className="text-[10px] text-gray-400 block mt-0.5">총 {Math.round(sResult.totalGFA).toLocaleString()} ㎡ (약 {Math.round(sResult.totalGFAByPyung).toLocaleString()}평) × ㎡당 {Math.round(sInputs.constructionCostPerPyung / 3.30578).toLocaleString()}만원 × 시나리오 가중치</span>
                       </li>
                       <li>
                         <strong className="text-gray-850">• 제세공과 및 부대비 (Other Costs):</strong>
@@ -1190,10 +1190,10 @@ export default function Step4Report({
                       <li>
                         <strong className="text-gray-850">• 분양 매출 (Sales Revenue):</strong>
                         <div className="font-mono text-gray-950 bg-white p-1.5 rounded border border-gray-150 mt-0.5 font-bold flex justify-between">
-                          <span>대입 공식: 세대수 × 공급평수 × 공급가</span>
+                          <span>대입 공식: 세대수 × 공급면적(㎡) × 공급가</span>
                           <span>{sResult.financials.totalSalesRevenue} 억원</span>
                         </div>
-                        <span className="text-[10px] text-gray-400 block mt-0.5">공급 세대평형 × 평당 공급가액 총액 합산값</span>
+                        <span className="text-[10px] text-gray-400 block mt-0.5">공급 세대면적(㎡) × ㎡당 공급가액 총액 합산값</span>
                       </li>
                       <li>
                         <strong className="text-gray-850">• 임대 보증금 수납 (Deposits):</strong>
@@ -1544,7 +1544,7 @@ export default function Step4Report({
                   <div className="bg-white p-3 rounded-xl border border-gray-100 mt-2 text-[10px]">
                     <span className="text-gray-450 block font-medium">용적률 상승에 따른 순 연면적 이득량:</span>
                     <span className="font-bold text-xs text-[#5F7161] block mt-1">
-                      {(((areaSize ?? 0) * ((finalFAR ?? 0) - (baselineFAR ?? 0)) / 100) * 0.3025).toFixed(1)} 평 ({(((areaSize ?? 0) * ((finalFAR ?? 0) - (baselineFAR ?? 0)) / 100)).toLocaleString()} ㎡)
+                      {(((areaSize ?? 0) * ((finalFAR ?? 0) - (baselineFAR ?? 0)) / 100)).toLocaleString()} ㎡ ({(((areaSize ?? 0) * ((finalFAR ?? 0) - (baselineFAR ?? 0)) / 100) * 0.3025).toFixed(1)}평)
                     </span>
                   </div>
                 </div>
@@ -1568,7 +1568,7 @@ export default function Step4Report({
                       <tbody>
                         <tr className="border-b border-gray-100">
                           <th className="p-2 text-left text-gray-500 font-medium">대지 면적 (Land Size)</th>
-                          <td className="p-2 text-right font-mono">{(((sInputs?.landArea ?? 0) * 0.3025)).toFixed(1)}평 ({(sInputs?.landArea ?? 0).toLocaleString()}㎡)</td>
+                          <td className="p-2 text-right font-mono">{(sInputs?.landArea ?? 0).toLocaleString()}㎡ ({(((sInputs?.landArea ?? 0) * 0.3025)).toFixed(1)}평)</td>
                         </tr>
                         <tr className="border-b border-gray-100">
                           <th className="p-2 text-left text-gray-500 font-medium">목표 적용 건폐율 (Applied BCR)</th>
@@ -1587,8 +1587,8 @@ export default function Step4Report({
                           <td className="p-2 text-right font-mono font-bold text-indigo-700">{sInputs.landPurchasePrice} 억원</td>
                         </tr>
                         <tr className="border-b border-gray-100">
-                          <th className="p-2 text-left text-gray-500 font-medium">평당 건축 토목 표준 공사비</th>
-                          <td className="p-2 text-right font-mono font-bold text-rose-700">{(((sInputs?.constructionCostPerPyung ?? 0) / 10000)).toFixed(1)} 천만원 / 평</td>
+                          <th className="p-2 text-left text-gray-500 font-medium">㎡당 건축 토목 표준 공사비</th>
+                          <td className="p-2 text-right font-mono font-bold text-rose-700">{Math.round((sInputs?.constructionCostPerPyung ?? 0) / 3.30578).toLocaleString()} 만원/㎡ (약 {sInputs?.constructionCostPerPyung}만원/평)</td>
                         </tr>
                         <tr className="border-b border-gray-100">
                           <th className="p-2 text-left text-gray-500 font-medium">기타 부대 제비용 간접 요율</th>
@@ -1605,8 +1605,8 @@ export default function Step4Report({
                       <thead>
                         <tr className="border-b border-gray-150 text-gray-500 font-semibold bg-slate-50/50">
                           <th className="p-2 text-left">주거 타입</th>
-                          <th className="p-2 text-center">전용면적</th>
-                          <th className="p-2 text-right">평당 분양가</th>
+                          <th className="p-2 text-center">전용면적(㎡) / 평</th>
+                          <th className="p-2 text-right">㎡당 분양가 (평당)</th>
                           <th className="p-2 text-right">배분율</th>
                         </tr>
                       </thead>
@@ -1614,8 +1614,8 @@ export default function Step4Report({
                         {sInputs.aptConfigs && sInputs.aptConfigs.map((apt: any, idx: number) => (
                           <tr key={idx} className="border-b border-gray-100">
                             <td className="p-2 font-bold text-slate-800">{apt.name}</td>
-                            <td className="p-2 text-center font-mono">{apt.pyung}평</td>
-                            <td className="p-2 text-right font-mono">{(((apt.salesPricePerPyung ?? 0) / 10000)).toFixed(1)} 천만원</td>
+                            <td className="p-2 text-center font-mono">{apt.sizeM2}㎡ ({apt.pyung}평)</td>
+                            <td className="p-2 text-right font-mono">{Math.round((apt.salesPricePerPyung ?? 0) / 3.30578 / 10000).toLocaleString()} 천만원/㎡ ({(((apt.salesPricePerPyung ?? 0) / 10000)).toFixed(1)} 천만/평)</td>
                             <td className="p-2 text-right font-mono font-semibold text-indigo-650">{apt.percentage}%</td>
                           </tr>
                         ))}
@@ -1633,8 +1633,8 @@ export default function Step4Report({
                       <tr className="border-b border-gray-150 text-gray-500 font-semibold bg-slate-50/50">
                         <th className="p-2 text-left">시설 유형</th>
                         <th className="p-2">규모 / 계약 사항</th>
-                        <th className="p-2 text-right">기본 분양가 (평당/실당)</th>
-                        <th className="p-2 text-right">임대 보증금 / 월세 조건</th>
+                        <th className="p-2 text-right">기본 분양가 (㎡당 [평당])</th>
+                        <th className="p-2 text-right">임대 보증금 / 월세 조건 (㎡당 [평당])</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1642,8 +1642,8 @@ export default function Step4Report({
                       {sInputs.officetelConfigs && sInputs.officetelConfigs.map((of: any, idx: number) => (
                         <tr key={idx} className="border-b border-gray-100">
                           <td className="p-2 font-bold text-slate-800">오피스텔: {of.name}</td>
-                          <td className="p-2 font-mono">전용 {of.pyung}평 / 배분율 {of.percentage}%</td>
-                          <td className="p-2 text-right font-mono">{(((of.salesPricePerPyung ?? 0) / 10000)).toFixed(1)} 천만원</td>
+                          <td className="p-2 font-mono">{of.sizeM2}㎡ (약 {of.pyung}평) / 배분율 {of.percentage}%</td>
+                          <td className="p-2 text-right font-mono">{Math.round((of.salesPricePerPyung ?? 0) / 3.30578 / 10000).toLocaleString()} 천만/㎡ ({(((of.salesPricePerPyung ?? 0) / 10000)).toFixed(1)} 천만/평)</td>
                           <td className="p-2 text-right text-gray-400 font-mono">-</td>
                         </tr>
                       ))}
@@ -1652,32 +1652,32 @@ export default function Step4Report({
                       {sInputs.retailB1Area > 0 && (
                         <tr className="border-b border-gray-100">
                           <td className="p-2 font-bold text-slate-800">상업시설 (지하1층)</td>
-                          <td className="p-2 font-mono">임대 전용률: {sInputs.retailNetRatio}% / 면적: {sInputs.retailB1Area}평</td>
-                          <td className="p-2 text-right font-mono">{(((sInputs?.retailB1Price ?? 0) / 10000)).toFixed(1)} 천만원</td>
+                          <td className="p-2 font-mono">임대 전용률: {sInputs.retailNetRatio}% / 면적: {Math.round(sInputs.retailB1Area * 3.30578).toLocaleString()}㎡ (약 {sInputs.retailB1Area}평)</td>
+                          <td className="p-2 text-right font-mono">{Math.round((sInputs?.retailB1Price ?? 0) / 3.30578 / 10000).toLocaleString()} 천만/㎡ ({(((sInputs?.retailB1Price ?? 0) / 10000)).toFixed(1)} 천만/평)</td>
                           <td className="p-2 text-right font-mono text-[#5F7161]">보증금 {sInputs.retailB1Deposit}억 / 월세 {sInputs.retailB1Rent}만</td>
                         </tr>
                       )}
                       {sInputs.retail1FArea > 0 && (
                         <tr className="border-b border-gray-100">
                           <td className="p-2 font-bold text-slate-800">상업시설 (지상1층)</td>
-                          <td className="p-2 font-mono">임대 전용률: {sInputs.retailNetRatio}% / 면적: {sInputs.retail1FArea}평</td>
-                          <td className="p-2 text-right font-mono">{(((sInputs?.retail1FPrice ?? 0) / 10000)).toFixed(1)} 천만원</td>
+                          <td className="p-2 font-mono">임대 전용률: {sInputs.retailNetRatio}% / 면적: {Math.round(sInputs.retail1FArea * 3.30578).toLocaleString()}㎡ (약 {sInputs.retail1FArea}평)</td>
+                          <td className="p-2 text-right font-mono">{Math.round((sInputs?.retail1FPrice ?? 0) / 3.30578 / 10000).toLocaleString()} 천만/㎡ ({(((sInputs?.retail1FPrice ?? 0) / 10000)).toFixed(1)} 천만/평)</td>
                           <td className="p-2 text-right font-mono text-[#5F7161]">보증금 {sInputs.retail1FDeposit}억 / 월세 {sInputs.retail1FRent}만</td>
                         </tr>
                       )}
                       {sInputs.retail2FArea > 0 && (
                         <tr className="border-b border-gray-100">
                           <td className="p-2 font-bold text-slate-800">상업시설 (지상2층)</td>
-                          <td className="p-2 font-mono">임대 전용률: {sInputs.retailNetRatio}% / 면적: {sInputs.retail2FArea}평</td>
-                          <td className="p-2 text-right font-mono">{(((sInputs?.retail2FPrice ?? 0) / 10000)).toFixed(1)} 천만원</td>
+                          <td className="p-2 font-mono">임대 전용률: {sInputs.retailNetRatio}% / 면적: {Math.round(sInputs.retail2FArea * 3.30578).toLocaleString()}㎡ (약 {sInputs.retail2FArea}평)</td>
+                          <td className="p-2 text-right font-mono">{Math.round((sInputs?.retail2FPrice ?? 0) / 3.30578 / 10000).toLocaleString()} 천만/㎡ ({(((sInputs?.retail2FPrice ?? 0) / 10000)).toFixed(1)} 천만/평)</td>
                           <td className="p-2 text-right font-mono text-[#5F7161]">보증금 {sInputs.retail2FDeposit}억 / 월세 {sInputs.retail2FRent}만</td>
                         </tr>
                       )}
                       {sInputs.retail3FArea > 0 && (
                         <tr className="border-b border-gray-100">
                           <td className="p-2 font-bold text-slate-800">상업시설 (지상3층)</td>
-                          <td className="p-2 font-mono">임대 전용률: {sInputs.retailNetRatio}% / 면적: {sInputs.retail3FArea}평</td>
-                          <td className="p-2 text-right font-mono">{(((sInputs?.retail3FPrice ?? 0) / 10000)).toFixed(1)} 천만원</td>
+                          <td className="p-2 font-mono">임대 전용률: {sInputs.retailNetRatio}% / 면적: {Math.round(sInputs.retail3FArea * 3.30578).toLocaleString()}㎡ (약 {sInputs.retail3FArea}평)</td>
+                          <td className="p-2 text-right font-mono">{Math.round((sInputs?.retail3FPrice ?? 0) / 3.30578 / 10000).toLocaleString()} 천만/㎡ ({(((sInputs?.retail3FPrice ?? 0) / 10000)).toFixed(1)} 천만/평)</td>
                           <td className="p-2 text-right font-mono text-[#5F7161]">보증금 {sInputs.retail3FDeposit}억 / 월세 {sInputs.retail3FRent}만</td>
                         </tr>
                       )}
@@ -1686,8 +1686,8 @@ export default function Step4Report({
                       {sInputs.hotelRoomCount > 0 && (
                         <tr className="border-b border-gray-100">
                           <td className="p-2 font-bold text-slate-800">레지던스/호텔 (복합)</td>
-                          <td className="p-2 font-mono">규모: {sInputs.hotelRoomCount}개 객실 / 실 면적: {sInputs.hotelRoomSizePyung}평</td>
-                          <td className="p-2 text-right font-mono">{(((sInputs?.hotelPricePerPyung ?? 0) / 10000)).toFixed(1)} 천만원</td>
+                          <td className="p-2 font-mono">규모: {sInputs.hotelRoomCount}개 객실 / 실 면적: {(sInputs.hotelRoomSizePyung * 3.30578).toFixed(1)}㎡ (약 {sInputs.hotelRoomSizePyung}평)</td>
+                          <td className="p-2 text-right font-mono">{Math.round((sInputs?.hotelPricePerPyung ?? 0) / 3.30578 / 10000).toLocaleString()} 천만/㎡ ({(((sInputs?.hotelPricePerPyung ?? 0) / 10000)).toFixed(1)} 천만/평)</td>
                           <td className="p-2 text-right font-mono text-[#5F7161]">실 보증금 {sInputs.hotelDepositPerRoom}억 / 월세 {sInputs.hotelRentPerRoom}만</td>
                         </tr>
                       )}
@@ -1696,9 +1696,9 @@ export default function Step4Report({
                       {sInputs.officeArea > 0 && (
                         <tr className="border-b border-gray-100">
                           <td className="p-2 font-bold text-slate-800">업무 오피스 시설</td>
-                          <td className="p-2 font-mono">임대 면적: {sInputs.officeArea}평 / 전용률: {sInputs.officeNetRatio}%</td>
-                          <td className="p-2 text-right font-mono">{(((sInputs?.officePricePerPyung ?? 0) / 10000)).toFixed(1)} 천만원</td>
-                          <td className="p-2 text-right font-mono text-[#5F7161]">평 보증금 {sInputs.officeDepositPerPyung}만 / 평 임대료 {sInputs.officeRentPerPyung}만</td>
+                          <td className="p-2 font-mono">임대 면적: {Math.round(sInputs.officeArea * 3.30578).toLocaleString()}㎡ (약 {sInputs.officeArea}평) / 전용률: {sInputs.officeNetRatio}%</td>
+                          <td className="p-2 text-right font-mono">{Math.round((sInputs?.officePricePerPyung ?? 0) / 3.30578 / 10000).toLocaleString()} 천만/㎡ ({(((sInputs?.officePricePerPyung ?? 0) / 10000)).toFixed(1)} 천만/평)</td>
+                          <td className="p-2 text-right font-mono text-[#5F7161]">㎡ 보증금 {Math.round(sInputs.officeDepositPerPyung / 3.30578).toLocaleString()}만 (평 {sInputs.officeDepositPerPyung}만) / ㎡ 임대료 {Math.round(sInputs.officeRentPerPyung / 3.30578).toLocaleString()}만 (평 {sInputs.officeRentPerPyung}만)</td>
                         </tr>
                       )}
 

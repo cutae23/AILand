@@ -1181,6 +1181,16 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           } else if (field === 'pyung') {
             updated.sizeM2 = parseFloat((Number(value) / 0.3025).toFixed(1));
           }
+          
+          // Auto-generate name based on sizeM2
+          let sizeCategory = '중형';
+          if (updated.sizeM2 < 60) {
+            sizeCategory = '소형';
+          } else if (updated.sizeM2 > 85) {
+            sizeCategory = '대형';
+          }
+          updated.name = `공동주택 ${sizeCategory} (${updated.sizeM2}㎡ / 약 ${updated.pyung}평)`;
+          
           return updated;
         }
         return item;
@@ -1215,6 +1225,16 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
           } else if (field === 'pyung') {
             updated.sizeM2 = parseFloat((Number(value) / 0.3025).toFixed(1));
           }
+          
+          // Auto-generate name based on sizeM2
+          let sizeCategory = '투룸';
+          if (updated.sizeM2 < 40) {
+            sizeCategory = '원룸';
+          } else if (updated.sizeM2 > 60) {
+            sizeCategory = '쓰리룸';
+          }
+          updated.name = `오피스텔 ${sizeCategory} (${updated.sizeM2}㎡ / 약 ${updated.pyung}평)`;
+          
           return updated;
         }
         return item;
@@ -2809,10 +2829,10 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                       <table className="w-full text-left border-collapse text-xs">
                         <thead>
                           <tr className="border-b border-gray-200 bg-slate-50/50 text-gray-500 font-bold">
-                            <th className="p-2.5 w-1/3">평형 타입명</th>
+                            <th className="p-2.5 w-1/3">타입 명칭</th>
                             <th className="p-2.5 w-[14%] text-right">전용(㎡)</th>
-                            <th className="p-2.5 w-[14%] text-right">실평수(평)</th>
-                            {activeStep !== 3 && <th className="p-2.5 w-1/5 text-right">평당분양가(만)</th>}
+                            <th className="p-2.5 w-[14%] text-right">평형(평)</th>
+                            {activeStep !== 3 && <th className="p-2.5 w-1/5 text-right">㎡당 분양가(만)</th>}
                             <th className="p-2.5 w-1/5 text-right">세대수</th>
                             <th className="p-2.5 w-[8%] text-center"></th>
                           </tr>
@@ -2831,9 +2851,10 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                                   <input
                                     type="text"
                                     value={cfg.name}
-                                    onChange={(e) => handleUpdateAptField(cfg.id, 'name', e.target.value)}
-                                    placeholder="예: 공동주택 84A형"
-                                    className="w-full font-bold text-[#2C251F] bg-slate-50/20 hover:bg-slate-50 focus:bg-white border border-gray-200 focus:border-[#5F7161] rounded-lg px-2 py-1 focus:outline-none text-[11px]"
+                                    readOnly
+                                    disabled
+                                    placeholder="자동 계산됨"
+                                    className="w-full font-bold text-[#2C251F] bg-gray-50/80 border border-gray-200 rounded-lg px-2 py-1 text-[11px] cursor-not-allowed opacity-85"
                                   />
                                 </td>
                                 <td className="p-2 text-right">
@@ -2856,10 +2877,11 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                                   <td className="p-2 text-right">
                                     <input
                                       type="number"
-                                      value={cfg.salesPricePerPyung || ''}
-                                      onChange={(e) => handleUpdateAptField(cfg.id, 'salesPricePerPyung', parseInt(e.target.value) || 0)}
+                                      value={Math.round((cfg.salesPricePerPyung || 0) / 3.30578) || ''}
+                                      onChange={(e) => handleUpdateAptField(cfg.id, 'salesPricePerPyung', Math.round((parseFloat(e.target.value) || 0) * 3.30578))}
                                       className="w-16 text-right font-mono font-bold text-[#5F7161] bg-slate-50/20 hover:bg-slate-50 focus:bg-white border border-gray-200 focus:border-[#5F7161] rounded-lg px-1.5 py-1 focus:outline-none text-[11px]"
                                     />
+                                    <div className="text-[9px] text-gray-400 mt-0.5">평당 {(cfg.salesPricePerPyung || 0).toLocaleString()}만</div>
                                   </td>
                                 )}
                                 <td className="p-2 text-right">
@@ -2926,10 +2948,10 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                       <table className="w-full text-left border-collapse text-xs">
                         <thead>
                           <tr className="border-b border-gray-200 bg-slate-50/50 text-gray-500 font-bold">
-                            <th className="p-2.5 w-1/3">타입명</th>
+                            <th className="p-2.5 w-1/3">타입 명칭</th>
                             <th className="p-2.5 w-[14%] text-right">전용(㎡)</th>
-                            <th className="p-2.5 w-[14%] text-right">실평수(평)</th>
-                            {activeStep !== 3 && <th className="p-2.5 w-1/5 text-right">평당분양가(만)</th>}
+                            <th className="p-2.5 w-[14%] text-right">평형(평)</th>
+                            {activeStep !== 3 && <th className="p-2.5 w-1/5 text-right">㎡당 분양가(만)</th>}
                             <th className="p-2.5 w-1/5 text-right">호실수</th>
                             <th className="p-2.5 w-[8%] text-center"></th>
                           </tr>
@@ -2948,9 +2970,10 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                                   <input
                                     type="text"
                                     value={cfg.name}
-                                    onChange={(e) => handleUpdateOfficetelField(cfg.id, 'name', e.target.value)}
-                                    placeholder="예: 오피스텔 30형 원룸"
-                                    className="w-full font-bold text-[#2C251F] bg-slate-50/20 hover:bg-slate-50 focus:bg-white border border-gray-200 focus:border-[#5F7161] rounded-lg px-2 py-1 focus:outline-none text-[11px]"
+                                    readOnly
+                                    disabled
+                                    placeholder="자동 계산됨"
+                                    className="w-full font-bold text-[#2C251F] bg-gray-50/80 border border-gray-200 rounded-lg px-2 py-1 text-[11px] cursor-not-allowed opacity-85"
                                   />
                                 </td>
                                 <td className="p-2 text-right">
@@ -2973,10 +2996,11 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                                   <td className="p-2 text-right">
                                     <input
                                       type="number"
-                                      value={cfg.salesPricePerPyung || ''}
-                                      onChange={(e) => handleUpdateOfficetelField(cfg.id, 'salesPricePerPyung', parseInt(e.target.value) || 0)}
+                                      value={Math.round((cfg.salesPricePerPyung || 0) / 3.30578) || ''}
+                                      onChange={(e) => handleUpdateOfficetelField(cfg.id, 'salesPricePerPyung', Math.round((parseFloat(e.target.value) || 0) * 3.30578))}
                                       className="w-16 text-right font-mono font-bold text-indigo-700 bg-slate-50/20 hover:bg-slate-50 focus:bg-white border border-gray-200 focus:border-[#5F7161] rounded-lg px-1.5 py-1 focus:outline-none text-[11px]"
                                     />
+                                    <div className="text-[9px] text-gray-400 mt-0.5">평당 {(cfg.salesPricePerPyung || 0).toLocaleString()}만</div>
                                   </td>
                                 )}
                                 <td className="p-2 text-right">
@@ -4999,8 +5023,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                     <div className="p-4.5 bg-slate-50 border border-slate-200/60 rounded-2xl space-y-4">
                       <div className="space-y-1.5">
                         <div className="flex justify-between font-semibold text-gray-800">
-                          <span>평당 토지 매입비</span>
-                          <span className="font-bold text-[#5F7161]">{landPricePerPyung.toLocaleString()} 만원/평</span>
+                          <span>㎡당 토지 매입비</span>
+                          <span className="font-bold text-[#5F7161]">{Math.round(landPricePerPyung / 3.30578).toLocaleString()} 만원/㎡</span>
                         </div>
                         <input
                           type="range"
@@ -5012,8 +5036,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                           className="w-full accent-[#5F7161]"
                         />
                         <div className="flex justify-between text-[11px] text-gray-400 font-medium">
-                          <span>㎡당 토지비 환산</span>
-                          <span>약 {Math.round(landPricePerPyung / 3.3058).toLocaleString()} 만원/㎡</span>
+                          <span>평당 토지비 환산</span>
+                          <span>약 {landPricePerPyung.toLocaleString()} 만원/평</span>
                         </div>
                       </div>
 
@@ -5057,8 +5081,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
                     <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
                       <div className="flex justify-between font-medium">
-                        <span>평당 공사비 (지상/지하 통합)</span>
-                        <span className="font-bold text-gray-950">{constructionCostPerPyung.toLocaleString()} 만원</span>
+                        <span>㎡당 공사비 (지상/지하 통합)</span>
+                        <span className="font-bold text-gray-950">{Math.round(constructionCostPerPyung / 3.30578).toLocaleString()} 만원/㎡</span>
                       </div>
                       <input
                         type="range"
@@ -5069,6 +5093,10 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                         onChange={(e) => setConstructionCostPerPyung(Number(e.target.value))}
                         className="w-full accent-[#5F7161]"
                       />
+                      <div className="flex justify-between text-[11px] text-gray-400 font-medium">
+                        <span>평당 공사비 환산</span>
+                        <span>약 {constructionCostPerPyung.toLocaleString()} 만원/평</span>
+                      </div>
                     </div>
 
                     <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
@@ -6918,9 +6946,9 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                       <div className="bg-indigo-50/25 p-4 rounded-xl border border-indigo-100/50">
                         <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wide block">총건축 연면적</span>
                         <span className="text-lg font-extrabold text-indigo-950 mt-1 block">
-                          {Math.round(result.totalGFAByPyung).toLocaleString()} 평
+                          {Math.round(result.aboveGroundGFA + result.undergroundGFA).toLocaleString()} ㎡
                         </span>
-                        <p className="text-[10px] text-indigo-700 mt-0.5">지상 {Math.round(result.aboveGroundGFAByPyung).toLocaleString()}평 설계</p>
+                        <p className="text-[10px] text-indigo-700 mt-0.5">지상 {Math.round(result.aboveGroundGFA).toLocaleString()}㎡ (약 {Math.round(result.totalGFAByPyung).toLocaleString()}평) 설계</p>
                       </div>
                       <div className="bg-emerald-50/30 p-4 rounded-xl border border-emerald-100/40 col-span-2 sm:col-span-1">
                         <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide block">예상 영업이익</span>
@@ -7329,15 +7357,15 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                               <div className="mt-3">
                                 <span className="font-semibold text-gray-900 block">② 설계 및 건축 토목 공사비 (Construction Cost)</span>
                                 <div className="font-mono bg-[#FAF9F5]/40 px-2.5 py-1.5 rounded border border-gray-150 mt-1 flex flex-wrap items-center justify-between text-[10.5px]">
-                                  <span>공식: 총건축 연면적(평) × [평당 공사비(만원) × 시나리오 가중치] × 10,000 / 1억</span>
+                                  <span>공식: 총건축 연면적(㎡) × [㎡당 공사비(만원) × 시나리오 가중치] × 10,000 / 1억</span>
                                   <span className="text-gray-950 font-bold">
-                                    {Math.round(result.totalGFAByPyung).toLocaleString()}평 × ({constructionCostPerPyung}만원 × {
+                                    {Math.round(result.aboveGroundGFA + result.undergroundGFA).toLocaleString()}㎡ × ({Math.round(constructionCostPerPyung / 3.30578).toLocaleString()}만원 × {
                                       selectedScenarioId === 'conservative' ? '1.15' : selectedScenarioId === 'optimistic' ? '0.95' : selectedScenarioId === 'inflation' ? '1.35' : '1.00'
                                     }) = {result.financials.constructionCost.toLocaleString()} 억원
                                   </span>
                                 </div>
                                 <span className="text-[10px] text-gray-400 mt-0.5 block leading-relaxed">
-                                  * 연면적(지상 {Math.round(result.aboveGroundGFAByPyung).toLocaleString()}평 + 지하 {Math.round(result.undergroundGFA / 3.30578).toLocaleString()}평 = {Math.round(result.totalGFAByPyung).toLocaleString()}평)에 평당 단가 {constructionCostPerPyung}만원을 곱해 원화로 계산 후 억원 단위로 환산합니다. 시나리오별 가중치(보수안 1.15배, 낙관안 0.95배, 공사폭등안 1.35배)가 동적 적용됩니다.
+                                  * 연면적(지상 {Math.round(result.aboveGroundGFA).toLocaleString()}㎡ + 지하 {Math.round(result.undergroundGFA).toLocaleString()}㎡ = {Math.round(result.aboveGroundGFA + result.undergroundGFA).toLocaleString()}㎡ / 약 {Math.round(result.totalGFAByPyung).toLocaleString()}평)에 ㎡당 단가 {Math.round(constructionCostPerPyung / 3.30578).toLocaleString()}만원(평당 {constructionCostPerPyung}만원)을 곱해 계산 후 억원 단위로 환산합니다. 시나리오별 가중치(보수안 1.15배, 낙관안 0.95배, 공사폭등안 1.35배)가 동적 적용됩니다.
                                 </span>
                               </div>
 
@@ -7381,20 +7409,26 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                                       <tr className="bg-[#FAF9F5] border-b border-gray-150 text-gray-600 font-bold">
                                         <th className="p-2 border-r border-gray-100">상품명</th>
                                         <th className="p-2 text-right border-r border-gray-100">공급 수량</th>
-                                        <th className="p-2 text-right border-r border-gray-100">전용평형</th>
-                                        <th className="p-2 text-right border-r border-gray-100">평당 단가(가중치 적용)</th>
+                                        <th className="p-2 text-right border-r border-gray-100">전용면적(㎡)</th>
+                                        <th className="p-2 text-right border-r border-gray-100">㎡당 단가(가중치 적용)</th>
                                         <th className="p-2 text-right text-[#5F7161]">산출 매출액</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
                                       {result.allocatedUnits.map((u: any) => {
+                                        const perM2Price = Math.round((u.totalSalesPrice * 10000) / (u.count * (u.sizeM2 || 1)));
+                                        const perPyungPrice = Math.round((u.totalSalesPrice * 10000) / (u.count * (u.pyung || 1)));
                                         return (
                                           <tr key={u.id} className="text-gray-700">
                                             <td className="p-2 font-medium text-gray-900 border-r border-gray-100">{u.name}</td>
                                             <td className="p-2 text-right font-mono border-r border-gray-100">{u.count}세대/실</td>
-                                            <td className="p-2 text-right font-mono border-r border-gray-100">{u.pyung}평</td>
-                                            <td className="p-2 text-right font-mono text-gray-500 border-r border-gray-100">
-                                              {Math.round((u.totalSalesPrice * 10000) / (u.count * u.pyung || 1)).toLocaleString()}만원
+                                            <td className="p-2 text-right font-mono border-r border-gray-100">
+                                              {Math.round(u.sizeM2).toLocaleString()}㎡
+                                              <span className="text-[9px] text-gray-400 block font-normal">(약 {u.pyung}평)</span>
+                                            </td>
+                                            <td className="p-2 text-right font-mono text-gray-900 border-r border-gray-100">
+                                              {perM2Price.toLocaleString()}만원/㎡
+                                              <span className="text-[9px] text-gray-400 block font-normal">(평당 {perPyungPrice.toLocaleString()}만)</span>
                                             </td>
                                             <td className="p-2 text-right font-mono font-bold text-slate-900">
                                               {u.totalSalesPrice.toLocaleString()} 억원
@@ -7719,22 +7753,22 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                         <div className="p-3 bg-[#FCFAF7] rounded-xl border border-gray-100">
                           <span className="font-bold text-[#2C251F] block mb-1">공동주택 부대시설</span>
-                          <p className="text-gray-600">규모: <strong className="text-[#5F7161]">{aptAuxArea}평</strong> (약 {Math.round(aptAuxArea * 3.3)}㎡)</p>
+                          <p className="text-gray-600">규모: <strong className="text-[#5F7161]">{Math.round(aptAuxArea * 3.30578)} ㎡</strong> (약 {aptAuxArea}평)</p>
                           <p className="text-[10px] text-gray-400 mt-1">주민공동시설, 관리사무소, 경로당, 어린이놀이터</p>
                         </div>
                         <div className="p-3 bg-[#FCFAF7] rounded-xl border border-gray-100">
                           <span className="font-bold text-[#2C251F] block mb-1">오피스텔 부대시설</span>
-                          <p className="text-gray-600">규모: <strong className="text-[#5F7161]">{officetelAuxArea}평</strong> (약 {Math.round(officetelAuxArea * 3.3)}㎡)</p>
+                          <p className="text-gray-600">규모: <strong className="text-[#5F7161]">{Math.round(officetelAuxArea * 3.30578)} ㎡</strong> (약 {officetelAuxArea}평)</p>
                           <p className="text-[10px] text-gray-400 mt-1">공유 택배함, 코인 세탁실, 입주민 공유 미팅룸</p>
                         </div>
                         <div className="p-3 bg-[#FCFAF7] rounded-xl border border-gray-100">
                           <span className="font-bold text-[#2C251F] block mb-1">호텔 부대복리시설</span>
-                          <p className="text-gray-600">규모: <strong className="text-[#5F7161]">{hotelAuxArea}평</strong> (약 {Math.round(hotelAuxArea * 3.3)}㎡)</p>
+                          <p className="text-gray-600">규모: <strong className="text-[#5F7161]">{Math.round(hotelAuxArea * 3.30578)} ㎡</strong> (약 {hotelAuxArea}평)</p>
                           <p className="text-[10px] text-gray-400 mt-1">로비 라운지, 컨시어지 데스크, 조식 레스토랑, 스파</p>
                         </div>
                         <div className="p-3 bg-[#FCFAF7] rounded-xl border border-gray-100">
                           <span className="font-bold text-[#2C251F] block mb-1">업무시설 공용시설</span>
-                          <p className="text-gray-600">규모: <strong className="text-[#5F7161]">{officeAuxArea}평</strong> (약 {Math.round(officeAuxArea * 3.3)}㎡)</p>
+                          <p className="text-gray-600">규모: <strong className="text-[#5F7161]">{Math.round(officeAuxArea * 3.30578)} ㎡</strong> (약 {officeAuxArea}평)</p>
                           <p className="text-[10px] text-gray-400 mt-1">복합기 룸, 스마트 OA 센터, 공용 회의실, 휴게실</p>
                         </div>
                       </div>
