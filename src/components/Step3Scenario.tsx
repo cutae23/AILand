@@ -885,7 +885,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
   const [activeSummaryTab, setActiveSummaryTab] = useState<'general' | 'area' | 'parking' | 'amenity' | 'layout'>('general');
 
   // Input tab control (removed building-spec as it is now integrated into the results summary panel directly)
-  const [activeInputTab, setActiveInputTab] = useState<'residential' | 'hotel' | 'retail' | 'office' | 'custom-usage' | 'scenario-strategy'>('residential');
+  const [activeInputTab, setActiveInputTab] = useState<'residential' | 'hotel' | 'retail' | 'office' | 'custom-usage'>('residential');
 
   // Sidebar sub-tab for the unified building configurations next to the reports
   const [sidebarTab, setSidebarTab] = useState<'config' | 'facility'>('config');
@@ -2775,7 +2775,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
             <div className={activeStep === 4 ? 'hidden' : 'space-y-6'}>
               {/* Input tabs */}
-            <div className="grid grid-cols-3 sm:grid-cols-6 border-b border-gray-100 mb-5 bg-gray-50/50 p-1 rounded-xl gap-1">
+            <div className="grid grid-cols-2 sm:grid-cols-5 border-b border-gray-100 mb-5 bg-gray-50/50 p-1 rounded-xl gap-1">
               <button
                 type="button"
                 onClick={() => setActiveInputTab('residential')}
@@ -2810,13 +2810,6 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                 className={`text-center py-2 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${activeInputTab === 'custom-usage' ? 'bg-white text-[#2C251F] shadow-sm border border-gray-100' : 'text-gray-500 hover:text-[#5F7161]'}`}
               >
                 추가용도 🧩
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveInputTab('scenario-strategy')}
-                className={`text-center py-2 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${activeInputTab === 'scenario-strategy' ? 'bg-white text-[#2C251F] shadow-sm border border-gray-100' : 'text-gray-500 hover:text-[#5F7161]'}`}
-              >
-                추진 시나리오
               </button>
             </div>
 
@@ -4258,8 +4251,8 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
               </div>
             )}
 
-            {activeInputTab === 'building-spec' && false && (
-              <div className="space-y-5 animate-fadeIn">
+            {false && (
+              <div className="hidden">
                 <div className="border-b border-gray-100 pb-3">
                   <h3 className="text-xs font-bold text-[#8D7B68] uppercase tracking-widest flex items-center gap-1.5">
                     <Compass className="w-4 h-4 text-[#5F7161]" />
@@ -5058,53 +5051,6 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
               </div>
             )}
 
-            {activeInputTab === 'scenario-strategy' && (
-              <div className="space-y-5 animate-fadeIn">
-                <div className="border-b border-gray-100 pb-3">
-                  <h3 className="text-xs font-bold text-[#8D7B68] uppercase tracking-widest flex items-center gap-1.5">
-                    <Activity className="w-4 h-4 text-emerald-600" />
-                    사업 추진 형태 및 출구(Exit) 전략 기획
-                  </h3>
-                  <p className="text-[10px] text-gray-400 mt-1">
-                    프로젝트의 출구 전략을 정의합니다. 설정된 시나리오는 Step 4 사업성 분석의 현금 흐름 및 할인 현가 산정에 반영됩니다.
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="block text-[11px] font-semibold text-gray-500">프로젝트 출구 시나리오 선택</label>
-                    <div className="grid grid-cols-1 gap-2.5">
-                      <button
-                        type="button"
-                        onClick={() => setExitStrategy('sales')}
-                        className={`p-3 text-left rounded-xl border transition-all cursor-pointer flex flex-col gap-1 ${exitStrategy === 'sales' ? 'bg-[#5F7161] text-white border-[#5F7161] shadow' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
-                      >
-                        <span className="font-bold text-xs">💸 일괄 분양형 시나리오 (Sales & Exit)</span>
-                        <span className="text-[10px] opacity-90">건축 즉시 전 호실 분양 매각을 추진하여 조기 수익 실현 및 PF 단기 상환</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setExitStrategy('lease-exit')}
-                        className={`p-3 text-left rounded-xl border transition-all cursor-pointer flex flex-col gap-1 ${exitStrategy === 'lease-exit' ? 'bg-[#5F7161] text-white border-[#5F7161] shadow' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
-                      >
-                        <span className="font-bold text-xs">🏢 단기 임대 후 매각 시나리오 (Lease then Exit)</span>
-                        <span className="text-[10px] opacity-90">준공 후 5년 간 임대 운영(에셋 밸류업)을 거쳐 자산 가치를 극대화한 후 통 매각</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setExitStrategy('lease-permanent')}
-                        className={`p-3 text-left rounded-xl border transition-all cursor-pointer flex flex-col gap-1 ${exitStrategy === 'lease-permanent' ? 'bg-[#5F7161] text-white border-[#5F7161] shadow' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
-                      >
-                        <span className="font-bold text-xs">🔄 장기 보유형 임대 시나리오 (Permanent Yield)</span>
-                        <span className="text-[10px] opacity-90">15년 장기 임대 운영을 통해 안정적 배당 및 월세 수입 확보, 영구 에셋 홀딩</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
             <div className="h-px bg-gray-100 my-4"></div>
 
