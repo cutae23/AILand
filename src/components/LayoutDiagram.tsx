@@ -57,6 +57,7 @@ interface LayoutDiagramProps {
   defaultFloorHeight?: number;
   customFloorHeights?: Record<string, number>;
   basementLandUtilRatio?: number;
+  floorCalculationMode?: 'auto' | 'manual';
 }
 
 export const TOWER_PRESETS = [
@@ -194,7 +195,8 @@ export default function LayoutDiagram({
   undergroundGFA = 0,
   defaultFloorHeight = 3.3,
   customFloorHeights = {},
-  basementLandUtilRatio = 70
+  basementLandUtilRatio = 70,
+  floorCalculationMode = 'manual'
 }: LayoutDiagramProps) {
   // View mode toggle: 'layout' for site layout plan, 'section' for building cross-section
   const [viewMode, setViewMode] = useState<'layout' | 'section'>('layout');
@@ -1259,108 +1261,7 @@ export default function LayoutDiagram({
             </div>
           </div>
 
-          {/* Interactive controls inside Layout tab */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100 text-[11px]">
-            <div className="space-y-1">
-              <span className="text-gray-400 font-medium block">동수 기획</span>
-              <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-lg border border-gray-150 justify-between">
-                <button
-                  type="button"
-                  onClick={() => setTowerCount(Math.max(1, towerCount - 1))}
-                  className="p-0.5 text-gray-400 hover:text-indigo-600 cursor-pointer"
-                >
-                  <Minus className="w-3.5 h-3.5" />
-                </button>
-                <strong className="text-gray-800 font-mono">{towerCount}동</strong>
-                <button
-                  type="button"
-                  onClick={() => setTowerCount(towerCount + 1)}
-                  className="p-0.5 text-gray-400 hover:text-indigo-600 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-gray-400 font-medium block">호조합 (라인 수)</span>
-              <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-lg border border-gray-150 justify-between">
-                <button
-                  type="button"
-                  onClick={() => setUnitsPerFloorLine(Math.max(1, unitsPerFloorLine - 1))}
-                  className="p-0.5 text-gray-400 hover:text-indigo-600 cursor-pointer"
-                >
-                  <Minus className="w-3.5 h-3.5" />
-                </button>
-                <strong className="text-gray-800 font-mono">{unitsPerFloorLine}호</strong>
-                <button
-                  type="button"
-                  onClick={() => setUnitsPerFloorLine(unitsPerFloorLine + 1)}
-                  className="p-0.5 text-gray-400 hover:text-indigo-600 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Aboveground Floors */}
-            <div className="space-y-1">
-              <span className="text-gray-400 font-medium block">지상 층수 {useLayoutSimulation ? '(자동 산식)' : '기획'}</span>
-              {useLayoutSimulation ? (
-                <div 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveTooltip(activeTooltip === 'above_floors' ? null : 'above_floors');
-                  }}
-                  className="bg-indigo-50/70 border border-indigo-150 px-2 py-1 rounded-lg text-indigo-950 font-bold font-mono text-center relative group cursor-help"
-                >
-                  {aboveGroundFloors}층
-                  <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl w-56 text-left leading-normal z-50 font-sans transition-all duration-200 ${activeTooltip === 'above_floors' ? 'block opacity-100 pointer-events-auto' : 'hidden group-hover:block pointer-events-none'}`}>
-                    <strong>지상층수 자동산식:</strong>
-                    <p>포디움 {podiumFloors}층 + 주동 기준층 {calculatedTypicalFloors}층 = {aboveGroundFloors}층</p>
-                    <p className="mt-1 text-[9.5px] text-gray-300">※ 주동 기준층 = Math.ceil(공동주택 {combinedConfigs.reduce((sum, item) => sum + item.count, 0)}세대 / ({towerCount}동 × {unitsPerFloorLine}호))</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-lg border border-gray-150 justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setAboveGroundFloors(Math.max(1, aboveGroundFloors - 1))}
-                    className="p-0.5 text-gray-400 hover:text-indigo-600 cursor-pointer"
-                  >
-                    <Minus className="w-3.5 h-3.5" />
-                  </button>
-                  <strong className="text-gray-800 font-mono">{aboveGroundFloors}층</strong>
-                  <button
-                    type="button"
-                    onClick={() => setAboveGroundFloors(aboveGroundFloors + 1)}
-                    className="p-0.5 text-gray-400 hover:text-indigo-600 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Underground Floors */}
-            <div className="space-y-1">
-              <span className="text-gray-400 font-medium block">지하 층수 (자동 산식)</span>
-              <div 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveTooltip(activeTooltip === 'under_floors' ? null : 'under_floors');
-                }}
-                className="bg-emerald-50/70 border border-emerald-150 px-2 py-1 rounded-lg text-emerald-950 font-bold font-mono text-center relative group cursor-help w-full"
-              >
-                {undergroundFloors}층
-                <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 p-2 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl w-56 text-left leading-normal z-50 font-sans transition-all duration-200 ${activeTooltip === 'under_floors' ? 'block opacity-100 pointer-events-auto' : 'hidden group-hover:block pointer-events-none'}`}>
-                  <strong>지하층수 자동산식:</strong>
-                  <p>지하층수 = Math.ceil(지하연면적 ({undergroundGFA.toLocaleString()}㎡) × 100 / (대지면적 ({landArea.toLocaleString()}㎡) × 지하대지활용률 ({basementLandUtilRatio}%))) = {undergroundFloors}층</p>
-                  <p className="mt-1 text-[9.5px] text-gray-300">※ 지하연면적 = 지하 주차장 + 기전실 + 지하상가</p>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Redundant controls removed to avoid duplication and synchronize with the main architectural plan sidebar */}
 
           {/* SVG Site Layout Map or Cross-Section */}
           <div 
