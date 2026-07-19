@@ -5628,16 +5628,50 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                   <div className="w-full bg-gray-50/50 rounded-2xl border border-gray-150 p-4.5 space-y-4">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-xs items-start">
                       
-                      {/* Column 1: 🏢 규모 및 배치 기획 (자동 산정) */}
+                      {/* Column 1: 🏢 규모 및 배치 기획 */}
                       <div className="space-y-3 bg-[#FAF9F5]/40 p-3.5 rounded-xl border border-gray-150/80">
                         <h5 className="text-[10.5px] font-bold text-gray-600 flex items-center gap-1.5 px-0.5 mb-1">
-                          🏢 규모 및 배치 기획 (자동 산정)
+                          🏢 규모 및 배치 기획
                         </h5>
-                        <div className="p-2.5 bg-emerald-50/50 border border-emerald-100 rounded-xl space-y-1">
-                          <span className="text-[10px] font-bold text-emerald-850 flex items-center gap-1">📐 지상/지하 층수 자동 산정 모드</span>
-                          <span className="text-[9px] text-emerald-600 leading-tight block">
-                            대상지의 조례 허용 용적률에 맞추어 주동의 층수가 자동 계산됩니다.
-                          </span>
+                        
+                        {/* 층수 산정 방식 선택 */}
+                        <div className="p-2.5 bg-white border border-gray-150 rounded-xl space-y-1.5">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-bold text-gray-700">📐 지상/지하 층수 산정 방식</span>
+                            <span className="text-[9px] text-gray-400 mt-0.5 leading-tight">
+                              {floorCalculationMode === 'auto'
+                                ? '대상지의 조례 허용 용적률에 맞추어 주동의 층수가 자동 계산됩니다.'
+                                : '지상 및 지하 층수를 원하는 숫자로 직접 제어할 수 있습니다.'}
+                            </span>
+                          </div>
+                          <div className="flex bg-gray-150 p-0.5 rounded-lg border border-gray-200 w-full mt-1">
+                            <button
+                              type="button"
+                              onClick={() => setFloorCalculationMode('auto')}
+                              className={`flex-1 py-1 text-[9.5px] font-extrabold rounded-md cursor-pointer transition-all ${
+                                floorCalculationMode === 'auto'
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'text-gray-500 hover:text-gray-800'
+                              }`}
+                            >
+                              자동 산정
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFloorCalculationMode('manual');
+                                setAboveGroundFloors(result.aboveGroundFloors);
+                                setUndergroundFloors(result.undergroundFloors);
+                              }}
+                              className={`flex-1 py-1 text-[9.5px] font-extrabold rounded-md cursor-pointer transition-all ${
+                                floorCalculationMode === 'manual'
+                                  ? 'bg-[#5F7161] text-white shadow-xs'
+                                  : 'text-gray-500 hover:text-gray-800'
+                              }`}
+                            >
+                              수동 변경
+                            </button>
+                          </div>
                         </div>
 
                         <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-gray-150">
@@ -5705,16 +5739,56 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
                         <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-gray-150">
                           <span className="text-[10.5px] font-bold text-gray-500">지상 주거 층수</span>
-                          <div className="px-2 py-0.5 bg-emerald-50 border border-emerald-100 rounded text-emerald-800 text-[10.5px] font-extrabold font-mono">
-                            {result.calculatedTypicalFloors}층 (자동)
-                          </div>
+                          {floorCalculationMode === 'auto' ? (
+                            <div className="px-2 py-0.5 bg-emerald-50 border border-emerald-100 rounded text-emerald-800 text-[10.5px] font-extrabold font-mono">
+                              {result.calculatedTypicalFloors}층 (자동)
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setAboveGroundFloors(Math.max(podiumFloors + 1, aboveGroundFloors - 1))}
+                                className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
+                              >
+                                -
+                              </button>
+                              <strong className="w-8 text-center text-xs text-gray-800 font-mono">{result.calculatedTypicalFloors}층</strong>
+                              <button
+                                type="button"
+                                onClick={() => setAboveGroundFloors(aboveGroundFloors + 1)}
+                                className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
+                              >
+                                +
+                              </button>
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-gray-150">
                           <span className="text-[10.5px] font-bold text-gray-500">지하 층수 (주차/기전)</span>
-                          <div className="px-2 py-0.5 bg-amber-50 border border-amber-100 rounded text-amber-850 text-[10.5px] font-extrabold font-mono">
-                            {result.undergroundFloors}층 (자동)
-                          </div>
+                          {floorCalculationMode === 'auto' ? (
+                            <div className="px-2 py-0.5 bg-amber-50 border border-amber-100 rounded text-amber-850 text-[10.5px] font-extrabold font-mono">
+                              {result.undergroundFloors}층 (자동)
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setUndergroundFloors(Math.max(0, undergroundFloors - 1))}
+                                className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
+                              >
+                                -
+                              </button>
+                              <strong className="w-8 text-center text-xs text-gray-800 font-mono">{result.undergroundFloors}층</strong>
+                              <button
+                                type="button"
+                                onClick={() => setUndergroundFloors(undergroundFloors + 1)}
+                                className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
+                              >
+                                +
+                              </button>
+                            </div>
+                          )}
                         </div>
 
                         <div className="space-y-1.5 bg-white p-2.5 rounded-xl border border-gray-150">
