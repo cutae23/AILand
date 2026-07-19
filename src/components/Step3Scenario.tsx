@@ -137,7 +137,7 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
 
   // [USER ADDITIONS] Layout Simulation parameters
   const [useLayoutSimulation, setUseLayoutSimulation] = useState<boolean>(() => inputs?.useLayoutSimulation ?? true);
-  const [floorCalculationMode, setFloorCalculationMode] = useState<'auto' | 'manual'>(() => inputs?.floorCalculationMode ?? 'manual');
+  const [floorCalculationMode, setFloorCalculationMode] = useState<'auto' | 'manual'>(() => inputs?.floorCalculationMode ?? 'auto');
   const [towerCount, setTowerCount] = useState<number>(() => inputs?.towerCount ?? 2);
   const [unitsPerFloorLine, setUnitsPerFloorLine] = useState<number>(() => inputs?.unitsPerFloorLine ?? 4);
   const [podiumFloors, setPodiumFloors] = useState<number>(() => inputs?.podiumFloors ?? 2);
@@ -5621,459 +5621,299 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                   </div>
                 </div>
 
-                {/* Grid layout containing left sidebar for architectural controls, and right side for sheet outputs */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                {/* Stacked layout: Top for architectural controls, and Bottom for sheet outputs */}
+                <div className="flex flex-col gap-6 items-stretch w-full">
                   
-                  {/* LEFT COLUMN: Unified Configuration Sidebar (lg:col-span-4) */}
-                  <div className="lg:col-span-4 bg-gray-50/50 rounded-2xl border border-gray-150 p-3.5 space-y-4">
-                    {/* Sub tabs inside sidebar */}
-                    <div className="flex bg-gray-150 p-1 rounded-xl border border-gray-200/60 gap-1 w-full">
-                      <button
-                        type="button"
-                        onClick={() => setSidebarTab('config')}
-                        className={`flex-1 text-center py-1.5 text-[10.5px] font-extrabold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                          sidebarTab === 'config'
-                            ? 'bg-white text-gray-800 shadow-xs border border-gray-100'
-                            : 'text-gray-500 hover:text-gray-800'
-                        }`}
-                      >
-                        🏢 규모 및 배치
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSidebarTab('facility')}
-                        className={`flex-1 text-center py-1.5 text-[10.5px] font-extrabold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                          sidebarTab === 'facility'
-                            ? 'bg-white text-gray-800 shadow-xs border border-gray-100'
-                            : 'text-gray-500 hover:text-gray-800'
-                        }`}
-                      >
-                        📐 부대시설 & 층고
-                      </button>
+                  {/* TOP SECTION: Unified Configuration Sidebar (Full Width) */}
+                  <div className="w-full bg-gray-50/50 rounded-2xl border border-gray-150 p-4.5 space-y-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-xs items-start">
+                      
+                      {/* Column 1: 🏢 규모 및 배치 기획 (자동 산정) */}
+                      <div className="space-y-3 bg-[#FAF9F5]/40 p-3.5 rounded-xl border border-gray-150/80">
+                        <h5 className="text-[10.5px] font-bold text-gray-600 flex items-center gap-1.5 px-0.5 mb-1">
+                          🏢 규모 및 배치 기획 (자동 산정)
+                        </h5>
+                        <div className="p-2.5 bg-emerald-50/50 border border-emerald-100 rounded-xl space-y-1">
+                          <span className="text-[10px] font-bold text-emerald-850 flex items-center gap-1">📐 지상/지하 층수 자동 산정 모드</span>
+                          <span className="text-[9px] text-emerald-600 leading-tight block">
+                            대상지의 조례 허용 용적률에 맞추어 주동의 층수가 자동 계산됩니다.
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-gray-150">
+                          <span className="text-[10.5px] font-bold text-gray-500">동수 (몇 동)</span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setTowerCount(Math.max(1, towerCount - 1))}
+                              className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
+                            >
+                              -
+                            </button>
+                            <strong className="w-8 text-center text-xs text-gray-800 font-mono">{towerCount}동</strong>
+                            <button
+                              type="button"
+                              onClick={() => setTowerCount(towerCount + 1)}
+                              className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-gray-150">
+                          <span className="text-[10.5px] font-bold text-gray-500">조합 (라인 수)</span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setUnitsPerFloorLine(Math.max(1, unitsPerFloorLine - 1))}
+                              className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
+                            >
+                              -
+                            </button>
+                            <strong className="w-8 text-center text-xs text-gray-800 font-mono">{unitsPerFloorLine}호</strong>
+                            <button
+                              type="button"
+                              onClick={() => setUnitsPerFloorLine(unitsPerFloorLine + 1)}
+                              className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-gray-150">
+                          <span className="text-[10.5px] font-bold text-gray-500">포디움 (지상상업층)</span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setPodiumFloors(Math.max(0, podiumFloors - 1))}
+                              className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
+                            >
+                              -
+                            </button>
+                            <strong className="w-8 text-center text-xs text-gray-800 font-mono">{podiumFloors}층</strong>
+                            <button
+                              type="button"
+                              onClick={() => setPodiumFloors(podiumFloors + 1)}
+                              className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-gray-150">
+                          <span className="text-[10.5px] font-bold text-gray-500">지상 주거 층수</span>
+                          <div className="px-2 py-0.5 bg-emerald-50 border border-emerald-100 rounded text-emerald-800 text-[10.5px] font-extrabold font-mono">
+                            {result.calculatedTypicalFloors}층 (자동)
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-gray-150">
+                          <span className="text-[10.5px] font-bold text-gray-500">지하 층수 (주차/기전)</span>
+                          <div className="px-2 py-0.5 bg-amber-50 border border-amber-100 rounded text-amber-850 text-[10.5px] font-extrabold font-mono">
+                            {result.undergroundFloors}층 (자동)
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5 bg-white p-2.5 rounded-xl border border-gray-150">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10.5px] font-bold text-gray-500">지하 대지활용률 (B.L.U)</span>
+                            <span className="font-extrabold text-[#5F7161] font-mono text-[11px]">{basementLandUtilRatio}%</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="range"
+                              min="10"
+                              max="100"
+                              step="5"
+                              value={basementLandUtilRatio}
+                              onChange={(e) => setBasementLandUtilRatio(Number(e.target.value))}
+                              className="w-full accent-[#5F7161] cursor-pointer"
+                            />
+                          </div>
+                          <p className="text-[9px] text-gray-400 font-medium">대지 {Math.round(landArea * (basementLandUtilRatio / 100)).toLocaleString()} ㎡ 활용 기획</p>
+                        </div>
+                      </div>
+
+                      {/* Column 2: 🏠 부대복리시설 기획 */}
+                      <div className="space-y-3 bg-[#FAF9F5]/40 p-3.5 rounded-xl border border-gray-150/80">
+                        <h5 className="text-[10.5px] font-bold text-gray-600 flex items-center gap-1.5 px-0.5 mb-1">
+                          🏠 부대복리시설 기획
+                        </h5>
+                        
+                        {/* 공동주택 */}
+                        <div className="bg-white p-2.5 rounded-xl border border-gray-150 space-y-1">
+                          <div className="flex justify-between items-center text-[10px] font-bold text-gray-700">
+                            <span>공동주택 주민시설</span>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min="0"
+                                max="3300"
+                                value={Math.round(aptAuxArea * 3.30578)}
+                                onChange={(e) => {
+                                  const m2Val = Math.max(0, Math.min(3300, Number(e.target.value) || 0));
+                                  setAptAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                                }}
+                                className="w-12 text-center text-[10px] font-bold bg-gray-50 border border-gray-200 py-0.5 rounded focus:outline-none"
+                              />
+                              <span>㎡</span>
+                              <span className="text-[9.5px] text-gray-400 font-normal">({Math.round(aptAuxArea)}평)</span>
+                            </div>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max="330"
+                            step="1"
+                            value={Math.round(aptAuxArea * 3.30578)}
+                            onChange={(e) => {
+                              const m2Val = Number(e.target.value);
+                              setAptAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                            }}
+                            className="w-full accent-[#5F7161] cursor-pointer"
+                          />
+                        </div>
+
+                        {/* 오피스텔 */}
+                        <div className="bg-white p-2.5 rounded-xl border border-gray-150 space-y-1">
+                          <div className="flex justify-between items-center text-[10px] font-bold text-gray-700">
+                            <span>오피스텔 부대시설</span>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min="0"
+                                max="3300"
+                                value={Math.round(officetelAuxArea * 3.30578)}
+                                onChange={(e) => {
+                                  const m2Val = Math.max(0, Math.min(3300, Number(e.target.value) || 0));
+                                  setOfficetelAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                                }}
+                                className="w-12 text-center text-[10px] font-bold bg-gray-50 border border-gray-200 py-0.5 rounded focus:outline-none"
+                              />
+                              <span>㎡</span>
+                              <span className="text-[9.5px] text-gray-400 font-normal">({Math.round(officetelAuxArea)}평)</span>
+                            </div>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max="165"
+                            step="1"
+                            value={Math.round(officetelAuxArea * 3.30578)}
+                            onChange={(e) => {
+                              const m2Val = Number(e.target.value);
+                              setOfficetelAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                            }}
+                            className="w-full accent-[#5F7161] cursor-pointer"
+                          />
+                        </div>
+
+                        {/* 호텔 */}
+                        <div className="bg-white p-2.5 rounded-xl border border-gray-150 space-y-1">
+                          <div className="flex justify-between items-center text-[10px] font-bold text-gray-700">
+                            <span>호텔 부대복리시설</span>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min="0"
+                                max="3300"
+                                value={Math.round(hotelAuxArea * 3.30578)}
+                                onChange={(e) => {
+                                  const m2Val = Math.max(0, Math.min(3300, Number(e.target.value) || 0));
+                                  setHotelAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                                }}
+                                className="w-12 text-center text-[10px] font-bold bg-gray-50 border border-gray-200 py-0.5 rounded focus:outline-none"
+                              />
+                              <span>㎡</span>
+                              <span className="text-[9.5px] text-gray-400 font-normal">({Math.round(hotelAuxArea)}평)</span>
+                            </div>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max="660"
+                            step="1"
+                            value={Math.round(hotelAuxArea * 3.30578)}
+                            onChange={(e) => {
+                              const m2Val = Number(e.target.value);
+                              setHotelAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                            }}
+                            className="w-full accent-[#5F7161] cursor-pointer"
+                          />
+                        </div>
+
+                        {/* 업무시설 */}
+                        <div className="bg-white p-2.5 rounded-xl border border-gray-150 space-y-1">
+                          <div className="flex justify-between items-center text-[10px] font-bold text-gray-700">
+                            <span>업무시설 공용시설</span>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min="0"
+                                max="3300"
+                                value={Math.round(officeAuxArea * 3.30578)}
+                                onChange={(e) => {
+                                  const m2Val = Math.max(0, Math.min(3300, Number(e.target.value) || 0));
+                                  setOfficeAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                                }}
+                                className="w-12 text-center text-[10px] font-bold bg-gray-50 border border-gray-200 py-0.5 rounded focus:outline-none"
+                              />
+                              <span>㎡</span>
+                              <span className="text-[9.5px] text-gray-400 font-normal">({Math.round(officeAuxArea)}평)</span>
+                            </div>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max="330"
+                            step="1"
+                            value={Math.round(officeAuxArea * 3.30578)}
+                            onChange={(e) => {
+                              const m2Val = Number(e.target.value);
+                              setOfficeAuxArea(Number((m2Val / 3.30578).toFixed(2)));
+                            }}
+                            className="w-full accent-[#5F7161] cursor-pointer"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Column 3: 📐 주요 특정층 층고 개별 설정 (m) */}
+                      <div className="space-y-3 bg-[#FAF9F5]/40 p-3.5 rounded-xl border border-gray-150/80">
+                        <h5 className="text-[10.5px] font-bold text-gray-600 flex items-center gap-1.5 px-0.5 mb-1">
+                          📐 주요 특정층 층고 개별 설정 (m)
+                        </h5>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-white p-2 rounded-lg border border-gray-150">
+                            <label className="block text-[9px] font-medium text-gray-500 mb-0.5">지상 1층 (1F)</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={customFloorHeights['1F'] ?? 4.5}
+                              onChange={(e) => setCustomFloorHeights({ ...customFloorHeights, '1F': Number(e.target.value) })}
+                              className="w-full text-center text-[11px] font-bold py-0.5 bg-gray-50 border border-gray-200 rounded font-mono"
+                            />
+                          </div>
+                          <div className="bg-white p-2 rounded-lg border border-gray-150">
+                            <label className="block text-[9px] font-medium text-gray-500 mb-0.5">지하 1층 (B1)</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={customFloorHeights['B1'] ?? 3.8}
+                              onChange={(e) => setCustomFloorHeights({ ...customFloorHeights, 'B1': Number(e.target.value) })}
+                              className="w-full text-center text-[11px] font-bold py-0.5 bg-gray-50 border border-gray-200 rounded font-mono"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
                     </div>
-
-                    {/* Content for sub-tab 'config' */}
-                    {sidebarTab === 'config' && (
-                      <div className="space-y-4 animate-fadeIn text-xs">
-                        {/* 층수 산정 방식 선택 */}
-                        <div className="p-2.5 bg-[#FAF9F5] border border-[#F2EFE9] rounded-xl space-y-1.5">
-                          <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-gray-700">📐 지상/지하 층수 산정 방식</span>
-                            <span className="text-[9px] text-gray-400 mt-0.5 leading-tight">
-                              {floorCalculationMode === 'auto'
-                                ? '대상지의 조례 허용 용적률에 맞추어 주동의 층수가 자동 계산됩니다.'
-                                : '원하는 지상/지하 층수를 직접 숫자로 조절하여 배치할 수 있습니다.'}
-                            </span>
-                          </div>
-                          <div className="flex bg-gray-200/60 p-0.5 rounded-lg border border-gray-200 w-full mt-1">
-                            <button
-                              type="button"
-                              onClick={() => setFloorCalculationMode('auto')}
-                              className={`flex-1 py-1 text-[9.5px] font-extrabold rounded-md cursor-pointer transition-all ${
-                                floorCalculationMode === 'auto'
-                                  ? 'bg-emerald-600 text-white shadow-xs'
-                                  : 'text-gray-500 hover:text-gray-800'
-                              }`}
-                            >
-                              용적률 자동 산정
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setFloorCalculationMode('manual')}
-                              className={`flex-1 py-1 text-[9.5px] font-extrabold rounded-md cursor-pointer transition-all ${
-                                floorCalculationMode === 'manual'
-                                  ? 'bg-[#5F7161] text-white shadow-xs'
-                                  : 'text-gray-500 hover:text-gray-800'
-                              }`}
-                            >
-                              사용자 직접 지정
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* 단지 설계 다이얼 기획 */}
-                        <div className="space-y-2.5">
-                          <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-gray-150">
-                            <span className="text-[10.5px] font-bold text-gray-500">동수 (몇 동)</span>
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => setTowerCount(Math.max(1, towerCount - 1))}
-                                className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
-                              >
-                                -
-                              </button>
-                              <strong className="w-8 text-center text-xs text-gray-800 font-mono">{towerCount}동</strong>
-                              <button
-                                type="button"
-                                onClick={() => setTowerCount(towerCount + 1)}
-                                className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-gray-150">
-                            <span className="text-[10.5px] font-bold text-gray-500">조합 (라인 수)</span>
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => setUnitsPerFloorLine(Math.max(1, unitsPerFloorLine - 1))}
-                                className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
-                              >
-                                -
-                              </button>
-                              <strong className="w-8 text-center text-xs text-gray-800 font-mono">{unitsPerFloorLine}호</strong>
-                              <button
-                                type="button"
-                                onClick={() => setUnitsPerFloorLine(unitsPerFloorLine + 1)}
-                                className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-gray-150">
-                            <span className="text-[10.5px] font-bold text-gray-500">포디움 (지상상업층)</span>
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => setPodiumFloors(Math.max(0, podiumFloors - 1))}
-                                className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
-                              >
-                                -
-                              </button>
-                              <strong className="w-8 text-center text-xs text-gray-800 font-mono">{podiumFloors}층</strong>
-                              <button
-                                type="button"
-                                onClick={() => setPodiumFloors(podiumFloors + 1)}
-                                className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-gray-150">
-                            <span className="text-[10.5px] font-bold text-gray-500">지상 주거 층수</span>
-                            {floorCalculationMode === 'auto' ? (
-                              <div className="px-2 py-0.5 bg-emerald-50 border border-emerald-100 rounded text-emerald-800 text-[10.5px] font-extrabold font-mono">
-                                {result.calculatedTypicalFloors}층 (자동)
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => setAboveGroundFloors(Math.max(podiumFloors + 1, aboveGroundFloors - 1))}
-                                  className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
-                                >
-                                  -
-                                </button>
-                                <strong className="w-8 text-center text-xs text-gray-800 font-mono">{result.calculatedTypicalFloors}층</strong>
-                                <button
-                                  type="button"
-                                  onClick={() => setAboveGroundFloors(aboveGroundFloors + 1)}
-                                  className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
-                                >
-                                  +
-                                </button>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-gray-150">
-                            <span className="text-[10.5px] font-bold text-gray-500">지하 층수 (주차/기전)</span>
-                            {floorCalculationMode === 'auto' ? (
-                              <div className="px-2 py-0.5 bg-amber-50 border border-amber-100 rounded text-amber-850 text-[10.5px] font-extrabold font-mono">
-                                {result.undergroundFloors}층 (자동)
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => setUndergroundFloors(Math.max(0, undergroundFloors - 1))}
-                                  className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
-                                >
-                                  -
-                                </button>
-                                <strong className="w-8 text-center text-xs text-gray-800 font-mono">{result.undergroundFloors}층</strong>
-                                <button
-                                  type="button"
-                                  onClick={() => setUndergroundFloors(undergroundFloors + 1)}
-                                  className="w-5.5 h-5.5 flex items-center justify-center border border-gray-200 bg-white rounded-lg hover:bg-gray-50 text-xs font-bold text-gray-600 cursor-pointer shadow-2xs"
-                                >
-                                  +
-                                </button>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="space-y-1.5 bg-white p-2.5 rounded-xl border border-gray-150">
-                            <div className="flex justify-between items-center">
-                              <span className="text-[10.5px] font-bold text-gray-500">지하 대지활용률 (B.L.U)</span>
-                              <span className="font-extrabold text-[#5F7161] font-mono text-[11px]">{basementLandUtilRatio}%</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="range"
-                                min="10"
-                                max="100"
-                                step="5"
-                                value={basementLandUtilRatio}
-                                onChange={(e) => setBasementLandUtilRatio(Number(e.target.value))}
-                                className="w-full accent-[#5F7161] cursor-pointer"
-                              />
-                            </div>
-                            <p className="text-[9px] text-gray-400 font-medium">대지 {Math.round(landArea * (basementLandUtilRatio / 100)).toLocaleString()} ㎡ 활용 기획</p>
-                          </div>
-                        </div>
-
-                        {/* 채광창 사선 및 동간격 규제 검토 */}
-                        <div className="pt-2.5 border-t border-gray-200 space-y-2">
-                          <h5 className="text-[10px] font-bold text-gray-600 flex items-center gap-1">
-                            📐 채광 사선 및 인동거리 검토
-                          </h5>
-
-                          <div className="grid grid-cols-2 gap-2 text-[10px]">
-                            <div className="space-y-1 bg-white p-2 rounded-lg border border-gray-150">
-                              <span className="text-gray-400 block font-semibold text-[9.5px]">동간 이격거리</span>
-                              <div className="flex items-center gap-1">
-                                <input
-                                  type="range"
-                                  min="10"
-                                  max="120"
-                                  step="2"
-                                  value={buildingSeparationDistance}
-                                  onChange={(e) => setBuildingSeparationDistance(Number(e.target.value))}
-                                  className="w-full accent-[#5F7161]"
-                                />
-                                <span className="font-bold text-gray-700 font-mono">{buildingSeparationDistance}m</span>
-                              </div>
-                            </div>
-
-                            <div className="space-y-1 bg-white p-2 rounded-lg border border-gray-150">
-                              <span className="text-gray-400 block font-semibold text-[9.5px]">대지경계선 거리</span>
-                              <div className="flex items-center gap-1">
-                                <input
-                                  type="range"
-                                  min="3"
-                                  max="60"
-                                  step="1"
-                                  value={boundarySeparationDistance}
-                                  onChange={(e) => setBoundarySeparationDistance(Number(e.target.value))}
-                                  className="w-full accent-[#5F7161]"
-                                />
-                                <span className="font-bold text-gray-700 font-mono">{boundarySeparationDistance}m</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="space-y-1.5 pt-1">
-                            {result.isCommercialZone ? (
-                              <div className="p-2 bg-emerald-50/70 border border-emerald-100 rounded-lg text-[9.5px] leading-relaxed text-emerald-800">
-                                <p className="font-bold">🟢 상업지역 예외 (규제 면제)</p>
-                                <p className="text-[9px] text-emerald-700">중심/일반상업지역은 일조 및 인동거리 규정이 제외됩니다.</p>
-                              </div>
-                            ) : (
-                              <div className="grid grid-cols-2 gap-1.5 text-[9.5px]">
-                                <div className={`p-1.5 border rounded-lg flex items-center gap-1 ${
-                                  result.isSeparationSatisfied ? 'bg-emerald-50/50 border-emerald-100 text-emerald-800' : 'bg-red-50/50 border-red-100 text-red-800'
-                                }`}>
-                                  <span>{result.isSeparationSatisfied ? '🟢' : '⚠️'}</span>
-                                  <span className="font-bold">동간이격: {result.isSeparationSatisfied ? '적합' : '부적합'}</span>
-                                </div>
-                                <div className={`p-1.5 border rounded-lg flex items-center gap-1 ${
-                                  result.isBoundarySatisfied ? 'bg-emerald-50/50 border-emerald-100 text-emerald-800' : 'bg-red-50/50 border-red-100 text-red-800'
-                                }`}>
-                                  <span>{result.isBoundarySatisfied ? '🟢' : '⚠️'}</span>
-                                  <span className="font-bold">일조사선: {result.isBoundarySatisfied ? '적합' : '부적합'}</span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Content for sub-tab 'facility' */}
-                    {sidebarTab === 'facility' && (
-                      <div className="space-y-3.5 animate-fadeIn text-xs">
-                        <div className="space-y-2.5">
-                          <h5 className="text-[10px] font-bold text-gray-600">🏢 부대복리시설 개별 기획</h5>
-                          
-                          {/* 공동주택 */}
-                          <div className="bg-white p-2.5 rounded-xl border border-gray-150 space-y-1">
-                            <div className="flex justify-between items-center text-[10px] font-bold text-gray-700">
-                              <span>공동주택 주민시설</span>
-                              <div className="flex items-center gap-1">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="3300"
-                                  value={Math.round(aptAuxArea * 3.30578)}
-                                  onChange={(e) => {
-                                    const m2Val = Math.max(0, Math.min(3300, Number(e.target.value) || 0));
-                                    setAptAuxArea(Number((m2Val / 3.30578).toFixed(2)));
-                                  }}
-                                  className="w-12 text-center text-[10px] font-bold bg-gray-50 border border-gray-200 py-0.5 rounded focus:outline-none"
-                                />
-                                <span>㎡</span>
-                                <span className="text-[9.5px] text-gray-400 font-normal">({Math.round(aptAuxArea)}평)</span>
-                              </div>
-                            </div>
-                            <input
-                              type="range"
-                              min="0"
-                              max="330"
-                              step="1"
-                              value={Math.round(aptAuxArea * 3.30578)}
-                              onChange={(e) => {
-                                const m2Val = Number(e.target.value);
-                                setAptAuxArea(Number((m2Val / 3.30578).toFixed(2)));
-                              }}
-                              className="w-full accent-[#5F7161] cursor-pointer"
-                            />
-                          </div>
-
-                          {/* 오피스텔 */}
-                          <div className="bg-white p-2.5 rounded-xl border border-gray-150 space-y-1">
-                            <div className="flex justify-between items-center text-[10px] font-bold text-gray-700">
-                              <span>오피스텔 부대시설</span>
-                              <div className="flex items-center gap-1">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="3300"
-                                  value={Math.round(officetelAuxArea * 3.30578)}
-                                  onChange={(e) => {
-                                    const m2Val = Math.max(0, Math.min(3300, Number(e.target.value) || 0));
-                                    setOfficetelAuxArea(Number((m2Val / 3.30578).toFixed(2)));
-                                  }}
-                                  className="w-12 text-center text-[10px] font-bold bg-gray-50 border border-gray-200 py-0.5 rounded focus:outline-none"
-                                />
-                                <span>㎡</span>
-                                <span className="text-[9.5px] text-gray-400 font-normal">({Math.round(officetelAuxArea)}평)</span>
-                              </div>
-                            </div>
-                            <input
-                              type="range"
-                              min="0"
-                              max="165"
-                              step="1"
-                              value={Math.round(officetelAuxArea * 3.30578)}
-                              onChange={(e) => {
-                                const m2Val = Number(e.target.value);
-                                setOfficetelAuxArea(Number((m2Val / 3.30578).toFixed(2)));
-                              }}
-                              className="w-full accent-[#5F7161] cursor-pointer"
-                            />
-                          </div>
-
-                          {/* 호텔 */}
-                          <div className="bg-white p-2.5 rounded-xl border border-gray-150 space-y-1">
-                            <div className="flex justify-between items-center text-[10px] font-bold text-gray-700">
-                              <span>호텔 부대복리시설</span>
-                              <div className="flex items-center gap-1">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="3300"
-                                  value={Math.round(hotelAuxArea * 3.30578)}
-                                  onChange={(e) => {
-                                    const m2Val = Math.max(0, Math.min(3300, Number(e.target.value) || 0));
-                                    setHotelAuxArea(Number((m2Val / 3.30578).toFixed(2)));
-                                  }}
-                                  className="w-12 text-center text-[10px] font-bold bg-gray-50 border border-gray-200 py-0.5 rounded focus:outline-none"
-                                />
-                                <span>㎡</span>
-                                <span className="text-[9.5px] text-gray-400 font-normal">({Math.round(hotelAuxArea)}평)</span>
-                              </div>
-                            </div>
-                            <input
-                              type="range"
-                              min="0"
-                              max="660"
-                              step="1"
-                              value={Math.round(hotelAuxArea * 3.30578)}
-                              onChange={(e) => {
-                                const m2Val = Number(e.target.value);
-                                setHotelAuxArea(Number((m2Val / 3.30578).toFixed(2)));
-                              }}
-                              className="w-full accent-[#5F7161] cursor-pointer"
-                            />
-                          </div>
-
-                          {/* 업무시설 */}
-                          <div className="bg-white p-2.5 rounded-xl border border-gray-150 space-y-1">
-                            <div className="flex justify-between items-center text-[10px] font-bold text-gray-700">
-                              <span>업무시설 공용시설</span>
-                              <div className="flex items-center gap-1">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="3300"
-                                  value={Math.round(officeAuxArea * 3.30578)}
-                                  onChange={(e) => {
-                                    const m2Val = Math.max(0, Math.min(3300, Number(e.target.value) || 0));
-                                    setOfficeAuxArea(Number((m2Val / 3.30578).toFixed(2)));
-                                  }}
-                                  className="w-12 text-center text-[10px] font-bold bg-gray-50 border border-gray-200 py-0.5 rounded focus:outline-none"
-                                />
-                                <span>㎡</span>
-                                <span className="text-[9.5px] text-gray-400 font-normal">({Math.round(officeAuxArea)}평)</span>
-                              </div>
-                            </div>
-                            <input
-                              type="range"
-                              min="0"
-                              max="330"
-                              step="1"
-                              value={Math.round(officeAuxArea * 3.30578)}
-                              onChange={(e) => {
-                                const m2Val = Number(e.target.value);
-                                setOfficeAuxArea(Number((m2Val / 3.30578).toFixed(2)));
-                              }}
-                              className="w-full accent-[#5F7161] cursor-pointer"
-                            />
-                          </div>
-                        </div>
-
-                        {/* 층고 커스터마이징 */}
-                        <div className="pt-2.5 border-t border-gray-200 space-y-2">
-                          <h5 className="text-[10px] font-bold text-gray-600">📐 주요 특정층 층고 개별 설정 (m)</h5>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-white p-2 rounded-lg border border-gray-150">
-                              <label className="block text-[9px] font-medium text-gray-500 mb-0.5">지상 1층 (1F)</label>
-                              <input
-                                type="number"
-                                step="0.1"
-                                value={customFloorHeights['1F'] ?? 4.5}
-                                onChange={(e) => setCustomFloorHeights({ ...customFloorHeights, '1F': Number(e.target.value) })}
-                                className="w-full text-center text-[11px] font-bold py-0.5 bg-gray-50 border border-gray-200 rounded font-mono"
-                              />
-                            </div>
-                            <div className="bg-white p-2 rounded-lg border border-gray-150">
-                              <label className="block text-[9px] font-medium text-gray-500 mb-0.5">지하 1층 (B1)</label>
-                              <input
-                                type="number"
-                                step="0.1"
-                                value={customFloorHeights['B1'] ?? 3.8}
-                                onChange={(e) => setCustomFloorHeights({ ...customFloorHeights, 'B1': Number(e.target.value) })}
-                                className="w-full text-center text-[11px] font-bold py-0.5 bg-gray-50 border border-gray-200 rounded font-mono"
-                              />
-                            </div>
-                          </div>
-
-
-                        </div>
-                      </div>
-                    )}
                   </div>
 
-                  {/* RIGHT COLUMN: Interactive Reports & Layout Canvas (lg:col-span-8) */}
-                  <div className="lg:col-span-8 space-y-8">
+                  {/* BOTTOM SECTION: Interactive Reports & Layout Canvas (Full Width) */}
+                  <div className="w-full space-y-8">
 
                 {/* Section 1: 종합건축개요 */}
                 <div id="section-general" className="bg-white p-5 rounded-2xl border border-gray-150 shadow-xs space-y-4 animate-fadeIn">
@@ -6292,181 +6132,250 @@ export default function Step3Scenario({ currentLand, currentRelaxation, onScenar
                   </div>
                   <div className="space-y-4 animate-fadeIn">
                     <div className="overflow-x-auto border border-gray-150 rounded-xl">
-                      <table className="w-full text-[10px] border-collapse text-left">
-                        <thead>
-                          <tr className="bg-[#FAF9F5] border-b border-gray-150 text-gray-600 font-bold">
-                            <th className="py-2 px-2.5 border-r border-gray-150">용도 구분</th>
-                            <th className="py-2 px-2.5 border-r border-gray-150 text-right">전용면적 (㎡/평)</th>
-                            <th className="py-2 px-2.5 border-r border-gray-150 text-right">공용면적 (㎡/평)</th>
-                            <th className="py-2 px-2.5 border-r border-gray-150 text-right">지상 소계 (㎡/평)</th>
-                            <th className="py-2 px-2.5 border-r border-gray-150 text-right">비율 (%)</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 text-gray-700 font-medium">
-                          {/* 1. 공동주택 */}
-                          {result.aptAboveGFA > 0 && (
-                            <tr>
-                              <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">
-                                <div>🏠 공동주택 (아파트)</div>
-                                <div className="text-[9px] text-emerald-700 font-bold mt-0.5 bg-emerald-50/60 px-1 py-0.5 rounded border border-emerald-100/50 inline-block">
-                                  총 {aptConfigs.reduce((s, c) => s + c.count, 0)} 세대
-                                </div>
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
-                                {result.aptNetArea.toLocaleString()} ㎡<br />
-                                <span className="text-[9px] text-gray-400">({Math.round(result.aptNetArea * 0.3025)}평)</span>
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
-                                {Math.round(result.aptAboveGFA - result.aptNetArea).toLocaleString()} ㎡<br />
-                                <span className="text-[9px] text-gray-400">({Math.round((result.aptAboveGFA - result.aptNetArea) * 0.3025)}평)</span>
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
-                                {result.aptAboveGFA.toLocaleString()} ㎡<br />
-                                <span className="text-[9px] text-gray-400">({Math.round(result.aptAboveGFA * 0.3025)}평)</span>
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono text-gray-500">
-                                {((result.aptAboveGFA / result.aboveGroundGFA) * 100).toFixed(1)}%
-                              </td>
-                            </tr>
-                          )}
-                          {/* 2. 오피스텔 */}
-                          {result.officetelAboveGFA > 0 && (
-                            <tr>
-                              <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">🏢 오피스텔</td>
-                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
-                                {result.officetelNetArea.toLocaleString()} ㎡<br />
-                                <span className="text-[9px] text-gray-400">({Math.round(result.officetelNetArea * 0.3025)}평)</span>
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
-                                {Math.round(result.officetelAboveGFA - result.officetelNetArea).toLocaleString()} ㎡<br />
-                                <span className="text-[9px] text-gray-400">({Math.round((result.officetelAboveGFA - result.officetelNetArea) * 0.3025)}평)</span>
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
-                                {result.officetelAboveGFA.toLocaleString()} ㎡<br />
-                                <span className="text-[9px] text-gray-400">({Math.round(result.officetelAboveGFA * 0.3025)}평)</span>
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono text-gray-500">
-                                {((result.officetelAboveGFA / result.aboveGroundGFA) * 100).toFixed(1)}%
-                              </td>
-                            </tr>
-                          )}
-                          {/* 3. 호텔 */}
-                          {hotelRoomCount > 0 && (
-                            <tr>
-                              <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">🏨 숙박시설 (호텔)</td>
-                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
-                                {(hotelRoomCount * hotelRoomSizePyung * 3.30578).toLocaleString()} ㎡<br />
-                                <span className="text-[9px] text-gray-400">({(hotelRoomCount * hotelRoomSizePyung).toLocaleString()}평)</span>
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
-                                {Math.round(result.hotelAboveGFA - (hotelRoomCount * hotelRoomSizePyung * 3.30578)).toLocaleString()} ㎡<br />
-                                <span className="text-[9px] text-gray-400">({Math.round((result.hotelAboveGFA - (hotelRoomCount * hotelRoomSizePyung * 3.30578)) * 0.3025)}평)</span>
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
-                                {result.hotelAboveGFA.toLocaleString()} ㎡<br />
-                                <span className="text-[9px] text-gray-400">({Math.round(result.hotelAboveGFA * 0.3025)}평)</span>
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono text-gray-500">
-                                {((result.hotelAboveGFA / result.aboveGroundGFA) * 100).toFixed(1)}%
-                              </td>
-                            </tr>
-                          )}
-                          {/* 4. 판매시설 */}
-                          {result.retailTotalGFA > 0 && (
-                            <tr>
-                              <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">🛍️ 판매시설 (상가)</td>
-                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
-                                {((retail1FArea + retail2FArea + retail3FArea + retailB1Area) * 3.30578).toLocaleString()} ㎡<br />
-                                <span className="text-[9px] text-gray-400">({(retail1FArea + retail2FArea + retail3FArea + retailB1Area).toFixed(1)}평)</span>
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
-                                {Math.round(result.retailTotalGFA - ((retail1FArea + retail2FArea + retail3FArea + retailB1Area) * 3.30578)).toLocaleString()} ㎡<br />
-                                <span className="text-[9px] text-gray-400">({Math.round((result.retailTotalGFA - ((retail1FArea + retail2FArea + retail3FArea + retailB1Area) * 3.30578)) * 0.3025)}평)</span>
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
-                                {result.retailTotalGFA.toLocaleString()} ㎡<br />
-                                <span className="text-[9px] text-gray-400">({Math.round(result.retailTotalGFA * 0.3025)}평)</span>
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono text-gray-500">
-                                {((result.retailAboveGFA / result.aboveGroundGFA) * 100).toFixed(1)}%
-                              </td>
-                            </tr>
-                          )}
-                          {/* 5. 업무시설 */}
-                          {officeArea > 0 && (
-                            <tr>
-                              <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">💼 업무시설 (오피스)</td>
-                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
-                                {(officeArea * 3.30578).toLocaleString()} ㎡<br />
-                                <span className="text-[9px] text-gray-400">({officeArea.toLocaleString()}평)</span>
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
-                                {Math.round(result.officeAboveGFA - (officeArea * 3.30578)).toLocaleString()} ㎡<br />
-                                <span className="text-[9px] text-gray-400">({Math.round((result.officeAboveGFA - (officeArea * 3.30578)) * 0.3025)}평)</span>
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
-                                {result.officeAboveGFA.toLocaleString()} ㎡<br />
-                                <span className="text-[9px] text-gray-400">({Math.round(result.officeAboveGFA * 0.3025)}평)</span>
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono text-gray-500">
-                                {((result.officeAboveGFA / result.aboveGroundGFA) * 100).toFixed(1)}%
-                              </td>
-                            </tr>
-                          )}
-                          {/* 6. 추가 기획용도 */}
-                          {customUsages.length > 0 && (
-                            <tr>
-                              <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">✨ 추가개발 용도</td>
-                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
-                                {customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578), 0).toLocaleString()} ㎡<br />
-                                <span className="text-[9px] text-gray-400">({customUsages.reduce((sum, item) => sum + item.areaPyung, 0).toFixed(1)}평)</span>
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
-                                {Math.round(customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578 / (item.netRatio / 100)), 0) - customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578), 0)).toLocaleString()} ㎡<br />
-                                <span className="text-[9px] text-gray-400">({Math.round((customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578 / (item.netRatio / 100)), 0) - customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578), 0)) * 0.3025)}평)</span>
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
-                                {customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578 / (item.netRatio / 100)), 0).toLocaleString()} ㎡<br />
-                                <span className="text-[9px] text-gray-400">({Math.round(customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578 / (item.netRatio / 100)), 0) * 0.3025)}평)</span>
-                              </td>
-                              <td className="py-2 px-2.5 text-right font-mono text-gray-500">
-                                {((customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578 / (item.netRatio / 100)), 0) / result.aboveGroundGFA) * 100).toFixed(1)}%
-                              </td>
-                            </tr>
-                          )}
-                          {/* 7. 기계실/전기실 & 지하주차장 */}
-                          <tr>
-                            <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">🚗 지하 주차장 / 기계·전기실</td>
-                            <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">-</td>
-                            <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
-                              {(result.parkingArea + result.machineryArea).toLocaleString()} ㎡<br />
-                              <span className="text-[9px] text-gray-400">({Math.round((result.parkingArea + result.machineryArea) * 0.3025)}평)</span>
-                            </td>
-                            <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
-                              {(result.parkingArea + result.machineryArea).toLocaleString()} ㎡<br />
-                              <span className="text-[9px] text-gray-400">({Math.round((result.parkingArea + result.machineryArea) * 0.3025)}평)</span>
-                            </td>
-                            <td className="py-2 px-2.5 text-right font-mono text-gray-500">
-                              {(((result.parkingArea + result.machineryArea) / result.totalGFA) * 100).toFixed(1)}% (연면적비)
-                            </td>
-                          </tr>
-                          {/* 8. 합계 */}
-                          <tr className="bg-[#FAF9F5]/60 font-bold text-gray-800">
-                            <td className="py-2.5 px-2.5 border-r border-gray-150">⭐ 연면적 합계 (GFA Total)</td>
-                            <td className="py-2.5 px-2.5 text-right font-mono border-r border-gray-150">
-                              {(result.aptNetArea + result.officetelNetArea + (hotelRoomCount * hotelRoomSizePyung * 3.30578) + ((retail1FArea + retail2FArea + retail3FArea + retailB1Area) * 3.30578) + (officeArea * 3.30578) + customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578), 0)).toLocaleString()} ㎡
-                            </td>
-                            <td className="py-2.5 px-2.5 text-right font-mono border-r border-gray-150">
-                              {(result.totalGFA - (result.aptNetArea + result.officetelNetArea + (hotelRoomCount * hotelRoomSizePyung * 3.30578) + ((retail1FArea + retail2FArea + retail3FArea + retailB1Area) * 3.30578) + (officeArea * 3.30578) + customUsages.reduce((sum, item) => sum + (item.areaPyung * 3.30578), 0))).toLocaleString()} ㎡
-                            </td>
-                            <td className="py-2.5 px-2.5 text-right font-mono text-[#5F7161] border-r border-gray-150 text-[11px]">
-                              {result.totalGFA.toLocaleString()} ㎡<br />
-                              <span className="text-[10px] text-emerald-700">({Math.round(result.totalGFAByPyung).toLocaleString()}평)</span>
-                            </td>
-                            <td className="py-2.5 px-2.5 text-right font-mono text-emerald-800">100.0%</td>
-                          </tr>
-                        </tbody>
-                      </table>
+                      {(() => {
+                        const PYUNG_TO_M2 = 3.30578;
+                        const sharedUndergroundArea = (result.parkingArea ?? 0) + (result.machineryArea ?? 0);
+                        const hasApt = (result.aptAboveGFA ?? 0) > 0;
+                        const hasHotel = (hotelRoomCount ?? 0) > 0 && (result.hotelAboveGFA ?? 0) > 0;
+
+                        let aptUndergroundShare = 0;
+                        let hotelUndergroundShare = 0;
+
+                        if (hasApt && hasHotel) {
+                          const shareBase = result.aptAboveGFA + result.hotelAboveGFA;
+                          aptUndergroundShare = sharedUndergroundArea * (result.aptAboveGFA / shareBase);
+                          hotelUndergroundShare = sharedUndergroundArea * (result.hotelAboveGFA / shareBase);
+                        } else if (hasApt) {
+                          aptUndergroundShare = sharedUndergroundArea;
+                          hotelUndergroundShare = 0;
+                        } else if (hasHotel) {
+                          aptUndergroundShare = 0;
+                          hotelUndergroundShare = sharedUndergroundArea;
+                        }
+
+                        const totalGFAVal = result.totalGFA || 1;
+
+                        return (
+                          <div>
+                            <table className="w-full text-[10px] border-collapse text-left">
+                              <thead>
+                                <tr className="bg-[#FAF9F5] border-b border-gray-150 text-gray-600 font-bold">
+                                  <th className="py-2 px-2.5 border-r border-gray-150">용도 구분</th>
+                                  <th className="py-2 px-2.5 border-r border-gray-150 text-right">전용면적 (㎡/평)</th>
+                                  <th className="py-2 px-2.5 border-r border-gray-150 text-right">공용면적 (지상+지하분배) (㎡/평)</th>
+                                  <th className="py-2 px-2.5 border-r border-gray-150 text-right">연면적 소계 (㎡/평)</th>
+                                  <th className="py-2 px-2.5 border-r border-gray-150 text-right">비율 (%)</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-100 text-gray-700 font-medium">
+                                {/* 1. 공동주택 */}
+                                {result.aptAboveGFA > 0 && (() => {
+                                  const aptNet = result.aptNetArea;
+                                  const aptAboveCommon = result.aptAboveGFA - result.aptNetArea;
+                                  const aptCommonTotal = aptAboveCommon + aptUndergroundShare;
+                                  const aptTotal = result.aptAboveGFA + aptUndergroundShare;
+                                  return (
+                                    <tr>
+                                      <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span>🏠 공동주택 (아파트)</span>
+                                          {sharedUndergroundArea > 0 && aptUndergroundShare > 0 && (
+                                            <span className="text-[9px] font-semibold text-purple-700 bg-purple-50 px-1 py-0.2 rounded border border-purple-100 inline-block">
+                                              지하분배 +{Math.round(aptUndergroundShare).toLocaleString()}㎡
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="text-[9px] text-emerald-700 font-bold mt-0.5 bg-emerald-50/60 px-1 py-0.5 rounded border border-emerald-100/50 inline-block">
+                                          총 {aptConfigs.reduce((s, c) => s + c.count, 0)} 세대
+                                        </div>
+                                      </td>
+                                      <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                        {aptNet.toLocaleString()} ㎡<br />
+                                        <span className="text-[9px] text-gray-400">({Math.round(aptNet * 0.3025)}평)</span>
+                                      </td>
+                                      <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                        {Math.round(aptCommonTotal).toLocaleString()} ㎡<br />
+                                        <span className="text-[9px] text-gray-400">
+                                          ({Math.round(aptCommonTotal * 0.3025)}평)
+                                          <span className="block text-[8px] text-gray-400 font-sans font-normal">
+                                            (지상 {Math.round(aptAboveCommon).toLocaleString()} / 지하 {Math.round(aptUndergroundShare).toLocaleString()})
+                                          </span>
+                                        </span>
+                                      </td>
+                                      <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                                        {Math.round(aptTotal).toLocaleString()} ㎡<br />
+                                        <span className="text-[9px] text-gray-400">({Math.round(aptTotal * 0.3025)}평)</span>
+                                      </td>
+                                      <td className="py-2 px-2.5 text-right font-mono text-gray-500">
+                                        {((aptTotal / totalGFAVal) * 100).toFixed(1)}%
+                                      </td>
+                                    </tr>
+                                  );
+                                })()}
+
+                                {/* 2. 오피스텔 */}
+                                {result.officetelAboveGFA > 0 && (
+                                  <tr>
+                                    <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">🏢 오피스텔</td>
+                                    <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                      {result.officetelNetArea.toLocaleString()} ㎡<br />
+                                      <span className="text-[9px] text-gray-400">({Math.round(result.officetelNetArea * 0.3025)}평)</span>
+                                    </td>
+                                    <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                      {Math.round(result.officetelAboveGFA - result.officetelNetArea).toLocaleString()} ㎡<br />
+                                      <span className="text-[9px] text-gray-400">({Math.round((result.officetelAboveGFA - result.officetelNetArea) * 0.3025)}평)</span>
+                                    </td>
+                                    <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                                      {result.officetelAboveGFA.toLocaleString()} ㎡<br />
+                                      <span className="text-[9px] text-gray-400">({Math.round(result.officetelAboveGFA * 0.3025)}평)</span>
+                                    </td>
+                                    <td className="py-2 px-2.5 text-right font-mono text-gray-500">
+                                      {((result.officetelAboveGFA / totalGFAVal) * 100).toFixed(1)}%
+                                    </td>
+                                  </tr>
+                                )}
+
+                                {/* 3. 호텔 */}
+                                {hotelRoomCount > 0 && (() => {
+                                  const hotelNet = hotelRoomCount * hotelRoomSizePyung * PYUNG_TO_M2;
+                                  const hotelAboveCommon = result.hotelAboveGFA - hotelNet;
+                                  const hotelCommonTotal = hotelAboveCommon + hotelUndergroundShare;
+                                  const hotelTotal = result.hotelAboveGFA + hotelUndergroundShare;
+                                  return (
+                                    <tr>
+                                      <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span>🏨 숙박시설 (호텔)</span>
+                                          {sharedUndergroundArea > 0 && hotelUndergroundShare > 0 && (
+                                            <span className="text-[9px] font-semibold text-purple-700 bg-purple-50 px-1 py-0.2 rounded border border-purple-100 inline-block">
+                                              지하분배 +{Math.round(hotelUndergroundShare).toLocaleString()}㎡
+                                            </span>
+                                          )}
+                                        </div>
+                                      </td>
+                                      <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                        {hotelNet.toLocaleString()} ㎡<br />
+                                        <span className="text-[9px] text-gray-400">({(hotelRoomCount * hotelRoomSizePyung).toLocaleString()}평)</span>
+                                      </td>
+                                      <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                        {Math.round(hotelCommonTotal).toLocaleString()} ㎡<br />
+                                        <span className="text-[9px] text-gray-400">
+                                          ({Math.round(hotelCommonTotal * 0.3025)}평)
+                                          <span className="block text-[8px] text-gray-400 font-sans font-normal">
+                                            (지상 {Math.round(hotelAboveCommon).toLocaleString()} / 지하 {Math.round(hotelUndergroundShare).toLocaleString()})
+                                          </span>
+                                        </span>
+                                      </td>
+                                      <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                                        {Math.round(hotelTotal).toLocaleString()} ㎡<br />
+                                        <span className="text-[9px] text-gray-400">({Math.round(hotelTotal * 0.3025)}평)</span>
+                                      </td>
+                                      <td className="py-2 px-2.5 text-right font-mono text-gray-500">
+                                        {((hotelTotal / totalGFAVal) * 100).toFixed(1)}%
+                                      </td>
+                                    </tr>
+                                  );
+                                })()}
+
+                                {/* 4. 판매시설 */}
+                                {result.retailTotalGFA > 0 && (
+                                  <tr>
+                                    <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">🛍️ 판매시설 (상가)</td>
+                                    <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                      {((retail1FArea + retail2FArea + retail3FArea + retailB1Area) * PYUNG_TO_M2).toLocaleString()} ㎡<br />
+                                      <span className="text-[9px] text-gray-400">({(retail1FArea + retail2FArea + retail3FArea + retailB1Area).toFixed(1)}평)</span>
+                                    </td>
+                                    <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                      {Math.round(result.retailTotalGFA - ((retail1FArea + retail2FArea + retail3FArea + retailB1Area) * PYUNG_TO_M2)).toLocaleString()} ㎡<br />
+                                      <span className="text-[9px] text-gray-400">({Math.round((result.retailTotalGFA - ((retail1FArea + retail2FArea + retail3FArea + retailB1Area) * PYUNG_TO_M2)) * 0.3025)}평)</span>
+                                    </td>
+                                    <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                                      {result.retailTotalGFA.toLocaleString()} ㎡<br />
+                                      <span className="text-[9px] text-gray-400">({Math.round(result.retailTotalGFA * 0.3025)}평)</span>
+                                    </td>
+                                    <td className="py-2 px-2.5 text-right font-mono text-gray-500">
+                                      {((result.retailTotalGFA / totalGFAVal) * 100).toFixed(1)}%
+                                    </td>
+                                  </tr>
+                                )}
+
+                                {/* 5. 업무시설 */}
+                                {officeArea > 0 && (
+                                  <tr>
+                                    <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">💼 업무시설 (오피스)</td>
+                                    <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                      {(officeArea * PYUNG_TO_M2).toLocaleString()} ㎡<br />
+                                      <span className="text-[9px] text-gray-400">({officeArea.toLocaleString()}평)</span>
+                                    </td>
+                                    <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                      {Math.round(result.officeAboveGFA - (officeArea * PYUNG_TO_M2)).toLocaleString()} ㎡<br />
+                                      <span className="text-[9px] text-gray-400">({Math.round((result.officeAboveGFA - (officeArea * PYUNG_TO_M2)) * 0.3025)}평)</span>
+                                    </td>
+                                    <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                                      {result.officeAboveGFA.toLocaleString()} ㎡<br />
+                                      <span className="text-[9px] text-gray-400">({Math.round(result.officeAboveGFA * 0.3025)}평)</span>
+                                    </td>
+                                    <td className="py-2 px-2.5 text-right font-mono text-gray-500">
+                                      {((result.officeAboveGFA / totalGFAVal) * 100).toFixed(1)}%
+                                    </td>
+                                  </tr>
+                                )}
+
+                                {/* 6. 추가 기획용도 */}
+                                {customUsages.length > 0 && (
+                                  <tr>
+                                    <td className="py-2 px-2.5 font-bold bg-gray-50/40 border-r border-gray-100">✨ 추가개발 용도</td>
+                                    <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                      {customUsages.reduce((sum, item) => sum + (item.areaPyung * PYUNG_TO_M2), 0).toLocaleString()} ㎡<br />
+                                      <span className="text-[9px] text-gray-400">({customUsages.reduce((sum, item) => sum + item.areaPyung, 0).toFixed(1)}평)</span>
+                                    </td>
+                                    <td className="py-2 px-2.5 text-right font-mono border-r border-gray-100">
+                                      {Math.round(customUsages.reduce((sum, item) => sum + (item.areaPyung * PYUNG_TO_M2 / (item.netRatio / 100)), 0) - customUsages.reduce((sum, item) => sum + (item.areaPyung * PYUNG_TO_M2), 0)).toLocaleString()} ㎡<br />
+                                      <span className="text-[9px] text-gray-400">({Math.round((customUsages.reduce((sum, item) => sum + (item.areaPyung * PYUNG_TO_M2 / (item.netRatio / 100)), 0) - customUsages.reduce((sum, item) => sum + (item.areaPyung * PYUNG_TO_M2), 0)) * 0.3025)}평)</span>
+                                    </td>
+                                    <td className="py-2 px-2.5 text-right font-mono font-bold text-gray-800 border-r border-gray-100">
+                                      {customUsages.reduce((sum, item) => sum + (item.areaPyung * PYUNG_TO_M2 / (item.netRatio / 100)), 0).toLocaleString()} ㎡<br />
+                                      <span className="text-[9px] text-gray-400">({Math.round(customUsages.reduce((sum, item) => sum + (item.areaPyung * PYUNG_TO_M2 / (item.netRatio / 100)), 0) * 0.3025)}평)</span>
+                                    </td>
+                                    <td className="py-2 px-2.5 text-right font-mono text-gray-500">
+                                      {((customUsages.reduce((sum, item) => sum + (item.areaPyung * PYUNG_TO_M2 / (item.netRatio / 100)), 0) / totalGFAVal) * 100).toFixed(1)}%
+                                    </td>
+                                  </tr>
+                                )}
+
+                                {/* 7. 합계 */}
+                                <tr className="bg-[#FAF9F5]/60 font-bold text-gray-800">
+                                  <td className="py-2.5 px-2.5 border-r border-gray-150">⭐ 연면적 합계 (GFA Total)</td>
+                                  <td className="py-2.5 px-2.5 text-right font-mono border-r border-gray-150">
+                                    {(result.aptNetArea + result.officetelNetArea + (hotelRoomCount * hotelRoomSizePyung * PYUNG_TO_M2) + ((retail1FArea + retail2FArea + retail3FArea + retailB1Area) * PYUNG_TO_M2) + (officeArea * PYUNG_TO_M2) + customUsages.reduce((sum, item) => sum + (item.areaPyung * PYUNG_TO_M2), 0)).toLocaleString()} ㎡
+                                  </td>
+                                  <td className="py-2.5 px-2.5 text-right font-mono border-r border-gray-150">
+                                    {(result.totalGFA - (result.aptNetArea + result.officetelNetArea + (hotelRoomCount * hotelRoomSizePyung * PYUNG_TO_M2) + ((retail1FArea + retail2FArea + retail3FArea + retailB1Area) * PYUNG_TO_M2) + (officeArea * PYUNG_TO_M2) + customUsages.reduce((sum, item) => sum + (item.areaPyung * PYUNG_TO_M2), 0))).toLocaleString()} ㎡
+                                  </td>
+                                  <td className="py-2.5 px-2.5 text-right font-mono text-[#5F7161] border-r border-gray-150 text-[11px]">
+                                    {result.totalGFA.toLocaleString()} ㎡<br />
+                                    <span className="text-[10px] text-emerald-700">({Math.round(result.totalGFAByPyung).toLocaleString()}평)</span>
+                                  </td>
+                                  <td className="py-2.5 px-2.5 text-right font-mono text-emerald-800">100.0%</td>
+                                </tr>
+                              </tbody>
+                            </table>
+
+                            <div className="p-3 bg-gray-50 border-t border-gray-100 text-[9.5px] text-gray-500 leading-relaxed space-y-1">
+                              <p className="font-semibold text-gray-600 flex items-center gap-1">
+                                💡 지하층 분배 안내 (Underground Area Allocation)
+                              </p>
+                              <p>
+                                지하 주차장 및 기계·전기실 합계 면적 <strong className="text-purple-700">{sharedUndergroundArea.toLocaleString()} ㎡ (약 {Math.round(sharedUndergroundArea * 0.3025)}평)</strong>은 사용자 요청에 따라 공동주택(아파트)과 숙박시설(호텔)의 지상층 비율로 배분하여 각 용도의 공용면적 및 연면적 소계에 자동 합산되었습니다.
+                              </p>
+                              <ul className="list-disc list-inside space-y-0.5 text-gray-400 mt-1 pl-1">
+                                {hasApt && <li>공동주택 배분비율: {((aptUndergroundShare / (sharedUndergroundArea || 1)) * 100).toFixed(1)}% (+{Math.round(aptUndergroundShare).toLocaleString()} ㎡)</li>}
+                                {hasHotel && <li>숙박시설 배분비율: {((hotelUndergroundShare / (sharedUndergroundArea || 1)) * 100).toFixed(1)}% (+{Math.round(hotelUndergroundShare).toLocaleString()} ㎡)</li>}
+                              </ul>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
